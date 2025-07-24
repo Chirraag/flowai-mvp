@@ -1,0 +1,425 @@
+import '@xyflow/react/dist/style.css';
+import React, { useCallback, useEffect, useState, useRef, useMemo } from 'react';
+import { ReactFlow, MiniMap, Controls, Background, addEdge, useNodesState, useEdgesState, Connection, Edge, Node, Position, useReactFlow } from '@xyflow/react';
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import dagre from 'dagre';
+import { useParams, Link } from 'react-router-dom';
+import { PlusIcon } from 'lucide-react';
+import CustomEdge from '@/components/business-workflows/editor/CustomEdge';
+import TriggerNode from '@/components/business-workflows/editor/custom-nodes/TriggerNode';
+import DelayNode from '@/components/business-workflows/editor/custom-nodes/DelayNode';
+import DecisionNode from '@/components/business-workflows/editor/custom-nodes/DecisionNode';
+import BusinessNode from '@/components/business-workflows/editor/custom-nodes/BusinessNode';
+import NodePickerSheet from '@/components/business-workflows/editor/NodePickerSheet';
+import NodeSheet from '@/components/business-workflows/editor/NodeSheet';
+import EditorHeader from '@/components/business-workflows/editor/EditorHeader';
+import { useToast } from "@/hooks/use-toast";
+
+const dagreGraph = new dagre.graphlib.Graph();
+dagreGraph.setDefaultEdgeLabel(() => ({}));
+
+const nodeWidth = 180;
+const nodeHeight = 40;
+
+function getLayoutedElements(nodes: Node[], edges: Edge[], direction = 'LR') {
+  const isHorizontal = direction === 'LR';
+  dagreGraph.setGraph({ rankdir: direction });
+  nodes.forEach((node) => {
+    dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
+  });
+  edges.forEach((edge) => {
+    dagreGraph.setEdge(edge.source, edge.target);
+  });
+  dagre.layout(dagreGraph);
+  return nodes.map((node) => {
+    const nodeWithPosition = dagreGraph.node(node.id);
+    node.targetPosition = isHorizontal ? Position.Left : Position.Top;
+    node.sourcePosition = isHorizontal ? Position.Right : Position.Bottom;
+    node.position = {
+      x: nodeWithPosition.x - nodeWidth / 2,
+      y: nodeWithPosition.y - nodeHeight / 2,
+    };
+    return node;
+  });
+}
+
+const initialNodes: Node[] = [];
+const initialEdges: Edge[] = [];
+
+function downloadJSON(obj: any, filename: string) {
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(obj, null, 2));
+  const dlAnchorElem = document.createElement('a');
+  dlAnchorElem.setAttribute("href", dataStr);
+  dlAnchorElem.setAttribute("download", filename);
+  document.body.appendChild(dlAnchorElem);
+  dlAnchorElem.click();
+  dlAnchorElem.remove();
+}
+
+interface Viewport { x: number; y: number; zoom: number; }
+
+const Editor: React.FC = () => {
+  const { workflowId } = useParams();
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
+  const [nodeSheetOpen, setNodeSheetOpen] = useState(false);
+  const [workflowName, setWorkflowName] = useState('');
+  const [workflowDescription, setWorkflowDescription] = useState('');
+  const [workflowActive, setWorkflowActive] = useState(false);
+  const [workflowUpdatedAt, setWorkflowUpdatedAt] = useState<string>('');
+  const [edgeType, setEdgeType] = useState<string>('default');
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const exportViewportRef = useRef<(() => Viewport) | null>(null);
+  const importViewportRef = useRef<((viewport: Viewport) => void) | null>(null);
+  const [pendingViewport, setPendingViewport] = useState<Viewport | null>(null);
+  const reactFlowRef = useRef<any>(null);
+  const [viewportCenter, setViewportCenter] = useState({ x: 400, y: 200 });
+  const { toast } = useToast();
+
+  const nodeTypes = useMemo(() => ({ 
+    trigger: TriggerNode,
+    delay: DelayNode,
+    decision: DecisionNode,
+    business: BusinessNode
+  }), []);
+  const edgeTypes = useMemo(() => ({ custom: CustomEdge }), []);
+
+  useEffect(() => {
+    if (!workflowId) return;
+    setLoading(true);
+    fetch(`/api/v1/business-workflows/${workflowId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.configuration && data.configuration.nodes && data.configuration.edges) {
+          setNodes(data.configuration.nodes);
+          setEdges(data.configuration.edges);
+          setWorkflowName(data.name || '');
+          setWorkflowDescription(data.description || '');
+          setWorkflowActive(data.status === 'active');
+          setWorkflowUpdatedAt(data.updatedAt || '');
+          setEdgeType(data.edgeType || 'default');
+          if (data.viewport) {
+            setPendingViewport(data.viewport);
+          }
+          toast({ title: "Workflow Loaded", description: "Workflow loaded from backend." });
+        } else {
+          setNodes([]);
+          setEdges([]);
+          setWorkflowName('');
+          setWorkflowDescription('');
+          setWorkflowActive(false);
+          setWorkflowUpdatedAt('');
+          setEdgeType('default');
+          toast({ title: "Load Error", description: "Workflow data is missing or invalid." });
+        }
+      })
+      .catch(() => {
+        setNodes([]);
+        setEdges([]);
+        setWorkflowName('');
+        setWorkflowDescription('');
+        setWorkflowActive(false);
+        setWorkflowUpdatedAt('');
+        setEdgeType('default');
+        toast({ title: "Load Error", description: "Failed to load workflow." });
+      })
+      .finally(() => setLoading(false));
+  }, [workflowId, setNodes, setEdges, toast]);
+
+
+
+  const onConnect = useCallback(
+    (params: Edge | Connection) =>
+      setEdges((eds) =>
+        addEdge(
+          { ...params, type: 'custom', animated: true, data: { onDelete: handleDeleteEdge, edgeType } },
+          eds
+        )
+      ),
+    [setEdges, edgeType]
+  );
+
+  const handleLayout = useCallback(() => {
+    setNodes((nds) => getLayoutedElements([...nds], edges, 'LR'));
+  }, [edges, setNodes]);
+
+  const onMove = useCallback((event: any, viewport: any) => {
+    const reactFlowElement = reactFlowRef.current;
+    if (!reactFlowElement) return;
+    const { width, height } = reactFlowElement.getBoundingClientRect();
+    const centerX = -viewport.x / viewport.zoom + width / (2 * viewport.zoom);
+    const centerY = -viewport.y / viewport.zoom + height / (2 * viewport.zoom);
+    setViewportCenter({ x: centerX, y: centerY });
+  }, []);
+
+  const handleOpenSheet = useCallback(() => setSheetOpen(true), []);
+  const handleCloseSheet = useCallback(() => setSheetOpen(false), []);
+
+  const handleNodeSelect = useCallback((node: any) => {
+    setNodes((nds) => {
+      // Determine the node type based on the nodeType field
+      let nodeType = 'trigger'; // Default to trigger
+      if (node.nodeType === 'Trigger Node') nodeType = 'trigger';
+      else if (node.nodeType === 'Delay Node') nodeType = 'delay';
+      else if (node.nodeType === 'Decision Node') nodeType = 'decision';
+      else if (node.nodeType === 'Business Node') nodeType = 'business';
+      
+      const newNode = {
+        id: `${Date.now()}`,
+        type: nodeType,
+        data: { ...node },
+        position: viewportCenter,
+      };
+      return [...nds, newNode];
+    });
+    setSheetOpen(false);
+  }, [setNodes, viewportCenter]);
+
+  const handleDeleteEdge = useCallback((id: string) => {
+    setEdges((eds) => eds.filter((e) => e.id !== id));
+    toast({ title: "Edge Deleted", description: "Edge has been removed from the workflow." });
+  }, [setEdges, toast]);
+
+  const handleNodeClick = useCallback((event: React.MouseEvent<Element, MouseEvent>, node: Node) => {
+    setSelectedNode(node);
+    setNodeSheetOpen(true);
+  }, []);
+
+  const handleDeleteNode = useCallback((id: string) => {
+    setNodes((nds) => nds.filter((n) => n.id !== id));
+    setEdges((eds) => eds.filter((e) => e.source !== id && e.target !== id));
+    toast({ title: "Node Deleted", description: "Node has been removed from the workflow." });
+  }, [setNodes, setEdges, toast]);
+
+  const handleUpdateNode = useCallback((nodeId: string, updates: any) => {
+    setNodes((nds) => nds.map((node) => 
+      node.id === nodeId 
+        ? { ...node, data: { ...node.data, ...updates } }
+        : node
+    ));
+  }, [setNodes]);
+
+  // Function to get the correct node type based on nodeType field
+  const getNodeTypeFromData = (nodeData: any) => {
+    if (nodeData.nodeType === 'Trigger Node') return 'trigger';
+    if (nodeData.nodeType === 'Delay Node') return 'delay';
+    if (nodeData.nodeType === 'Decision Node') return 'decision';
+    if (nodeData.nodeType === 'Business Node') return 'business';
+    return 'trigger'; // Default to trigger if unknown
+  };
+
+  const nodesWithClick = useMemo(() => nodes.map(n => ({
+    ...n,
+    // Update node type based on nodeType field if it's still 'custom' or unknown
+    type: (n.type === 'custom' || !['trigger', 'delay', 'decision', 'business'].includes(n.type || '')) 
+      ? getNodeTypeFromData(n.data) 
+      : (n.type || 'trigger'),
+    data: {
+      ...n.data,
+      onClick: (event: React.MouseEvent<Element, MouseEvent>) => handleNodeClick(event, n),
+      onDelete: () => handleDeleteNode(n.id),
+    },
+  })), [nodes, handleNodeClick, handleDeleteNode]);
+
+  const handleImport = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const json = JSON.parse(event.target?.result as string);
+        if (
+          typeof json === 'object' &&
+          json.name &&
+          json.configuration &&
+          Array.isArray(json.configuration.nodes) &&
+          Array.isArray(json.configuration.edges)
+        ) {
+          setWorkflowName(json.name);
+          setWorkflowDescription(json.description || '');
+          setNodes(json.configuration.nodes);
+          setEdges(json.configuration.edges);
+          setWorkflowActive(json.status === 'active');
+          setEdgeType(json.edgeType || 'default');
+          toast({ title: "Workflow Imported", description: "Workflow imported successfully!" });
+        } else {
+          throw new Error('Invalid workflow JSON structure');
+        }
+      } catch (err) {
+        toast({ title: "Import Error", description: `Error importing workflow: ${err instanceof Error ? err.message : err}` });
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  }, [setWorkflowName, setWorkflowDescription, setNodes, setEdges, setWorkflowActive, toast]);
+
+  useEffect(() => {
+    if (pendingViewport && importViewportRef.current) {
+      importViewportRef.current(pendingViewport);
+      setPendingViewport(null);
+    }
+  }, [nodes, edges, pendingViewport]);
+
+  return (
+    <div className="flex flex-col bg-muted">
+      <div className="p-0 bg-background">
+        <Link 
+          to="/business-workflows" 
+          className="inline-flex items-center text-md text-primary underline hover:text-primary/80 transition-colors"
+        >
+          Back to Workflows
+        </Link>
+      </div>
+      <Card className="flex flex-col flex-1 w-full">
+        <EditorHeader
+          name={workflowName}
+          description={workflowDescription}
+          active={workflowActive}
+          nodeCount={nodes.length}
+          version="1.0"
+          lastUpdated={workflowUpdatedAt}
+          saving={saving}
+          edgeType={edgeType}
+          onEdit={(name, desc) => { setWorkflowName(name); setWorkflowDescription(desc); }}
+          onToggleActive={setWorkflowActive}
+          onEdgeTypeChange={setEdgeType}
+          onSave={async () => {
+            setSaving(true);
+            const payload = {
+              name: workflowName,
+              description: workflowDescription,
+              configuration: { nodes, edges },
+              status: workflowActive ? 'active' : 'inactive',
+              version: '1.0',
+              edgeType: edgeType,
+              isTemplate: false
+            };
+            try {
+              const res = await fetch(`/api/v1/business-workflows${workflowId ? `/${workflowId}` : ''}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+              });
+              if (!res.ok) throw new Error('Failed to save workflow');
+              setWorkflowUpdatedAt(new Date().toISOString());
+              toast({ title: "Workflow Saved", description: "Workflow saved successfully!" });
+            } catch (err) {
+              toast({ title: "Save Error", description: `Error saving workflow: ${err instanceof Error ? err.message : err}` });
+            } finally {
+              setSaving(false);
+            }
+          }}
+          onImport={handleImport}
+          onExport={() => {
+            const viewport = exportViewportRef.current ? exportViewportRef.current() : { x: 0, y: 0, zoom: 1 };
+            downloadJSON({
+              name: workflowName,
+              description: workflowDescription,
+              configuration: {
+                nodes,
+                edges
+              },
+              status: workflowActive ? 'active' : 'inactive',
+              version: '1.0',
+              edgeType: edgeType,
+              isTemplate: false,
+              viewport
+            }, `${workflowName || 'workflow'}.json`);
+            toast({ title: "Workflow Exported", description: "Workflow exported as JSON file." });
+          }}
+        />
+        <input
+          type="file"
+          accept="application/json"
+          ref={fileInputRef}
+          style={{ display: 'none' }}
+          onChange={handleFileChange}
+        />
+        <CardContent className="flex-1 p-0">
+          <div className="h-[68vh] md:h-[68vh] w-full relative">
+            <Button
+              variant="outline"
+              className="absolute border-primary top-8 right-8 z-10 border-2 w-12 h-12"
+              title="Pick Node"
+              onClick={handleOpenSheet}
+            >
+              <PlusIcon className="w-8 h-8" />
+            </Button>
+            <NodePickerSheet
+              open={sheetOpen}
+              onClose={handleCloseSheet}
+              onNodeSelect={handleNodeSelect}
+            />
+            {selectedNode && (
+              <NodeSheet
+                open={nodeSheetOpen}
+                onClose={() => setNodeSheetOpen(false)}
+                node={selectedNode}
+                onUpdateNode={handleUpdateNode}
+              />
+            )}
+            {loading ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="flex flex-col items-center space-y-4">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                  <div className="text-lg text-muted-foreground">Loading workflow...</div>
+                </div>
+              </div>
+            ) : (
+              <ReactFlow
+                nodes={nodesWithClick}
+                edges={edges.map(e => ({ ...e, data: { ...e.data, onDelete: handleDeleteEdge, edgeType } }))}
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
+                onConnect={onConnect}
+                onMove={onMove}
+                nodeTypes={nodeTypes}
+                edgeTypes={edgeTypes}
+                fitView={true}
+                ref={reactFlowRef}
+                maxZoom={1}
+              >
+                <FlowViewportManager onExportRef={exportViewportRef} onImportViewport={importViewportRef} />
+                <MiniMap />
+                <Controls />
+                <Background gap={16} />
+              </ReactFlow>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+interface FlowViewportManagerProps {
+  onExportRef: React.MutableRefObject<(() => Viewport) | null>;
+  onImportViewport: React.MutableRefObject<((viewport: Viewport) => void) | null>;
+}
+function FlowViewportManager({ onExportRef, onImportViewport }: FlowViewportManagerProps) {
+  const reactFlowInstance = useReactFlow();
+  useEffect(() => {
+    if (onExportRef) {
+      onExportRef.current = () => reactFlowInstance.getViewport();
+    }
+  }, [onExportRef, reactFlowInstance]);
+  useEffect(() => {
+    if (onImportViewport) {
+      onImportViewport.current = (viewport: Viewport) => {
+        reactFlowInstance.setViewport(viewport, { duration: 0 });
+      };
+    }
+  }, [onImportViewport, reactFlowInstance]);
+  return null;
+}
+
+export default Editor; 
