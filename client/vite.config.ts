@@ -8,12 +8,12 @@ export default defineConfig({
     react(),
     runtimeErrorOverlay(),
     ...(process.env.NODE_ENV !== "production" &&
-      process.env.REPL_ID !== undefined
+    process.env.REPL_ID !== undefined
       ? [
-        await import("@replit/vite-plugin-cartographer").then((m) =>
-          m.cartographer(),
-        ),
-      ]
+          await import("@replit/vite-plugin-cartographer").then((m) =>
+            m.cartographer(),
+          ),
+        ]
       : []),
   ],
   resolve: {
@@ -28,11 +28,15 @@ export default defineConfig({
   },
   server: {
     port: 3000,
+    host: "0.0.0.0",
+    allowedHosts:
+      ["0f1bb795-d559-4b2f-888d-5dd01a5bb780-00-3g69905bg105d.pike.replit.dev"],
     proxy: {
-      '/api': {
-        target: 'http://localhost:5000',
+      "/api": {
+        target:
+          "https://0f1bb795-d559-4b2f-888d-5dd01a5bb780-00-3g69905bg105d.pike.replit.dev:5000",
         changeOrigin: true,
-      }
-    }
-  }
-}); 
+      },
+    },
+  },
+});
