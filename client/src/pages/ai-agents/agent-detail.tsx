@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Settings, MessageSquare, Bot, Calendar, FileText, Globe, Database, Mic, FileDown, Phone, PhoneOff, ChevronDown } from "lucide-react";
-import { useRetellAgentDetails, useUpdateRetellAgent, useRetellVoicesList, createWebCall } from "@/services/retellApi";
+import { useRetellAgentDetails, useUpdateRetellAgent, useRetellVoicesList, createWebCall, type RetellAgentDetails } from "@/services/retellApi";
 import { RetellWebClient } from "retell-client-js-sdk";
 import { AnimatedMicrophone } from "@/components/AnimatedMicrophone";
 
@@ -52,6 +52,9 @@ export default function AgentDetail() {
     global_prompt: ''
   });
 
+  // Track the latest saved agent data for reset functionality
+  const [savedAgentData, setSavedAgentData] = useState<RetellAgentDetails | null>(null);
+
   // Watch for any changes to messages and auto-scroll if user hasn't manually scrolled
   useEffect(() => {
     console.log(`🔄 Message update effect: ${chatMessages.length} messages, isUserScrolling=${isUserScrolling}`);
@@ -71,15 +74,17 @@ export default function AgentDetail() {
   }, [chatMessages, isUserScrolling]);
 
 
-  // Update form data when agent data is loaded
+  // Update form data and saved agent data when agent data is loaded
   useEffect(() => {
     if (agent) {
-      setFormData({
+      const formValues = {
         model: agent.model || '',
         voice_id: agent.voice_id || '',
         language: agent.language || '',
         global_prompt: agent.global_prompt || ''
-      });
+      };
+      setFormData(formValues);
+      setSavedAgentData(agent); // Set the initial saved state
     }
   }, [agent]);
 
@@ -399,15 +404,89 @@ export default function AgentDetail() {
   // Find the selected voice details
   const selectedVoice = voices.find(v => v.voice_id === formData.voice_id);
 
-  // Reset form to original data
-  const handleReset = () => {
-    if (agent) {
-      setFormData({
-        model: agent.model || '',
-        voice_id: agent.voice_id || '',
-        language: agent.language || '',
-        global_prompt: agent.global_prompt || ''
+  // Save configuration handler
+  const handleSaveConfiguration = async () => {
+    if (!agent?.agent_id) return;
+
+    try {
+      // Only send fields that have changed
+      const updatedFields: any = {};
+      
+      if (formData.model !== (savedAgentData?.model || '')) {
+        updatedFields.model = formData.model;
+      }
+      if (formData.voice_id !== (savedAgentData?.voice_id || '')) {
+        updatedFields.voice_id = formData.voice_id;
+      }
+      if (formData.language !== (savedAgentData?.language || '')) {
+        updatedFields.language = formData.language;
+      }
+      if (formData.global_prompt !== (savedAgentData?.global_prompt || '')) {
+        updatedFields.global_prompt = formData.global_prompt;
+      }
+
+      // Only make API call if there are changes
+      if (Object.keys(updatedFields).length === 0) {
+        console.log('No changes to save');
+        return;
+      }
+
+      console.log('Saving configuration changes:', updatedFields);
+      
+      const response = await updateAgent.mutateAsync({
+        agent_id: agent.agent_id,
+        data: updatedFields
       });
+
+      // Update the saved agent data with the response
+      console.log('API Response:', response);
+      console.log('Response structure:', {
+        hasData: !!response?.data,
+        dataKeys: response?.data ? Object.keys(response.data) : 'no data',
+        fullResponse: response
+      });
+      
+      if (response?.data) {
+        console.log('Updated agent data received:', response.data);
+        setSavedAgentData(response.data);
+        console.log('Configuration saved successfully');
+      } else {
+        console.warn('No data in response, keeping current saved data');
+      }
+    } catch (error) {
+      console.error('Failed to save configuration:', error);
+      alert('Failed to save configuration. Please try again.');
+    }
+  };
+
+  // Reset form to saved data
+  const handleReset = () => {
+    const baseData = savedAgentData || agent;
+    console.log('Reset config - using data:', {
+      savedAgentData: savedAgentData ? {
+        model: savedAgentData.model,
+        voice_id: savedAgentData.voice_id,
+        language: savedAgentData.language,
+        global_prompt: savedAgentData.global_prompt?.substring(0, 100) + '...'
+      } : null,
+      originalAgent: agent ? {
+        model: agent.model,
+        voice_id: agent.voice_id,
+        language: agent.language,
+        global_prompt: agent.global_prompt?.substring(0, 100) + '...'
+      } : null,
+      usingData: baseData === savedAgentData ? 'savedAgentData' : 'originalAgent'
+    });
+    
+    if (baseData) {
+      const newFormData = {
+        model: baseData.model || '',
+        voice_id: baseData.voice_id || '',
+        language: baseData.language || '',
+        global_prompt: baseData.global_prompt || ''
+      };
+      console.log('Setting form data to:', newFormData);
+      setFormData(newFormData);
     }
   };
 
@@ -453,8 +532,12 @@ export default function AgentDetail() {
             <Button variant="outline" onClick={handleReset}>
               Reset Configuration
             </Button>
-            <Button className="bg-blue-600 hover:bg-blue-700">
-              Save Configuration
+            <Button 
+              className="bg-blue-600 hover:bg-blue-700" 
+              onClick={handleSaveConfiguration}
+              disabled={updateAgent.isPending}
+            >
+              {updateAgent.isPending ? 'Saving...' : 'Save Configuration'}
             </Button>
           </div>
         </div>
