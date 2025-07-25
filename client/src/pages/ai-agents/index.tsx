@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,15 +11,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { IOSSwitch } from "@/components/ui/ios-switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Edit, Trash2, Bot, Activity, Settings, MessageSquare, Calendar, FileText, Shield, Zap, Users, BarChart3, Play, Pause, AlertTriangle, CheckCircle, Target, Brain, TestTube, Clock, TrendingUp, Eye, Rocket, StopCircle } from "lucide-react";
+import { useRetellAgentsList, useUpdateAgentStatus } from "@/services/retellApi";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface Agent {
-  id: number;
-  name: string;
+  agent_id: string;
+  user_id: string;
   type: string;
-  description: string;
-  language: string;
-  status: string;
-  configuration: {
+  status: string; // 'available' or 'active'
+  // These fields might come from the detail API
+  name?: string;
+  description?: string;
+  model?: string;
+  language?: string;
+  configuration?: {
     model: string;
     temperature: number;
     maxTokens: number;
@@ -26,16 +32,74 @@ interface Agent {
     tools: string[];
     integrations: string[];
   };
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export default function AIAgents() {
   const [selectedAgentForConfig, setSelectedAgentForConfig] = useState<string>("");
+  const [updatingAgentId, setUpdatingAgentId] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-  const { data: agents = [], isLoading } = useQuery<Agent[]>({
-    queryKey: ["/api/v1/ai-agents"],
+  // Use the new Retell API
+  const { data: retellAgents = [], isLoading } = useRetellAgentsList();
+  
+  // Status update mutation
+  const updateAgentStatus = useUpdateAgentStatus({
+    onSuccess: () => {
+      // Invalidate and refetch the agents list
+      queryClient.invalidateQueries({ queryKey: ['retell-agents-list'] });
+      setUpdatingAgentId(null);
+    },
+    onError: (error) => {
+      console.error('Failed to update agent status:', error);
+      setUpdatingAgentId(null);
+    },
   });
+
+  // Map Retell agents to match the expected format with proper names and descriptions
+  const getAgentDisplayInfo = (type: string) => {
+    const agentInfo = {
+      'customer_support': {
+        name: 'Customer Support Agent',
+        description: 'Comprehensive customer support with automated ticket routing and resolution tracking'
+      },
+      'patient_intake': {
+        name: 'Patient Intake Agent',
+        description: 'Adaptive digital intake forms with identity verification and clinical questionnaires'
+      },
+      'scheduling': {
+        name: 'Scheduling Agent',
+        description: 'Intelligent appointment scheduling with provider matching and patient preferences'
+      }
+    };
+    
+    return agentInfo[type as keyof typeof agentInfo] || {
+      name: `${type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())} Agent`,
+      description: `${type.replace('_', ' ')} agent for healthcare operations`
+    };
+  };
+
+  const agents: Agent[] = retellAgents.map(agent => {
+    const displayInfo = getAgentDisplayInfo(agent.type);
+    return {
+      ...agent,
+      name: displayInfo.name,
+      description: displayInfo.description,
+    };
+  });
+
+  // Handler functions for status updates
+  const handleDeployAgent = (agentId: string) => {
+    setUpdatingAgentId(agentId);
+    updateAgentStatus.mutate({ agent_id: agentId, status: 'active' });
+  };
+
+  const handleDeactivateAgent = (agentId: string) => {
+    setUpdatingAgentId(agentId);
+    updateAgentStatus.mutate({ agent_id: agentId, status: 'available' });
+  };
 
   // Mock evaluation data - in production this would come from real analytics
   const evaluationMetrics = {
@@ -98,7 +162,7 @@ export default function AIAgents() {
     return flags[language as keyof typeof flags] || "🇺🇸";
   };
 
-  const selectedAgentData = agents.find(agent => agent.id.toString() === selectedAgentForConfig);
+  const selectedAgentData = agents.find(agent => agent.agent_id === selectedAgentForConfig);
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-96">Loading...</div>;
@@ -111,41 +175,31 @@ export default function AIAgents() {
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 truncate">AI Agents</h1>
           <p className="text-gray-600 mt-1 sm:mt-2 text-sm sm:text-base">Configure and manage your AI healthcare agents</p>
         </div>
-        <Button className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
-          <Plus className="h-4 w-4 mr-2" />
-          Create Agent
-        </Button>
       </div>
 
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 gap-1">
+        <TabsList className="grid w-full grid-cols-2 gap-1">
           <TabsTrigger value="overview" className="text-xs sm:text-sm">Overview</TabsTrigger>
-          <TabsTrigger value="config" className="text-xs sm:text-sm">Config</TabsTrigger>
           <TabsTrigger value="evaluation" className="text-xs sm:text-sm">Evaluation</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
 
-          {/* Deployed AI Agents - Only Active Ones */}
+          {/* Active AI Agents */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg sm:text-xl">Deployed AI Agents</CardTitle>
-              <CardDescription className="text-sm">Healthcare-specialized AI agents currently active in your system</CardDescription>
+              <CardTitle className="text-lg sm:text-xl">Active AI Agents</CardTitle>
+              <CardDescription className="text-sm">AI agents currently deployed and active in your system</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 {agents
-                  .filter(agent => 
-                    agent.type === 'scheduling' || 
-                    agent.type === 'digital_intake' ||
-                    agent.name.toLowerCase().includes('scheduling') ||
-                    agent.name.toLowerCase().includes('intake')
-                  )
+                  .filter(agent => agent.status === 'active')
                   .map((agent) => {
                     const IconComponent = getAgentIcon(agent.type);
                     return (
-                      <Card key={agent.id} className="hover:shadow-md transition-shadow">
+                      <Card key={agent.agent_id} className="hover:shadow-md transition-shadow">
                         <CardHeader className="pb-3">
                           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                             <div className="flex items-center space-x-2 min-w-0 flex-1">
@@ -158,19 +212,13 @@ export default function AIAgents() {
                                 variant="ghost"
                                 className="h-7 w-7 sm:h-8 sm:w-8 p-0"
                                 onClick={() => {
-                                  if (agent.type === 'scheduling' || agent.name.toLowerCase().includes('scheduling')) {
-                                    window.location.href = '/ai-agents/scheduling-agent-config';
-                                  } else {
-                                    setSelectedAgentForConfig(agent.id.toString());
-                                    const configTab = document.querySelector('[data-value="config"]') as HTMLElement;
-                                    configTab?.click();
-                                  }
+                                  navigate(`/ai-agents/${agent.agent_id}`);
                                 }}
                               >
                                 <Settings className="h-3 w-3 sm:h-4 sm:w-4 text-gray-500 hover:text-blue-600" />
                               </Button>
                               <Badge className="bg-green-100 text-green-800 hover:bg-green-100 text-xs">
-                                Active
+                                {agent.status}
                               </Badge>
                             </div>
                           </div>
@@ -183,13 +231,25 @@ export default function AIAgents() {
                               <span className="font-medium truncate ml-2">{agent.type.replace('_', ' ')}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-gray-600">Model:</span>
-                              <span className="font-medium truncate ml-2">{agent.configuration?.model || 'GPT-4'}</span>
+                              <span className="text-gray-600">Agent ID:</span>
+                              <span className="font-medium truncate ml-2 font-mono text-xs">{agent.agent_id}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-gray-600">Language:</span>
-                              <span className="font-medium truncate ml-2">{getLanguageFlag(agent.language || 'en')} {(agent.language || 'en').toUpperCase()}</span>
+                              <span className="text-gray-600">Status:</span>
+                              <span className="font-medium truncate ml-2 capitalize">{agent.status}</span>
                             </div>
+                          </div>
+                          <div className="mt-4 pt-3 border-t border-gray-100">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => handleDeactivateAgent(agent.agent_id)}
+                              disabled={updatingAgentId === agent.agent_id}
+                            >
+                              <StopCircle className="h-4 w-4 mr-2" />
+                              {updatingAgentId === agent.agent_id ? 'Deactivating...' : 'Deactivate Agent'}
+                            </Button>
                           </div>
                         </CardContent>
                       </Card>
@@ -199,39 +259,20 @@ export default function AIAgents() {
             </CardContent>
           </Card>
 
-          {/* Available Agents - All Others */}
+          {/* Available Agents */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg sm:text-xl">Available Agents</CardTitle>
-              <CardDescription className="text-sm">Additional AI agents ready for deployment and configuration</CardDescription>
+              <CardDescription className="text-sm">AI agents ready for deployment and configuration</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 {agents
-                  .filter(agent => {
-                    const agentName = agent.name.toLowerCase();
-                    return (
-                      agentName.includes('order') && agentName.includes('intake') ||
-                      agentName.includes('authorization') ||
-                      agentName.includes('insurance') && agentName.includes('verification') ||
-                      agentName.includes('faq')
-                    );
-                  })
-                  .sort((a, b) => {
-                    const getOrder = (agent: Agent) => {
-                      const name = agent.name.toLowerCase();
-                      if (name.includes('order') && name.includes('intake')) return 0;
-                      if (name.includes('authorization')) return 1;
-                      if (name.includes('insurance') && name.includes('verification')) return 2;
-                      if (name.includes('faq')) return 3;
-                      return 4;
-                    };
-                    return getOrder(a) - getOrder(b);
-                  })
+                  .filter(agent => agent.status === 'available')
                   .map((agent) => {
                     const IconComponent = getAgentIcon(agent.type);
                     return (
-                      <Card key={agent.id} className="hover:shadow-md transition-shadow border-dashed">
+                      <Card key={agent.agent_id} className="hover:shadow-md transition-shadow border-dashed">
                         <CardHeader className="pb-3">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-2">
@@ -244,19 +285,13 @@ export default function AIAgents() {
                                 variant="ghost"
                                 className="h-8 w-8 p-0"
                                 onClick={() => {
-                                  if (agent.type === 'scheduling' || agent.name.toLowerCase().includes('scheduling')) {
-                                    window.location.href = '/ai-agents/scheduling-agent-config';
-                                  } else {
-                                    setSelectedAgentForConfig(agent.id.toString());
-                                    const configTab = document.querySelector('[data-value="config"]') as HTMLElement;
-                                    configTab?.click();
-                                  }
+                                  navigate(`/ai-agents/${agent.agent_id}`);
                                 }}
                               >
                                 <Settings className="h-4 w-4 text-gray-500 hover:text-blue-600" />
                               </Button>
                               <Badge className="bg-gray-100 text-gray-600 hover:bg-gray-100">
-                                Available
+                                {agent.status}
                               </Badge>
                             </div>
                           </div>
@@ -269,18 +304,24 @@ export default function AIAgents() {
                               <span className="font-medium">{agent.type.replace('_', ' ')}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-gray-600">Model:</span>
-                              <span className="font-medium">{agent.configuration?.model || 'GPT-4'}</span>
+                              <span className="text-gray-600">Agent ID:</span>
+                              <span className="font-medium font-mono text-xs">{agent.agent_id}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-gray-600">Language:</span>
-                              <span className="font-medium">{getLanguageFlag(agent.language || 'en')} {(agent.language || 'en').toUpperCase()}</span>
+                              <span className="text-gray-600">Status:</span>
+                              <span className="font-medium capitalize">{agent.status}</span>
                             </div>
                           </div>
                           <div className="mt-4 pt-3 border-t border-gray-100">
-                            <Button size="sm" variant="outline" className="w-full">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="w-full text-green-600 hover:text-green-700 hover:bg-green-50"
+                              onClick={() => handleDeployAgent(agent.agent_id)}
+                              disabled={updatingAgentId === agent.agent_id}
+                            >
                               <Rocket className="h-4 w-4 mr-2" />
-                              Deploy Agent
+                              {updatingAgentId === agent.agent_id ? 'Deploying...' : 'Deploy Agent'}
                             </Button>
                           </div>
                         </CardContent>
@@ -304,40 +345,29 @@ export default function AIAgents() {
                 <div>
                   <Label htmlFor="agent-select">Select Agent</Label>
                   <Select value={selectedAgentForConfig} onValueChange={(value) => {
-                    const selectedAgent = agents.find(agent => agent.id.toString() === value);
-                    if (selectedAgent && (selectedAgent.type === 'scheduling' || selectedAgent.name.toLowerCase().includes('scheduling'))) {
-                      window.location.href = '/ai-agents/scheduling-agent-config';
-                      return;
-                    }
-                    if (selectedAgent && (selectedAgent.type === 'digital_intake' || selectedAgent.name.toLowerCase().includes('intake'))) {
-                      window.location.href = '/ai-agents/patient-intake-agent-config';
-                      return;
-                    }
-                    setSelectedAgentForConfig(value);
+                    navigate(`/ai-agents/${value}`);
                   }}>
                     <SelectTrigger>
                       <SelectValue placeholder="Choose an agent to configure" />
                     </SelectTrigger>
                     <SelectContent>
-                      {agents
-                        .filter(agent => {
-                          const agentName = agent.name.toLowerCase();
-                          return (
-                            (agentName.includes('scheduling') && agentName.includes('agent')) ||
-                            (agentName.includes('intake') && agentName.includes('agent'))
-                          );
-                        })
-                        .map((agent) => {
-                          const IconComponent = getAgentIcon(agent.type);
-                          return (
-                            <SelectItem key={agent.id} value={agent.id.toString()}>
-                              <div className="flex items-center space-x-2">
-                                <IconComponent className="h-4 w-4" />
-                                <span>{agent.name}</span>
-                              </div>
-                            </SelectItem>
-                          );
-                        })}
+                      {agents.filter(agent => agent.status === 'active').length === 0 ? (
+                        <div className="px-2 py-1.5 text-sm text-gray-500">No active agents available</div>
+                      ) : (
+                        agents
+                          .filter(agent => agent.status === 'active')
+                          .map((agent) => {
+                            const IconComponent = getAgentIcon(agent.type);
+                            return (
+                              <SelectItem key={agent.agent_id} value={agent.agent_id}>
+                                <div className="flex items-center space-x-2">
+                                  <IconComponent className="h-4 w-4" />
+                                  <span>{agent.name}</span>
+                                </div>
+                              </SelectItem>
+                            );
+                          })
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -533,25 +563,23 @@ export default function AIAgents() {
                     <SelectValue placeholder="Choose an agent to evaluate" />
                   </SelectTrigger>
                   <SelectContent>
-                    {agents
-                      .filter(agent => {
-                        const agentName = agent.name.toLowerCase();
-                        return (
-                          (agentName.includes('scheduling') && agentName.includes('agent')) ||
-                          (agentName.includes('intake') && agentName.includes('agent'))
-                        );
-                      })
-                      .map((agent) => {
-                        const IconComponent = getAgentIcon(agent.type);
-                        return (
-                          <SelectItem key={agent.id} value={agent.id.toString()}>
-                            <div className="flex items-center space-x-2">
-                              <IconComponent className="h-4 w-4" />
-                              <span>{agent.name}</span>
-                            </div>
-                          </SelectItem>
-                        );
-                      })}
+                    {agents.filter(agent => agent.status === 'active').length === 0 ? (
+                      <div className="px-2 py-1.5 text-sm text-gray-500">No active agents available</div>
+                    ) : (
+                      agents
+                        .filter(agent => agent.status === 'active')
+                        .map((agent) => {
+                          const IconComponent = getAgentIcon(agent.type);
+                          return (
+                            <SelectItem key={agent.agent_id} value={agent.agent_id}>
+                              <div className="flex items-center space-x-2">
+                                <IconComponent className="h-4 w-4" />
+                                <span>{agent.name}</span>
+                              </div>
+                            </SelectItem>
+                          );
+                        })
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -650,7 +678,7 @@ export default function AIAgents() {
                   {agents.slice(0, 4).map((agent) => {
                     const IconComponent = getAgentIcon(agent.type);
                     return (
-                      <div key={agent.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div key={agent.agent_id} className="flex items-center justify-between p-3 border rounded-lg">
                         <div className="flex items-center space-x-3">
                           <IconComponent className="h-5 w-5 text-blue-600" />
                           <div>

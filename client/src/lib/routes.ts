@@ -8,6 +8,7 @@ const Analytics = lazy(() => import('@/pages/analytics'));
 const BusinessWorkflows = lazy(() => import('@/pages/business-workflows'));
 const BusinessWorkflowEditor = lazy(() => import('@/pages/business-workflows/editor'));
 const AIAgents = lazy(() => import('@/pages/ai-agents'));
+const AgentDetail = lazy(() => import('@/pages/ai-agents/agent-detail'));
 const PatientIntakeAgentConfig = lazy(() => import('@/pages/ai-agents/patient-intake-agent-config'));
 const SchedulingAgentConfig = lazy(() => import('@/pages/ai-agents/scheduling-agent-config'));
 const EMR = lazy(() => import('@/pages/emr'));
@@ -38,6 +39,10 @@ export const routes: RouteObject[] = [
             {
                 path: '/ai-agents',
                 element: React.createElement(AIAgents),
+            },
+            {
+                path: '/ai-agents/:agentId',
+                element: React.createElement(AgentDetail),
             },
             {
                 path: '/ai-agents/patient-intake-agent-config',
