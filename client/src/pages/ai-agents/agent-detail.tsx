@@ -748,26 +748,7 @@ export default function AgentDetail() {
                         }
                       `}</style>
                       {/* End call button */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
-                        <Button 
-                          onClick={() => {
-                            // Add test messages to force scrollbar
-                            const testMessages = [];
-                            for (let i = 0; i < 30; i++) {
-                              testMessages.push({
-                                id: `test-${i}`,
-                                role: i % 2 === 0 ? 'user' : 'agent',
-                                content: `Test message ${i + 1}`,
-                                timestamp: new Date()
-                              });
-                            }
-                            setChatMessages(testMessages);
-                          }}
-                          variant="outline"
-                          size="sm"
-                        >
-                          Add Test Messages
-                        </Button>
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
                         <Button 
                           onClick={handleTestAgent}
                           variant="destructive"
