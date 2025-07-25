@@ -1,17 +1,18 @@
 modules = ["nodejs-20", "web"]
-run = "npm run dev"
+run = "npm run start:prod"
 
 [nix]
 channel = "stable-25_05"
 
 [deployment]
-run = ["sh", "-c", "npm run dev"]
-
-[[ports]]
-localPort = 3000
-externalPort = 80
+run = ["npm", "run", "start:prod"]
 
 [[ports]]
 localPort = 5000
-externalPort = 5000
-exposeLocalhost = true
+externalPort = 80
+
+# Remove the second port configuration since you're not using port 5000 for a secondary service
+# [[ports]]
+# localPort = 5000
+# externalPort = 5000
+# exposeLocalhost = true

@@ -29,12 +29,13 @@ export default defineConfig({
   server: {
     port: 3000,
     host: "0.0.0.0",
-    allowedHosts:
-      ["0f1bb795-d559-4b2f-888d-5dd01a5bb780-00-3g69905bg105d.pike.replit.dev"],
+    allowedHosts: [
+      "0f1bb795-d559-4b2f-888d-5dd01a5bb780-00-3g69905bg105d.pike.replit.dev",
+      "flowai-mvp.replit.app",
+    ],
     proxy: {
       "/api": {
-        target:
-          "https://0f1bb795-d559-4b2f-888d-5dd01a5bb780-00-3g69905bg105d.pike.replit.dev:5000",
+        target: "https://flowai-mvp.replit.app:5000",
         changeOrigin: true,
       },
     },
