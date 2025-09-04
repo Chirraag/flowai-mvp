@@ -36,7 +36,7 @@ export default function LoginForm() {
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="space-y-4 text-center">
           <div className="flex justify-center">
-            <FlowAILogo className="h-16 w-auto" />
+            <FlowAILogo />
           </div>
           <div>
             <CardTitle className="text-2xl font-bold text-gray-900">Welcome Back</CardTitle>
