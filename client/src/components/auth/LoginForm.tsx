@@ -5,7 +5,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { FlowAILogo } from '@/components/FlowAILogo';
 import { Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
 
 export default function LoginForm() {
@@ -36,7 +35,11 @@ export default function LoginForm() {
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="space-y-4 text-center">
           <div className="flex justify-center">
-            <FlowAILogo />
+            <img 
+              src="/logo_flowai.png" 
+              alt="Flow AI" 
+              className="h-12 w-auto"
+            />
           </div>
           <div>
             <CardTitle className="text-2xl font-bold text-gray-900">Welcome Back</CardTitle>
