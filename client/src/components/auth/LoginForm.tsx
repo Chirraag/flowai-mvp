@@ -113,11 +113,6 @@ export default function LoginForm() {
             </Button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Demo credentials: chirag.gupta@myflowai.com / qwertyuiop
-            </p>
-          </div>
         </CardContent>
       </Card>
     </div>
