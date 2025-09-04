@@ -19,10 +19,16 @@ const Security = lazy(() => import('@/pages/security'));
 const ContactCenterIntegration = lazy(() => import('@/pages/contact-center-integration'));
 const HumanAI = lazy(() => import('@/pages/human-ai'));
 const AskEva = lazy(() => import('@/pages/ask-eva'));
+const LoginPage = lazy(() => import('@/pages/login'));
 const NotificationsPage = lazy(() => import('@/pages/notifications'));
 const NotFound = lazy(() => import('@/pages/not-found'));
 
 export const routes: RouteObject[] = [
+    // Login route - accessible without authentication
+    {
+        path: '/login',
+        element: React.createElement(LoginPage),
+    },
     {
         path: '/',
         element: React.createElement(RootLayout),

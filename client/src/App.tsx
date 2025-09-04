@@ -8,6 +8,9 @@ import { routes } from "./lib/routes";
 import RootLayout from "./components/layout/RootLayout";
 import { AppProvider } from "./context/AppContext";
 import { NotificationProvider } from "./context/NotificationContext";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import LoginForm from "./components/auth/LoginForm";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 // Loading component for Suspense fallback
 const LoadingSpinner = () => (
@@ -18,11 +21,22 @@ const LoadingSpinner = () => (
 
 // Component to render routes with proper layout handling
 function AppRoutes() {
+  const { isAuthenticated, isLoading } = useAuth();
   const element = useRoutes(routes);
   
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+
+  if (!isAuthenticated) {
+    return <LoginForm />;
+  }
+
   return (
     <Suspense fallback={<LoadingSpinner />}>
-      {element}
+      <ProtectedRoute>
+        {element}
+      </ProtectedRoute>
     </Suspense>
   );
 }
@@ -30,14 +44,16 @@ function AppRoutes() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AppProvider>
-        <NotificationProvider>
-          <TooltipProvider>
-            <Toaster />
+      <AuthProvider>
+        <AppProvider>
+          <NotificationProvider>
+            <TooltipProvider>
+              <Toaster />
               <AppRoutes />
-          </TooltipProvider>
-        </NotificationProvider>
-      </AppProvider>
+            </TooltipProvider>
+          </NotificationProvider>
+        </AppProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

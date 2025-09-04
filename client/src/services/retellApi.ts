@@ -1,6 +1,7 @@
 import { useQuery, useMutation, UseQueryOptions, UseMutationOptions } from '@tanstack/react-query';
+import { api } from '@/lib/api';
 
-const RETELL_API_BASE_URL = 'https://flowai-backend.replit.app';
+const RETELL_API_BASE_URL = 'https://api.myflowai.com';
 
 interface RetellAgent {
   agent_id: string;
@@ -69,23 +70,7 @@ interface RetellApiResponse<T> {
 }
 
 async function fetchWithRetellApi(endpoint: string, options?: RequestInit) {
-  const url = `${RETELL_API_BASE_URL}${endpoint}`;
-  
-  const response = await fetch(url, {
-    method: 'POST',
-    ...options,
-    headers: {
-      'accept': 'application/json',
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`API call failed: ${response.statusText}`);
-  }
-
-  return response.json();
+  return api.post(endpoint, options?.body ? JSON.parse(options.body as string) : {});
 }
 
 export function useRetellAgentsList(options?: UseQueryOptions<RetellAgent[]>) {
@@ -117,21 +102,14 @@ export function useRetellAgentDetails(agentId: string | undefined, options?: Use
 
 export function useUpdateRetellAgent(options?: UseMutationOptions<any, Error, { agent_id: string; data: any }>) {
   return useMutation({
-    mutationFn: ({ agent_id, data }) =>
-      fetchWithRetellApi('/api/v1/retell/agent/update', {
-        method: 'POST',
-        body: JSON.stringify({ agent_id, ...data }),
-      }),
+    mutationFn: ({ agent_id, data }) => api.post('/api/v1/retell/agent/update', { agent_id, ...data }),
     ...options,
   });
 }
 
 export function useUpdateAgentStatus(options?: UseMutationOptions<RetellApiResponse<RetellAgent[]>, Error, { agent_id: string; status: string }>) {
   return useMutation({
-    mutationFn: ({ agent_id, status }) =>
-      fetchWithRetellApi('/api/v1/retell/agent/update-status', {
-        body: JSON.stringify({ agent_id, status }),
-      }),
+    mutationFn: ({ agent_id, status }) => api.post('/api/v1/retell/agent/update-status', { agent_id, status }),
     ...options,
   });
 }
@@ -172,22 +150,19 @@ interface CreateWebCallResponse {
 }
 
 export async function createWebCall(agentId: string): Promise<CreateWebCallResponse> {
-  const response = await fetchWithRetellApi('/api/v1/retell/agent/create-web-call', {
-    body: JSON.stringify({
-      agent_id: agentId,
-      metadata: {
-        user_id: "12345",
-        session_id: "abc123"
-      },
-      retell_llm_dynamic_variables: {
-        customer_name: "John Doe"
-      },
-      custom_sip_headers: {
-        "X-Custom-Header": "Custom Value"
-      },
-      opt_out_sensitive_data_storage: true,
-      opt_in_signed_url: true
-    }),
+  return api.post('/api/v1/retell/agent/create-web-call', {
+    agent_id: agentId,
+    metadata: {
+      user_id: "12345",
+      session_id: "abc123"
+    },
+    retell_llm_dynamic_variables: {
+      customer_name: "John Doe"
+    },
+    custom_sip_headers: {
+      "X-Custom-Header": "Custom Value"
+    },
+    opt_out_sensitive_data_storage: true,
+    opt_in_signed_url: true
   });
-  return response;
 }

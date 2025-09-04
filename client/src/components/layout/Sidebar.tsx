@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 import { Menu, X, Bolt } from "lucide-react";
 import { NAVIGATION_ITEMS } from "@/lib/constants";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -15,6 +16,7 @@ interface SidebarProps {
 export default function Sidebar({ mobileMenuOpen, setMobileMenuOpen }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const isMobile = useIsMobile();
 
   // Close mobile menu when switching to desktop
@@ -195,12 +197,17 @@ export default function Sidebar({ mobileMenuOpen, setMobileMenuOpen }: SidebarPr
         <div className="px-4 py-4 border-t border-gray-200">
           <div className="flex items-center">
             <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
-              <AvatarImage src="https://images.unsplash.com/photo-1622253692010-333f2da6031d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=100&h=100" />
-              <AvatarFallback>SJ</AvatarFallback>
+              <AvatarFallback className="bg-blue-100 text-blue-700">
+                {user?.username ? user.username.substring(0, 2).toUpperCase() : 'U'}
+              </AvatarFallback>
             </Avatar>
             <div className="ml-3 min-w-0">
-              <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">Dr. Krishna</p>
-              <p className="text-xs text-gray-500 truncate">Administrator</p>
+              <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">
+                {user?.username || 'User'}
+              </p>
+              <p className="text-xs text-gray-500 truncate capitalize">
+                {user?.role || 'User'} • {user?.workspace_name || 'Workspace'}
+              </p>
             </div>
           </div>
         </div>
