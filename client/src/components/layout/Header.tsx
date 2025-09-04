@@ -1,24 +1,17 @@
 import { useApp } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
-import { LANGUAGES } from "@/lib/constants";
-import { BarChart3, Settings, Users, Menu, LogOut, User } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Menu, LogOut, User } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useLocation, Link } from "wouter";
-import { useState } from "react";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { NotificationPanel } from "@/components/NotificationPanel";
 
 interface HeaderProps {
   onMobileMenuToggle?: () => void;
 }
 
 export default function Header({ onMobileMenuToggle }: HeaderProps) {
-  // Use default values if context not yet available
-  const { language = "en", setLanguage = () => {} } = {};
   const { user, logout } = useAuth();
   const [location] = useLocation();
 
@@ -26,20 +19,15 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
 
   // Get page title from location
   const getPageTitle = () => {
-    const path = location === "/" ? "/dashboard" : location;
-    
-    // Handle specific page titles
-    if (path === "/ai-settings") {
-      return "AI Agent Settings";
+    if (location === "/" || location === "/business-workflows") {
+      return "Business Workflows";
     }
     
-    const title = path.split("/")[1];
-    return title.charAt(0).toUpperCase() + title.slice(1).replace(/-/g, " ");
-  };
-
-  const handleLanguageChange = (value: string) => {
-    // Will be connected to context once fixed
-    console.log("Language changed to:", value);
+    if (location.includes("/business-workflows/editor/")) {
+      return "Workflow Editor";
+    }
+    
+    return "Business Workflows";
   };
 
   const handleLogout = async () => {
@@ -59,6 +47,7 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
     }
     return 'U';
   };
+
   return (
     <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm">
       <div className="flex items-center justify-between max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
@@ -75,71 +64,8 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
           <h1 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white truncate">{getPageTitle()}</h1>
         </div>
         
-        {/* Navigation Tabs - Hidden on small screens */}
-        <div className="hidden lg:flex items-center space-x-6">
-          
-          {/* Language and Notifications */}
-          <div className="flex items-center space-x-3 border-l border-gray-200 dark:border-gray-700 pl-6">
-            <div className="relative">
-              <Select defaultValue={language} onValueChange={handleLanguageChange}>
-                <SelectTrigger className="w-[120px] h-10 px-3 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600">
-                  {LANGUAGES.map((lang) => (
-                    <SelectItem key={lang.code} value={lang.code} className="text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
-                      {lang.flag} {lang.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <NotificationPanel />
-            
-            {/* User Menu */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-blue-100 text-blue-700 text-sm font-medium">
-                      {getUserInitials(user)}
-                    </AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="end" forceMount>
-                <div className="flex items-center justify-start gap-2 p-2">
-                  <div className="flex flex-col space-y-1 leading-none">
-                    <p className="font-medium text-sm">{user?.username || 'User'}</p>
-                    <p className="text-xs text-muted-foreground">{user?.email}</p>
-                    <p className="text-xs text-muted-foreground capitalize">{user?.role} • {user?.workspace_name}</p>
-                  </div>
-                </div>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="cursor-pointer">
-                  <User className="mr-2 h-4 w-4" />
-                  <span>Profile</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer">
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Settings</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="cursor-pointer text-red-600" onClick={handleLogout}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Log out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-
-        {/* Mobile notifications only */}
-        <div className="flex lg:hidden items-center space-x-3">
-          <NotificationPanel />
-          
-          {/* Mobile User Menu */}
+        {/* User Menu */}
+        <div className="flex items-center space-x-3">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">
@@ -158,15 +84,6 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
                   <p className="text-xs text-muted-foreground capitalize">{user?.role} • {user?.workspace_name}</p>
                 </div>
               </div>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="cursor-pointer">
-                <User className="mr-2 h-4 w-4" />
-                <span>Profile</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer">
-                <Settings className="mr-2 h-4 w-4" />
-                <span>Settings</span>
-              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="cursor-pointer text-red-600" onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />

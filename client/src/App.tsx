@@ -6,8 +6,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { routes } from "./lib/routes";
 import RootLayout from "./components/layout/RootLayout";
-import { AppProvider } from "./context/AppContext";
-import { NotificationProvider } from "./context/NotificationContext";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import LoginForm from "./components/auth/LoginForm";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -52,14 +50,10 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <AppProvider>
-          <NotificationProvider>
-            <TooltipProvider>
-              <Toaster />
-              <AppRoutes />
-            </TooltipProvider>
-          </NotificationProvider>
-        </AppProvider>
+        <TooltipProvider>
+          <Toaster />
+          <AppRoutes />
+        </TooltipProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

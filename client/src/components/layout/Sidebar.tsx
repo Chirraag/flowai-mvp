@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { Menu, X, Bolt } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { NAVIGATION_ITEMS } from "@/lib/constants";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { FlowAILogo } from "@/components/FlowAILogo";
 
 interface SidebarProps {
   mobileMenuOpen: boolean;
@@ -154,7 +153,7 @@ export default function Sidebar({ mobileMenuOpen, setMobileMenuOpen }: SidebarPr
       )}>
         <div className="flex items-center justify-between px-4 py-3 sm:py-5 border-b border-gray-200">
           <div className="flex items-center">
-            <FlowAILogo className="h-10 sm:h-14 w-auto" />
+            <div className="text-xl font-bold text-blue-600">Flow AI</div>
           </div>
           {isMobile && (
             <button

@@ -34,87 +34,12 @@ export const SPECIALTIES = [
 
 export const NAVIGATION_ITEMS = [
   {
-    title: "MAIN",
+    title: "WORKFLOWS",
     items: [
       {
         name: "Workflows",
         path: "/business-workflows",
         icon: "workflow",
-      },
-      {
-        name: "AI Agents",
-        path: "/ai-agents",
-        icon: "brain",
-      },
-      {
-        name: "Analytics",
-        path: "/analytics",
-        icon: "bar-chart-2",
-      },
-    ],
-  },
-  {
-    title: "HEALTH SYSTEMS",
-    items: [
-      {
-        name: "EMR",
-        path: "/emr",
-        icon: "database",
-      },
-      {
-        name: "RIS",
-        path: "/ris",
-        icon: "database",
-      },
-    ],
-  },
-  {
-    title: "COMPLIANCE",
-    items: [
-      {
-        name: "Audits",
-        path: "/audits",
-        icon: "shield",
-      },
-      {
-        name: "Privacy",
-        path: "/privacy",
-        icon: "users",
-      },
-      {
-        name: "Security",
-        path: "/security",
-        icon: "shield",
-      },
-    ],
-  },
-  {
-    title: "CONTACT CENTER",
-    items: [
-      {
-        name: "Integration",
-        path: "/contact-center-integration",
-        icon: "sliders",
-      },
-      {
-        name: "Human <-> AI",
-        path: "/human-ai",
-        icon: "user-check",
-      },
-    ],
-  },
-  {
-    title: "ABOUT US",
-    items: [
-      {
-        name: "About Us",
-        path: "/",
-        icon: "info",
-      },
-      {
-        name: "Ask Eva",
-        path: "/ask-eva",
-        icon: "bot",
       },
     ],
   },
