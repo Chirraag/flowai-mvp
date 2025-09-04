@@ -23,6 +23,7 @@ export default function LoginForm() {
 
     try {
       await login(email, password);
+      // Navigation is handled in the AuthContext after successful login
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Login failed');
     } finally {

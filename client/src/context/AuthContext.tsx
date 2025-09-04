@@ -50,6 +50,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         try {
           // Validate token with API
           const response = await fetch('https://api.myflowai.com/auth/validate', {
+            method: 'POST',
             headers: {
               'Authorization': `Bearer ${storedToken}`,
               'Content-Type': 'application/json',
@@ -123,6 +124,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
           // Validate the new token to get user data
           const validateResponse = await fetch('https://api.myflowai.com/auth/validate', {
+            method: 'POST',
             headers: {
               'Authorization': `Bearer ${data.token}`,
               'Content-Type': 'application/json',
@@ -173,6 +175,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         if (data.refreshToken) {
           localStorage.setItem('refresh_token', data.refreshToken);
         }
+        
+        // Navigate to dashboard after successful login
+        window.location.href = '/';
       } else {
         throw new Error('Invalid response from server');
       }
@@ -197,6 +202,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       console.error('Logout API call failed:', error);
     } finally {
       clearAuth();
+      // Navigate to login page after logout
+      window.location.href = '/login';
     }
   };
 

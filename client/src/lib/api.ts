@@ -57,7 +57,12 @@ export async function apiCall(endpoint: string, options: RequestInit = {}) {
             if (!retryResponse.ok) {
               throw new ApiError(retryResponse.status, `API call failed: ${retryResponse.statusText}`);
             }
-            return retryResponse.json();
+            
+            const contentType = retryResponse.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+              return retryResponse.json();
+            }
+            return retryResponse.text();
           }
         }
       } catch (refreshError) {
@@ -80,7 +85,11 @@ export async function apiCall(endpoint: string, options: RequestInit = {}) {
     throw new ApiError(response.status, `API call failed: ${response.statusText}`);
   }
 
-  return response.json();
+  const contentType = response.headers.get('content-type');
+  if (contentType && contentType.includes('application/json')) {
+    return response.json();
+  }
+  return response.text();
 }
 
 export const api = {
