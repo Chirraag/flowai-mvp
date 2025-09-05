@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Rocket, ChevronDown } from "lucide-react";
 import { NAVIGATION_ITEMS } from "@/lib/constants";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
@@ -17,6 +17,7 @@ export default function Sidebar({ mobileMenuOpen, setMobileMenuOpen }: SidebarPr
   const navigate = useNavigate();
   const { user } = useAuth();
   const isMobile = useIsMobile();
+  const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
 
   // Close mobile menu when switching to desktop
   useEffect(() => {
@@ -36,6 +37,11 @@ export default function Sidebar({ mobileMenuOpen, setMobileMenuOpen }: SidebarPr
   const handleNavigation = (path: string) => {
     navigate(path);
     handleMobileMenuItemClick();
+  };
+
+  // Handle dropdown toggle
+  const handleDropdownToggle = (itemName: string) => {
+    setDropdownOpen(dropdownOpen === itemName ? null : itemName);
   };
 
   const IconComponent = (iconName: string) => {
@@ -97,6 +103,21 @@ export default function Sidebar({ mobileMenuOpen, setMobileMenuOpen }: SidebarPr
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
         </svg>
       ),
+      book: (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+        </svg>
+      ),
+      "file-text": (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      ),
+      notes: (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        </svg>
+      ),
       database: (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
@@ -127,6 +148,7 @@ export default function Sidebar({ mobileMenuOpen, setMobileMenuOpen }: SidebarPr
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
         </svg>
       ),
+      rocket: <Rocket className="h-5 w-5 mr-3" />,
     };
 
     return icons[iconName] || <div className="h-5 w-5" />;
@@ -177,21 +199,74 @@ export default function Sidebar({ mobileMenuOpen, setMobileMenuOpen }: SidebarPr
                 <p className="text-xs sm:text-sm font-medium text-gray-400">{section.title}</p>
               </div>
               {section.items.map((item) => (
-                <button
-                  key={item.path}
-                  className={cn(
-                    "sidebar-link text-sm sm:text-base px-3 sm:px-4 py-2 mx-2 sm:mx-3 transition-colors duration-200 w-full text-left",
-                    location.pathname === item.path 
-                      ? "bg-blue-50 border-r-4 border-blue-500 text-blue-700" 
-                      : "hover:bg-gray-50 text-gray-700"
+                <div key={item.path || item.name}>
+                  {item.isDropdown ? (
+                    <>
+                      {/* Dropdown parent */}
+                      <button
+                        className={cn(
+                          "sidebar-link text-sm sm:text-base px-3 sm:px-4 py-2 mx-2 sm:mx-3 transition-colors duration-200 w-full text-left flex items-center justify-between",
+                          (item.children?.some(child => location.pathname === child.path) || dropdownOpen === item.name)
+                            ? "bg-blue-50 border-r-4 border-blue-500 text-blue-700"
+                            : "hover:bg-gray-50 text-gray-700"
+                        )}
+                        onClick={() => handleDropdownToggle(item.name)}
+                      >
+                        <div className="flex items-center">
+                          <span className="p-1 mr-2 sm:mr-3 inline-flex">
+                            {IconComponent(item.icon)}
+                          </span>
+                          <span className="flex-1 break-words">{item.name}</span>
+                        </div>
+                        <ChevronDown
+                          className={cn(
+                            "h-4 w-4 transition-transform duration-200",
+                            dropdownOpen === item.name ? "rotate-180" : ""
+                          )}
+                        />
+                      </button>
+
+                      {/* Dropdown children */}
+                      {dropdownOpen === item.name && item.children && (
+                        <div className="ml-6 mt-1 space-y-1">
+                          {item.children.map((child) => (
+                            <button
+                              key={child.path}
+                              className={cn(
+                                "sidebar-link text-sm px-3 py-2 transition-colors duration-200 w-full text-left flex items-center",
+                                location.pathname === child.path
+                                  ? "bg-blue-50 border-r-4 border-blue-500 text-blue-700"
+                                  : "hover:bg-gray-50 text-gray-600"
+                              )}
+                              onClick={() => handleNavigation(child.path)}
+                            >
+                              <span className="p-1 mr-3 inline-flex">
+                                {IconComponent(child.icon)}
+                              </span>
+                              <span className="flex-1 break-words">{child.name}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    /* Regular navigation item */
+                    <button
+                      className={cn(
+                        "sidebar-link text-sm sm:text-base px-3 sm:px-4 py-2 mx-2 sm:mx-3 transition-colors duration-200 w-full text-left",
+                        location.pathname === item.path
+                          ? "bg-blue-50 border-r-4 border-blue-500 text-blue-700"
+                          : "hover:bg-gray-50 text-gray-700"
+                      )}
+                      onClick={() => handleNavigation(item.path)}
+                    >
+                      <span className="p-1 mr-2 sm:mr-3 inline-flex">
+                        {IconComponent(item.icon)}
+                      </span>
+                      <span className="flex-1 break-words">{item.name}</span>
+                    </button>
                   )}
-                  onClick={() => handleNavigation(item.path)}
-                >
-                  <span className="p-1 mr-2 sm:mr-3 inline-flex">
-                    {IconComponent(item.icon)}
-                  </span>
-                  <span className="flex-1 break-words">{item.name}</span>
-                </button>
+                </div>
               ))}
             </div>
           ))}
