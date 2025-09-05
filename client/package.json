@@ -66,6 +66,8 @@
     "react-resizable-panels": "^2.1.7",
     "react-router-dom": "^7.6.3",
     "reactflow": "^11.11.4",
+    "chart.js": "^4.5.0",
+    "react-chartjs-2": "^5.3.0",
     "recharts": "^2.15.3",
     "retell-client-js-sdk": "^2.0.0",
     "tailwind-merge": "^2.6.0",
