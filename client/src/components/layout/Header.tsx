@@ -1,4 +1,3 @@
-import { useApp } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 import { Menu, LogOut, User } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -19,15 +18,45 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
 
   // Get page title from location
   const getPageTitle = () => {
-    if (location === "/" || location === "/business-workflows") {
+    if (location === "/launchpad") {
+      return "Launchpad";
+    }
+
+    if (location === "/business-workflows") {
       return "Business Workflows";
     }
-    
+
     if (location.includes("/business-workflows/editor/")) {
       return "Workflow Editor";
     }
-    
-    return "Business Workflows";
+
+    // AI Agents pages
+    if (location === "/ai-agents/scheduling") {
+      return "Scheduling Agent";
+    }
+
+    if (location === "/ai-agents/patient-intake") {
+      return "Patient Intake Agent";
+    }
+
+    if (location === "/ai-agents/customer-support") {
+      return "Customer Support Agent";
+    }
+
+    if (location === "/ai-agents/knowledge") {
+      return "Knowledge";
+    }
+
+    if (location === "/ai-agents/analytics") {
+      return "Analytics";
+    }
+
+    // Default fallback
+    if (location === "/") {
+      return "Dashboard";
+    }
+
+    return "Flow AI";
   };
 
   const handleLogout = async () => {
