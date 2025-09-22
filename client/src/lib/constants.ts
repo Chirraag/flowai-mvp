@@ -38,35 +38,35 @@ export const NAVIGATION_ITEMS = [
     items: [
       {
         name: "Launchpad",
-        path: "/launchpad",
+        path: "launchpad",
         icon: "rocket",
       },
       {
         name: "AI Agents",
-        path: "/ai-agents",
+        path: "ai-agents",
         icon: "bot",
         isDropdown: true,
         children: [
           {
             name: "Scheduling Agent",
-            path: "/ai-agents/scheduling",
+            path: "ai-agents/scheduling",
             icon: "calendar",
           },
           {
             name: "Patient Intake Agent",
-            path: "/ai-agents/patient-intake",
+            path: "ai-agents/patient-intake",
             icon: "clipboard",
           },
           {
             name: "Customer Support Agent",
-            path: "/ai-agents/customer-support",
+            path: "ai-agents/customer-support",
             icon: "users",
           },
         ],
       },
       {
         name: "Analytics",
-        path: "/ai-agents/analytics",
+        path: "ai-agents/analytics",
         icon: "bar-chart-2",
       },
     ],

@@ -1,6 +1,12 @@
 import { useAuth } from "@/context/AuthContext";
 import { Menu, LogOut, User } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -18,29 +24,32 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
 
   // Get page title from location
   const getPageTitle = () => {
-    if (location === "/launchpad") {
+    const pathParts = location.split("/");
+    const page = pathParts[pathParts.length - 1];
+
+    if (page === "launchpad") {
       return "Launchpad";
     }
 
     // AI Agents pages
-    if (location === "/ai-agents/scheduling") {
+    if (location.includes("ai-agents/scheduling")) {
       return "Scheduling Agent";
     }
 
-    if (location === "/ai-agents/patient-intake") {
+    if (location.includes("ai-agents/patient-intake")) {
       return "Patient Intake Agent";
     }
 
-    if (location === "/ai-agents/customer-support") {
+    if (location.includes("ai-agents/customer-support")) {
       return "Customer Support Agent";
     }
 
-    if (location === "/ai-agents/analytics") {
+    if (location.includes("ai-agents/analytics")) {
       return "Analytics";
     }
 
     // Default fallback
-    if (location === "/") {
+    if (page === "" || location === "/") {
       return "Dashboard";
     }
 
@@ -51,7 +60,7 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
     try {
       await logout();
     } catch (error) {
-      console.error('Logout failed:', error);
+      console.error("Logout failed:", error);
     }
   };
 
@@ -62,7 +71,7 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
     if (user?.email) {
       return user.email.substring(0, 2).toUpperCase();
     }
-    return 'U';
+    return "U";
   };
 
   return (
@@ -78,9 +87,11 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
               <Menu className="h-6 w-6" />
             </button>
           )}
-          <h1 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white truncate">{getPageTitle()}</h1>
+          <h1 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white truncate">
+            {getPageTitle()}
+          </h1>
         </div>
-        
+
         {/* User Menu */}
         <div className="flex items-center space-x-3">
           <DropdownMenu>
@@ -96,13 +107,20 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
             <DropdownMenuContent className="w-56" align="end" forceMount>
               <div className="flex items-center justify-start gap-2 p-2">
                 <div className="flex flex-col space-y-1 leading-none">
-                  <p className="font-medium text-sm">{user?.username || 'User'}</p>
+                  <p className="font-medium text-sm">
+                    {user?.username || "User"}
+                  </p>
                   <p className="text-xs text-muted-foreground">{user?.email}</p>
-                  <p className="text-xs text-muted-foreground capitalize">{user?.role} • {user?.org_name}</p>
+                  <p className="text-xs text-muted-foreground capitalize">
+                    {user?.role} • {user?.org_name}
+                  </p>
                 </div>
               </div>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="cursor-pointer text-red-600" onClick={handleLogout}>
+              <DropdownMenuItem
+                className="cursor-pointer text-red-600"
+                onClick={handleLogout}
+              >
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Log out</span>
               </DropdownMenuItem>
