@@ -34,12 +34,40 @@ export const SPECIALTIES = [
 
 export const NAVIGATION_ITEMS = [
   {
-    title: "WORKFLOWS",
+    title: "MAIN",
     items: [
       {
-        name: "Workflows",
-        path: "/business-workflows",
-        icon: "workflow",
+        name: "Launchpad",
+        path: "/launchpad",
+        icon: "rocket",
+      },
+      {
+        name: "AI Agents",
+        path: "/ai-agents",
+        icon: "bot",
+        isDropdown: true,
+        children: [
+          {
+            name: "Scheduling Agent",
+            path: "/ai-agents/scheduling",
+            icon: "calendar",
+          },
+          {
+            name: "Patient Intake Agent",
+            path: "/ai-agents/patient-intake",
+            icon: "clipboard",
+          },
+          {
+            name: "Customer Support Agent",
+            path: "/ai-agents/customer-support",
+            icon: "users",
+          },
+        ],
+      },
+      {
+        name: "Analytics",
+        path: "/ai-agents/analytics",
+        icon: "bar-chart-2",
       },
     ],
   },

@@ -10,10 +10,10 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import LoginForm from "./components/auth/LoginForm";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
-// Loading component for Suspense fallback
-const LoadingSpinner = () => (
+// Loading component for Suspense fallback (pulsing logo)
+const LoadingLogo = () => (
   <div className="flex items-center justify-center min-h-screen">
-    <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+    <img src="/logo.png" alt="Flow AI" className="w-40 h-auto animate-pulse" />
   </div>
 );
 
@@ -30,7 +30,7 @@ function AppRoutes() {
   }, [isAuthenticated, isLoading]);
   
   if (isLoading) {
-    return <LoadingSpinner />;
+    return <LoadingLogo />;
   }
 
   if (!isAuthenticated) {
@@ -38,7 +38,7 @@ function AppRoutes() {
   }
 
   return (
-    <Suspense fallback={<LoadingSpinner />}>
+    <Suspense fallback={<LoadingLogo />}>
       <ProtectedRoute>
         {element}
       </ProtectedRoute>

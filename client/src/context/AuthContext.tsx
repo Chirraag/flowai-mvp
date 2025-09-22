@@ -1,12 +1,16 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
+import { queryClient } from '@/lib/queryClient';
 
 interface User {
   id: number;
   username: string;
   email: string;
   role: string;
-  workspace_id: number;
-  workspace_name: string;
+  org_id: number;
+  org_name: string;
+  workspaceId?: number;
+  workspaceKey?: string;
+  workspaceName?: string;
   is_active: boolean;
   last_login: string;
 }
@@ -39,12 +43,18 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const prevOrgIdRef = useRef<number | null>(null);
 
   // Initialize auth state from localStorage
   useEffect(() => {
     const initializeAuth = async () => {
+      console.log('AuthContext: Initializing auth...');
       const storedToken = localStorage.getItem('auth_token');
       const storedRefreshToken = localStorage.getItem('refresh_token');
+      console.log('AuthContext: Found tokens:', { 
+        hasToken: !!storedToken, 
+        hasRefreshToken: !!storedRefreshToken 
+      });
       
       if (storedToken) {
         try {
@@ -59,9 +69,26 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
           if (response.ok) {
             const data = await response.json();
+            console.log('Auth validation response:', data);
             if (data.valid && data.user) {
+              console.log('Setting user from auth validation:', data.user);
+              // Map API response to User interface
+              const mappedUser: User = {
+                id: data.user.userId,
+                username: data.user.username,
+                email: data.user.email,
+                role: data.user.role,
+                org_id: data.user.orgId, // Map orgId to org_id
+                org_name: data.user.orgName,
+                workspaceId: data.user.retellWorkspaceId ? parseInt(data.user.retellWorkspaceId.replace('org_', ''), 36) : undefined,
+                workspaceKey: data.user.orgKey,
+                workspaceName: data.user.orgName,
+                is_active: data.user.isActive,
+                last_login: new Date().toISOString() // API doesn't provide this
+              };
+              console.log('Mapped user:', mappedUser);
               setToken(storedToken);
-              setUser(data.user);
+              setUser(mappedUser);
             } else {
               // Token invalid, try refresh
               if (storedRefreshToken) {
@@ -79,16 +106,21 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             }
           }
         } catch (error) {
-          console.error('Token validation failed:', error);
+          console.error('AuthContext: Token validation failed:', error);
           // Try refresh token if available
           if (storedRefreshToken) {
+            console.log('AuthContext: Attempting token refresh...');
             await refreshTokenInternal(storedRefreshToken);
           } else {
+            console.log('AuthContext: No refresh token, clearing auth');
             clearAuth();
           }
         }
+      } else {
+        console.log('AuthContext: No stored token found');
       }
       
+      console.log('AuthContext: Auth initialization complete');
       setIsLoading(false);
     };
 
@@ -100,9 +132,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setToken(null);
     localStorage.removeItem('auth_token');
     localStorage.removeItem('refresh_token');
+    try { queryClient.clear(); } catch {}
   };
 
   const refreshTokenInternal = async (refreshToken: string) => {
+    console.log('AuthContext: Refreshing token...');
     try {
       const response = await fetch('https://api.myflowai.com/auth/refresh', {
         method: 'POST',
@@ -114,6 +148,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       if (response.ok) {
         const data = await response.json();
+        console.log('AuthContext: Refresh response:', data);
         if (data.success && data.token) {
           setToken(data.token);
           localStorage.setItem('auth_token', data.token);
@@ -133,18 +168,36 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
           if (validateResponse.ok) {
             const validateData = await validateResponse.json();
+            console.log('AuthContext: Validation after refresh:', validateData);
             if (validateData.valid && validateData.user) {
-              setUser(validateData.user);
+              console.log('AuthContext: Setting user after refresh:', validateData.user);
+              // Map API response to User interface
+              const mappedUser: User = {
+                id: validateData.user.userId,
+                username: validateData.user.username,
+                email: validateData.user.email,
+                role: validateData.user.role,
+                org_id: validateData.user.orgId, // Map orgId to org_id
+                org_name: validateData.user.orgName,
+                workspaceId: validateData.user.retellWorkspaceId ? parseInt(validateData.user.retellWorkspaceId.replace('org_', ''), 36) : undefined,
+                workspaceKey: validateData.user.orgKey,
+                workspaceName: validateData.user.orgName,
+                is_active: validateData.user.isActive,
+                last_login: new Date().toISOString()
+              };
+              setUser(mappedUser);
             }
           }
         } else {
+          console.log('AuthContext: Refresh failed - no success/token in response');
           clearAuth();
         }
       } else {
+        console.log('AuthContext: Refresh request failed with status:', response.status);
         clearAuth();
       }
     } catch (error) {
-      console.error('Token refresh failed:', error);
+      console.error('AuthContext: Token refresh failed:', error);
       clearAuth();
     }
   };
@@ -168,7 +221,21 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       
       if (data.success && data.token && data.user) {
         setToken(data.token);
-        setUser(data.user);
+        // Map API response to User interface
+        const mappedUser: User = {
+          id: data.user.userId,
+          username: data.user.username,
+          email: data.user.email,
+          role: data.user.role,
+          org_id: data.user.orgId, // Map orgId to org_id
+          org_name: data.user.orgName,
+          workspaceId: data.user.retellWorkspaceId ? parseInt(data.user.retellWorkspaceId.replace('org_', ''), 36) : undefined,
+          workspaceKey: data.user.orgKey,
+          workspaceName: data.user.orgName,
+          is_active: data.user.isActive,
+          last_login: new Date().toISOString()
+        };
+        setUser(mappedUser);
         
         // Store tokens in localStorage
         localStorage.setItem('auth_token', data.token);
@@ -223,6 +290,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     logout,
     refreshToken,
   };
+
+  // Clear query cache when org switches to avoid cross-tenant leakage
+  useEffect(() => {
+    const currentOrgId = user?.org_id ?? null;
+    if (prevOrgIdRef.current !== null && currentOrgId !== prevOrgIdRef.current) {
+      try { queryClient.clear(); } catch {}
+    }
+    prevOrgIdRef.current = currentOrgId;
+  }, [user?.org_id]);
 
   return (
     <AuthContext.Provider value={value}>

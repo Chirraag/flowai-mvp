@@ -1,0 +1,150 @@
+import React from "react";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Trash2 } from "lucide-react";
+
+type Person = {
+  id: string;
+  title: string;
+  name: string;
+  email: string;
+  phone: string;
+};
+
+interface TeamReportingSectionProps {
+  title: string;
+  team: Person[]; // Array of team members
+  onAdd: () => void;
+  onUpdate: (id: string, field: keyof Person, value: string) => void;
+  onRemove: (id: string, personName: string) => void;
+}
+
+export default function TeamReportingSection({
+  title,
+  team,
+  onAdd,
+  onUpdate,
+  onRemove,
+}: TeamReportingSectionProps) {
+  return (
+    <div className="space-y-4">
+      {/* Team Section Header */}
+      <div className="border-b border-[#1C275E]/20 pb-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-[#1C275E]/10 rounded-lg flex items-center justify-center">
+              <svg className="w-4 h-4 text-[#1C275E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+              </svg>
+            </div>
+            <h3 className="text-base font-semibold text-[#1C275E]">{title}</h3>
+            {team.length > 0 && (
+              <span className="bg-[#1C275E]/10 text-[#1C275E] px-2 py-1 rounded-full text-xs font-medium">
+                {team.length} member{team.length !== 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={onAdd}
+            className="bg-[#F48024] hover:bg-[#F48024]/90 text-white px-4 py-2 rounded-lg shadow-sm"
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+            </svg>
+            Add Person
+          </Button>
+        </div>
+      </div>
+
+      {/* Team Members Table */}
+      <div className="space-y-2">
+        {team.length > 0 ? (
+          <div className="overflow-x-auto">
+            <Table className="min-w-[700px]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-[#1C275E] font-semibold">Title</TableHead>
+                  <TableHead className="text-[#1C275E] font-semibold">Name</TableHead>
+                  <TableHead className="text-[#1C275E] font-semibold">Email</TableHead>
+                  <TableHead className="text-[#1C275E] font-semibold">Phone</TableHead>
+                  <TableHead className="text-[#1C275E] font-semibold w-16">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {team.map((member) => (
+                  <TableRow key={member.id} className="hover:bg-[#1C275E]/5">
+                    <TableCell className="p-2">
+                      <Input
+                        className="border-2 border-gray-200 focus:border-[#1C275E] focus:ring-[#1C275E]/20 rounded-lg transition-all duration-300"
+                        placeholder="Enter title"
+                        value={member.title}
+                        onChange={(e) => onUpdate(member.id, 'title', e.target.value)}
+                        aria-label="Title"
+                      />
+                    </TableCell>
+                    <TableCell className="p-2">
+                      <Input
+                        className="border-2 border-gray-200 focus:border-[#1C275E] focus:ring-[#1C275E]/20 rounded-lg transition-all duration-300"
+                        placeholder="Full name"
+                        value={member.name}
+                        onChange={(e) => onUpdate(member.id, 'name', e.target.value)}
+                        aria-label="Name"
+                      />
+                    </TableCell>
+                    <TableCell className="p-2">
+                      <Input
+                        className="border-2 border-gray-200 focus:border-[#1C275E] focus:ring-[#1C275E]/20 rounded-lg transition-all duration-300"
+                        placeholder="email@practice.com"
+                        value={member.email}
+                        onChange={(e) => onUpdate(member.id, 'email', e.target.value)}
+                        aria-label="Email"
+                      />
+                    </TableCell>
+                    <TableCell className="p-2">
+                      <Input
+                        className="border-2 border-gray-200 focus:border-[#1C275E] focus:ring-[#1C275E]/20 rounded-lg transition-all duration-300"
+                        placeholder="(555) 123-4567"
+                        value={member.phone}
+                        onChange={(e) => onUpdate(member.id, 'phone', e.target.value)}
+                        aria-label="Phone"
+                      />
+                    </TableCell>
+                    <TableCell className="p-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onRemove(member.id, member.name || 'this person')}
+                        className="bg-white text-black border border-black hover:bg-gray-50 h-8 w-8 p-0"
+                        aria-label="Delete person"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        ) : (
+          <div className="text-center py-16 px-8 bg-gradient-to-br from-[#1C275E]/3 to-[#1C275E]/1 rounded-xl border-2 border-dashed border-[#1C275E]/20">
+            <div className="w-20 h-20 bg-[#1C275E]/10 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg className="w-10 h-10 text-[#1C275E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+              </svg>
+            </div>
+            <h4 className="text-xl font-semibold text-[#1C275E] mb-3">No team members yet</h4>
+            <p className="text-[#1C275E]/70 mb-6 max-w-sm mx-auto">
+              Add the first team member for {title.toLowerCase()} to get started with reporting structure.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+

@@ -8,13 +8,14 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiCall(endpoint: string, options: RequestInit = {}) {
+export async function apiCall<T = any>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem('auth_token');
   
   const config: RequestInit = {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      ...(options.body && !(options.body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}),
       ...(token && { 'Authorization': `Bearer ${token}` }),
       ...options.headers,
     },
@@ -47,7 +48,8 @@ export async function apiCall(endpoint: string, options: RequestInit = {}) {
             const retryConfig: RequestInit = {
               ...options,
               headers: {
-                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                ...(options.body && !(options.body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}),
                 'Authorization': `Bearer ${refreshData.token}`,
                 ...options.headers,
               },
@@ -60,9 +62,9 @@ export async function apiCall(endpoint: string, options: RequestInit = {}) {
             
             const contentType = retryResponse.headers.get('content-type');
             if (contentType && contentType.includes('application/json')) {
-              return retryResponse.json();
+              return await retryResponse.json() as T;
             }
-            return retryResponse.text();
+            return await retryResponse.text() as unknown as T;
           }
         }
       } catch (refreshError) {
@@ -87,20 +89,24 @@ export async function apiCall(endpoint: string, options: RequestInit = {}) {
 
   const contentType = response.headers.get('content-type');
   if (contentType && contentType.includes('application/json')) {
-    return response.json();
+    return await response.json() as T;
   }
-  return response.text();
+  return await response.text() as unknown as T;
 }
 
 export const api = {
-  get: (endpoint: string) => apiCall(endpoint, { method: 'GET' }),
-  post: (endpoint: string, data?: any) => apiCall(endpoint, { 
+  get: <T = any>(endpoint: string) => apiCall<T>(endpoint, { method: 'GET' }),
+  post: <T = any>(endpoint: string, data?: any) => apiCall<T>(endpoint, { 
     method: 'POST', 
     body: data ? JSON.stringify(data) : undefined 
   }),
-  put: (endpoint: string, data?: any) => apiCall(endpoint, { 
+  put: <T = any>(endpoint: string, data?: any) => apiCall<T>(endpoint, { 
     method: 'PUT', 
     body: data ? JSON.stringify(data) : undefined 
   }),
-  delete: (endpoint: string) => apiCall(endpoint, { method: 'DELETE' }),
+  delete: <T = any>(endpoint: string) => apiCall<T>(endpoint, { method: 'DELETE' }),
+  upload: <T = any>(endpoint: string, formData: FormData) => apiCall<T>(endpoint, { 
+    method: 'POST', 
+    body: formData 
+  }),
 };

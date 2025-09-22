@@ -1,4 +1,3 @@
-import { useApp } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 import { Menu, LogOut, User } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -19,15 +18,33 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
 
   // Get page title from location
   const getPageTitle = () => {
-    if (location === "/" || location === "/business-workflows") {
-      return "Business Workflows";
+    if (location === "/launchpad") {
+      return "Launchpad";
     }
-    
-    if (location.includes("/business-workflows/editor/")) {
-      return "Workflow Editor";
+
+    // AI Agents pages
+    if (location === "/ai-agents/scheduling") {
+      return "Scheduling Agent";
     }
-    
-    return "Business Workflows";
+
+    if (location === "/ai-agents/patient-intake") {
+      return "Patient Intake Agent";
+    }
+
+    if (location === "/ai-agents/customer-support") {
+      return "Customer Support Agent";
+    }
+
+    if (location === "/ai-agents/analytics") {
+      return "Analytics";
+    }
+
+    // Default fallback
+    if (location === "/") {
+      return "Dashboard";
+    }
+
+    return "Flow AI";
   };
 
   const handleLogout = async () => {
@@ -81,7 +98,7 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
                 <div className="flex flex-col space-y-1 leading-none">
                   <p className="font-medium text-sm">{user?.username || 'User'}</p>
                   <p className="text-xs text-muted-foreground">{user?.email}</p>
-                  <p className="text-xs text-muted-foreground capitalize">{user?.role} • {user?.workspace_name}</p>
+                  <p className="text-xs text-muted-foreground capitalize">{user?.role} • {user?.org_name}</p>
                 </div>
               </div>
               <DropdownMenuSeparator />

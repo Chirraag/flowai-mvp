@@ -1,8 +1,8 @@
 import { db } from "./index";
-import { 
-  patients, 
-  aiAgents, 
-  healthcareProviders, 
+import {
+  patients,
+  aiAgents,
+  healthcareProviders,
   appointments,
   agentInteractions,
   workflowOrchestrations,
@@ -512,11 +512,33 @@ export async function initializeProductionDatabase() {
         },
         version: "1.6",
         languages: ["en", "es", "zh"]
+      },
+      {
+        name: "Customer Support Agent",
+        type: "customer_support",
+        description: "AI-powered patient support, FAQs, and ticket triage",
+        status: "active",
+        configuration: {
+          channels: ["chat", "email", "voice"],
+          routing: "intelligent",
+          handoff: "agent_escalation"
+        },
+        capabilities: ["faq_management", "ticket_triage", "escalation", "sentiment_analysis"],
+        skills: ["nlp_understanding", "knowledge_search", "multilingual_support"],
+        metrics: {
+          firstResponseTime: "5 seconds",
+          resolutionRate: "92%",
+          csat: "4.8/5"
+        },
+        version: "1.0",
+        languages: ["en", "es"]
       }
     ];
 
     const insertedAgents = await db.insert(aiAgents).values(aiAgentsData).returning();
     console.log(`Created ${insertedAgents.length} AI agents`);
+
+
 
     // 7. Create Appointments
     const appointmentsData = [
