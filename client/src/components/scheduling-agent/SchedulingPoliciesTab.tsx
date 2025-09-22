@@ -1,38 +1,32 @@
-import React, { useImperativeHandle, forwardRef } from "react";
+import React, { useImperativeHandle, forwardRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { IOSSwitch } from "@/components/ui/ios-switch";
 import { Clock, Users } from "lucide-react";
+import type { SchedulingPoliciesValues } from "@/types/schedulingAgent";
 
 /**
  * SchedulingPoliciesTab
  * - Walk-ins, same-day, and cancellation policies configuration
  * - Mirrors the launchpad tab styling and structure
  */
+export type SchedulingPoliciesTabProps = {
+  initialValues?: SchedulingPoliciesValues;
+};
+
 export type SchedulingPoliciesTabHandle = {
   /**
    * Returns the current values held by the tab.
    */
-  getValues: () => {
-    walkInPolicy: {
-      acceptWalkIns: boolean;
-      allowSameDayAppointments: boolean;
-      sameDayCutoffTime: string;
-    };
-    cancellationPolicy: {
-      minimumCancellationNotice: string;
-      noShowFee: string;
-      autoBlockAfterTwoNoShows: boolean;
-    };
-  };
+  getValues: () => SchedulingPoliciesValues;
   /**
    * Lightweight validation for the tab.
    */
   validate: () => { valid: boolean; errors: string[] };
 };
 
-const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle>((_props, ref) => {
+const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, SchedulingPoliciesTabProps>((props, ref) => {
   // Walk-in Policy state
   const [acceptWalkIns, setAcceptWalkIns] = React.useState(true);
   const [allowSameDayAppointments, setAllowSameDayAppointments] = React.useState(true);
@@ -41,7 +35,17 @@ const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle>((_props, r
   // Cancellation Policy state
   const [minimumCancellationNotice, setMinimumCancellationNotice] = React.useState("24");
   const [noShowFee, setNoShowFee] = React.useState("50");
-  const [autoBlockAfterTwoNoShows, setAutoBlockAfterTwoNoShows] = React.useState(false);
+
+  // Set initial values when props change
+  useEffect(() => {
+    if (props.initialValues) {
+      setAcceptWalkIns(props.initialValues.walkInPolicy.acceptWalkIns);
+      setAllowSameDayAppointments(props.initialValues.walkInPolicy.allowSameDayAppointments);
+      setSameDayCutoffTime(props.initialValues.walkInPolicy.sameDayCutoffTime);
+      setMinimumCancellationNotice(props.initialValues.cancellationPolicy.minimumCancellationNotice);
+      setNoShowFee(props.initialValues.cancellationPolicy.noShowFee);
+    }
+  }, [props.initialValues]);
 
   // Expose values and validation to parent page
   useImperativeHandle(ref, () => ({
@@ -54,7 +58,6 @@ const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle>((_props, r
       cancellationPolicy: {
         minimumCancellationNotice,
         noShowFee,
-        autoBlockAfterTwoNoShows,
       },
     }),
     validate: () => {
@@ -161,15 +164,6 @@ const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle>((_props, r
                   className="h-11"
                 />
               </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <Label htmlFor="auto-block" className="text-gray-900">Auto-block after 2 no-shows</Label>
-              <IOSSwitch
-                id="auto-block"
-                checked={autoBlockAfterTwoNoShows}
-                onCheckedChange={setAutoBlockAfterTwoNoShows}
-              />
             </div>
           </div>
         </CardContent>

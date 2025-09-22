@@ -1,41 +1,32 @@
-import React, { useImperativeHandle, forwardRef } from "react";
+import React, { useImperativeHandle, forwardRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { IOSSwitch } from "@/components/ui/ios-switch";
 import { Users, FileText } from "lucide-react";
+import type { PatientEligibilityValues } from "@/types/schedulingAgent";
 
 /**
  * PatientEligibilityTab
  * - Patient types and referral requirements configuration
  * - Mirrors the launchpad tab styling and structure
  */
+export type PatientEligibilityTabProps = {
+  initialValues?: PatientEligibilityValues;
+};
+
 export type PatientEligibilityTabHandle = {
   /**
    * Returns the current values held by the tab.
    */
-  getValues: () => {
-    patientTypes: {
-      newPatients: boolean;
-      existingPatients: boolean;
-      selfPay: boolean;
-      hmo: boolean;
-      ppo: boolean;
-      medicare: boolean;
-      medicaid: boolean;
-    };
-    referralRequirements: {
-      servicesRequiringReferrals: string;
-      insurancePlansRequiringReferrals: string;
-    };
-  };
+  getValues: () => PatientEligibilityValues;
   /**
    * Lightweight validation for the tab.
    */
   validate: () => { valid: boolean; errors: string[] };
 };
 
-const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle>((_props, ref) => {
+const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEligibilityTabProps>((props, ref) => {
   // Patient Types state
   const [newPatients, setNewPatients] = React.useState(true);
   const [existingPatients, setExistingPatients] = React.useState(true);
@@ -48,6 +39,21 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle>((_props, r
   // Referral Requirements state
   const [servicesRequiringReferrals, setServicesRequiringReferrals] = React.useState("");
   const [insurancePlansRequiringReferrals, setInsurancePlansRequiringReferrals] = React.useState("");
+
+  // Set initial values when props change
+  useEffect(() => {
+    if (props.initialValues) {
+      setNewPatients(props.initialValues.patientTypes.newPatients);
+      setExistingPatients(props.initialValues.patientTypes.existingPatients);
+      setSelfPay(props.initialValues.patientTypes.selfPay);
+      setHmo(props.initialValues.patientTypes.hmo);
+      setPpo(props.initialValues.patientTypes.ppo);
+      setMedicare(props.initialValues.patientTypes.medicare);
+      setMedicaid(props.initialValues.patientTypes.medicaid);
+      setServicesRequiringReferrals(props.initialValues.referralRequirements.servicesRequiringReferrals);
+      setInsurancePlansRequiringReferrals(props.initialValues.referralRequirements.insurancePlansRequiringReferrals);
+    }
+  }, [props.initialValues]);
 
   // Expose values and validation to parent page
   useImperativeHandle(ref, () => ({

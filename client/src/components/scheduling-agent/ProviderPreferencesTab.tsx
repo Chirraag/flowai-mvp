@@ -1,34 +1,44 @@
-import React, { useImperativeHandle, forwardRef } from "react";
+import React, { useImperativeHandle, forwardRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Users } from "lucide-react";
+import type { ProviderPreferencesValues } from "@/types/schedulingAgent";
 
 /**
  * ProviderPreferencesTab
  * - Provider preferences and scheduling restrictions
  * - Mirrors the launchpad tab styling and structure
  */
+export type ProviderPreferencesTabProps = {
+  initialValues?: ProviderPreferencesValues;
+};
+
 export type ProviderPreferencesTabHandle = {
   /**
    * Returns the current values held by the tab.
    */
-  getValues: () => {
-    providerBlackoutDates: string;
-    establishedPatientsOnlyDays: string;
-    customSchedulingRules: string;
-  };
+  getValues: () => ProviderPreferencesValues;
   /**
    * Lightweight validation for the tab.
    */
   validate: () => { valid: boolean; errors: string[] };
 };
 
-const ProviderPreferencesTab = forwardRef<ProviderPreferencesTabHandle>((_props, ref) => {
+const ProviderPreferencesTab = forwardRef<ProviderPreferencesTabHandle, ProviderPreferencesTabProps>((props, ref) => {
   // Provider Preferences state
   const [providerBlackoutDates, setProviderBlackoutDates] = React.useState("");
   const [establishedPatientsOnlyDays, setEstablishedPatientsOnlyDays] = React.useState("");
   const [customSchedulingRules, setCustomSchedulingRules] = React.useState("");
+
+  // Set initial values when props change
+  useEffect(() => {
+    if (props.initialValues) {
+      setProviderBlackoutDates(props.initialValues.providerBlackoutDates);
+      setEstablishedPatientsOnlyDays(props.initialValues.establishedPatientsOnlyDays);
+      setCustomSchedulingRules(props.initialValues.customSchedulingRules);
+    }
+  }, [props.initialValues]);
 
   // Expose values and validation to parent page
   useImperativeHandle(ref, () => ({

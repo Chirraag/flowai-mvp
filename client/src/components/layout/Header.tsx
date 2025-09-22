@@ -22,14 +22,6 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
       return "Launchpad";
     }
 
-    if (location === "/business-workflows") {
-      return "Business Workflows";
-    }
-
-    if (location.includes("/business-workflows/editor/")) {
-      return "Workflow Editor";
-    }
-
     // AI Agents pages
     if (location === "/ai-agents/scheduling") {
       return "Scheduling Agent";
@@ -41,10 +33,6 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
 
     if (location === "/ai-agents/customer-support") {
       return "Customer Support Agent";
-    }
-
-    if (location === "/ai-agents/knowledge") {
-      return "Knowledge";
     }
 
     if (location === "/ai-agents/analytics") {
@@ -110,7 +98,7 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
                 <div className="flex flex-col space-y-1 leading-none">
                   <p className="font-medium text-sm">{user?.username || 'User'}</p>
                   <p className="text-xs text-muted-foreground">{user?.email}</p>
-                  <p className="text-xs text-muted-foreground capitalize">{user?.role} • {user?.workspace_name}</p>
+                  <p className="text-xs text-muted-foreground capitalize">{user?.role} • {user?.org_name}</p>
                 </div>
               </div>
               <DropdownMenuSeparator />

@@ -2,9 +2,7 @@ import React, { useImperativeHandle, forwardRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Bot } from "lucide-react";
 
 /**
@@ -29,13 +27,34 @@ export type PatientAgentConfigTabHandle = {
   validate: () => { valid: boolean; errors: string[] };
 };
 
-const PatientAgentConfigTab = forwardRef<PatientAgentConfigTabHandle>((_props, ref) => {
-  // Agent Configuration state
+export interface PatientAgentConfigTabProps {
+  initialData?: {
+    agentName: string;
+    language: string;
+    voice: string;
+    agentInstructions: string;
+    humanTransferCriteria: string;
+  };
+}
+
+const PatientAgentConfigTab = forwardRef<PatientAgentConfigTabHandle, PatientAgentConfigTabProps>(({ initialData }, ref) => {
+  // Agent Configuration state (default values, overridden by initialData if provided)
   const [agentName, setAgentName] = React.useState("Patient Intake Agent");
   const [language, setLanguage] = React.useState("us-english");
   const [voice, setVoice] = React.useState("sofia");
   const [agentInstructions, setAgentInstructions] = React.useState("");
   const [humanTransferCriteria, setHumanTransferCriteria] = React.useState("");
+
+  // Populate state from initialData if provided
+  React.useEffect(() => {
+    if (initialData) {
+      setAgentName(initialData.agentName || "Patient Intake Agent");
+      setLanguage(initialData.language || "us-english");
+      setVoice(initialData.voice || "sofia");
+      setAgentInstructions(initialData.agentInstructions || "");
+      setHumanTransferCriteria(initialData.humanTransferCriteria || "");
+    }
+  }, [initialData]);
 
   // Expose values and validation to parent page
   useImperativeHandle(ref, () => ({
@@ -76,58 +95,31 @@ const PatientAgentConfigTab = forwardRef<PatientAgentConfigTabHandle>((_props, r
                 id="agent-name"
                 placeholder="Patient Intake Agent"
                 value={agentName}
-                onChange={(e) => setAgentName(e.target.value)}
+                readOnly
                 className="h-11"
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="language">Language</Label>
-              <Select value={language} onValueChange={setLanguage}>
-                <SelectTrigger className="h-11">
-                  <SelectValue placeholder="Select language" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="us-english">US English</SelectItem>
-                  <SelectItem value="es-spanish">ES Spanish</SelectItem>
-                  <SelectItem value="cn-chinese">CN Chinese</SelectItem>
-                </SelectContent>
-              </Select>
+              <Input
+                id="language"
+                placeholder="e.g., en-US"
+                value={language}
+                readOnly
+                className="h-11"
+              />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="voice">Voice</Label>
-              <Select value={voice} onValueChange={setVoice}>
-                <SelectTrigger className="h-11">
-                  <SelectValue placeholder="Select voice" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="sofia">
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-6 w-6">
-                        <AvatarFallback className="bg-blue-100 text-blue-600 text-xs">S</AvatarFallback>
-                      </Avatar>
-                      <span>Sofia</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="maria">
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-6 w-6">
-                        <AvatarFallback className="bg-pink-100 text-pink-600 text-xs">M</AvatarFallback>
-                      </Avatar>
-                      <span>Maria</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="lisa">
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-6 w-6">
-                        <AvatarFallback className="bg-green-100 text-green-600 text-xs">L</AvatarFallback>
-                      </Avatar>
-                      <span>Lisa</span>
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <Input
+                id="voice"
+                placeholder="e.g., alloy"
+                value={voice}
+                readOnly
+                className="h-11"
+              />
             </div>
           </div>
 
@@ -138,7 +130,7 @@ const PatientAgentConfigTab = forwardRef<PatientAgentConfigTabHandle>((_props, r
               id="agent-instructions"
               placeholder="Enter detailed instructions for the patient intake agent..."
               value={agentInstructions}
-              onChange={(e) => setAgentInstructions(e.target.value)}
+              readOnly
               className="min-h-[500px] resize-none"
             />
           </div>
@@ -150,7 +142,7 @@ const PatientAgentConfigTab = forwardRef<PatientAgentConfigTabHandle>((_props, r
               id="transfer-criteria"
               placeholder="Define criteria for when calls should be transferred to human agents..."
               value={humanTransferCriteria}
-              onChange={(e) => setHumanTransferCriteria(e.target.value)}
+              readOnly
               className="min-h-32 resize-none"
             />
           </div>

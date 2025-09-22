@@ -1,8 +1,19 @@
-import React, { Suspense, lazy } from "react";
+import React, { Suspense, lazy, useEffect, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { FileText, Settings, Play } from "lucide-react";
+import { FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { api } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
+import {
+  PatientIntakeApiData,
+  mapApiToFieldContentRules,
+  mapApiToDeliveryMethods,
+  mapApiToAgentConfig,
+  mapFieldContentRulesToApi,
+  mapDeliveryMethodsToApi,
+  mapAgentConfigToApi
+} from "@/lib/patient-intake.mappers";
 
 // Lazy-load tab sections so future heavy UIs don't bloat initial load.
 const FormsQuestionnairesTab = lazy(() => import("@/components/patient-intake/FormsQuestionnairesTab"));
@@ -13,6 +24,117 @@ const PatientAgentConfigTab = lazy(() => import("@/components/patient-intake/Pat
 
 export default function PatientIntakeAgent() {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const [initialData, setInitialData] = useState<PatientIntakeApiData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState<Record<string, boolean>>({
+    fieldRequirements: false,
+    deliveryMethods: false,
+    agentConfig: false,
+  });
+
+  const orgId = user?.org_id;
+
+  // Fetch initial data on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!orgId) return;
+
+      try {
+        const response = await api.get(`/api/v1/patient-intake-agent/${orgId}`) as { data: PatientIntakeApiData };
+        setInitialData(response.data);
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: "Failed to load patient intake configuration. Please try again.",
+          variant: "destructive",
+        });
+        console.error("Error fetching patient intake data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [toast, orgId]);
+
+  // Function to refetch data after successful save
+  const refetchData = async () => {
+    if (!orgId) return;
+
+    try {
+      const response = await api.get(`/api/v1/patient-intake-agent/${orgId}`) as { data: PatientIntakeApiData };
+      setInitialData(response.data);
+    } catch (error: any) {
+      console.error("Error refetching data:", error);
+    }
+  };
+
+  // Save handlers for each tab
+  const handleSaveFieldRequirements = async () => {
+    if (!rulesRef.current || !orgId) return;
+    const validation = rulesRef.current.validate();
+    if (!validation.valid) {
+      toast({ title: "Validation Error", description: validation.errors.join(", "), variant: "destructive" });
+      return;
+    }
+    setIsSaving((prev) => ({ ...prev, fieldRequirements: true }));
+    try {
+      const tabData = rulesRef.current.getValues();
+      const payload = { ...mapFieldContentRulesToApi(tabData), current_version: initialData?.current_version || 1 };
+      await api.put(`/api/v1/patient-intake-agent/${orgId}/field-requirements`, payload);
+      toast({ title: "Success", description: "Field requirements saved successfully." });
+      await refetchData();
+    } catch (error: any) {
+      toast({ title: "Error", description: "Failed to save field requirements.", variant: "destructive" });
+      console.error("Error saving field requirements:", error);
+    } finally {
+      setIsSaving((prev) => ({ ...prev, fieldRequirements: false }));
+    }
+  };
+
+  const handleSaveDeliveryMethods = async () => {
+    if (!deliveryRef.current || !orgId) return;
+    const validation = deliveryRef.current.validate();
+    if (!validation.valid) {
+      toast({ title: "Validation Error", description: validation.errors.join(", "), variant: "destructive" });
+      return;
+    }
+    setIsSaving((prev) => ({ ...prev, deliveryMethods: true }));
+    try {
+      const tabData = deliveryRef.current.getValues();
+      const payload = { ...mapDeliveryMethodsToApi(tabData), current_version: initialData?.current_version || 1 };
+      await api.put(`/api/v1/patient-intake-agent/${orgId}/delivery-methods`, payload);
+      toast({ title: "Success", description: "Delivery methods saved successfully." });
+      await refetchData();
+    } catch (error: any) {
+      toast({ title: "Error", description: "Failed to save delivery methods.", variant: "destructive" });
+      console.error("Error saving delivery methods:", error);
+    } finally {
+      setIsSaving((prev) => ({ ...prev, deliveryMethods: false }));
+    }
+  };
+
+  const handleSaveAgentConfig = async () => {
+    if (!agentConfigRef.current || !orgId) return;
+    const validation = agentConfigRef.current.validate();
+    if (!validation.valid) {
+      toast({ title: "Validation Error", description: validation.errors.join(", "), variant: "destructive" });
+      return;
+    }
+    setIsSaving((prev) => ({ ...prev, agentConfig: true }));
+    try {
+      const tabData = agentConfigRef.current.getValues();
+      const payload = { ...mapAgentConfigToApi(tabData), current_version: initialData?.current_version || 1 };
+      await api.put(`/api/v1/patient-intake-agent/${orgId}/agent-config`, payload);
+      toast({ title: "Success", description: "Agent configuration saved successfully." });
+      await refetchData();
+    } catch (error: any) {
+      toast({ title: "Error", description: "Failed to save agent configuration.", variant: "destructive" });
+      console.error("Error saving agent config:", error);
+    } finally {
+      setIsSaving((prev) => ({ ...prev, agentConfig: false }));
+    }
+  };
 
   // Refs used to call validation on Save Configuration
   const formsRef = React.useRef<any>(null);
@@ -34,16 +156,6 @@ export default function PatientIntakeAgent() {
           <p className="text-gray-600 mt-1 sm:mt-2 text-sm sm:text-base">
             Streamlined patient registration and information collection
           </p>
-        </div>
-        <div className="flex gap-3">
-          <Button variant="outline" className="flex items-center gap-2">
-            <Settings className="h-4 w-4" />
-            Configure
-          </Button>
-          <Button className="flex items-center gap-2">
-            <Play className="h-4 w-4" />
-            Start Agent
-          </Button>
         </div>
       </div>
 
@@ -67,16 +179,30 @@ export default function PatientIntakeAgent() {
 
         {/* Field & Content Rules tab */}
         <TabsContent value="field-content-rules">
-          <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
-            <FieldContentRulesTab ref={rulesRef} />
-          </Suspense>
+          <div className="space-y-4">
+            <div className="flex justify-end">
+              <Button onClick={handleSaveFieldRequirements} disabled={isSaving.fieldRequirements}>
+                {isSaving.fieldRequirements ? "Saving..." : "Save Field Requirements"}
+              </Button>
+            </div>
+            <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
+              {initialData && <FieldContentRulesTab ref={rulesRef} initialData={mapApiToFieldContentRules(initialData)} />}
+            </Suspense>
+          </div>
         </TabsContent>
 
         {/* Delivery Methods tab */}
         <TabsContent value="delivery-methods">
-          <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
-            <DeliveryMethodsTab ref={deliveryRef} />
-          </Suspense>
+          <div className="space-y-4">
+            <div className="flex justify-end">
+              <Button onClick={handleSaveDeliveryMethods} disabled={isSaving.deliveryMethods}>
+                {isSaving.deliveryMethods ? "Saving..." : "Save Delivery Methods"}
+              </Button>
+            </div>
+            <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
+              {initialData && <DeliveryMethodsTab ref={deliveryRef} initialData={mapApiToDeliveryMethods(initialData)} />}
+            </Suspense>
+          </div>
         </TabsContent>
 
         {/* Workflows tab */}
@@ -88,8 +214,18 @@ export default function PatientIntakeAgent() {
 
         {/* Agent Config tab */}
         <TabsContent value="agent-config">
+          {/* <div className="space-y-4">
+            <div className="flex justify-end">
+              <Button onClick={handleSaveAgentConfig} disabled={isSaving.agentConfig}>
+                {isSaving.agentConfig ? "Saving..." : "Save Agent Config"}
+              </Button>
+            </div>
+            <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
+              {initialData && <PatientAgentConfigTab ref={agentConfigRef} initialData={mapApiToAgentConfig(initialData)} />}
+            </Suspense>
+          </div> */}
           <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
-            <PatientAgentConfigTab ref={agentConfigRef} />
+            {initialData && <PatientAgentConfigTab ref={agentConfigRef} initialData={mapApiToAgentConfig(initialData)} />}
           </Suspense>
         </TabsContent>
       </Tabs>

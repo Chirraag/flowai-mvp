@@ -65,19 +65,9 @@ export const NAVIGATION_ITEMS = [
         ],
       },
       {
-        name: "Knowledge",
-        path: "/ai-agents/knowledge",
-        icon: "book",
-      },
-      {
         name: "Analytics",
         path: "/ai-agents/analytics",
         icon: "bar-chart-2",
-      },
-      {
-        name: "Workflows",
-        path: "/business-workflows",
-        icon: "workflow",
       },
     ],
   },

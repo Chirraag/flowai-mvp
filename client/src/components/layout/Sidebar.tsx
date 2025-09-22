@@ -284,7 +284,7 @@ export default function Sidebar({ mobileMenuOpen, setMobileMenuOpen }: SidebarPr
                 {user?.username || 'User'}
               </p>
               <p className="text-xs text-gray-500 truncate capitalize">
-                {user?.role || 'User'} • {user?.workspace_name || 'Workspace'}
+                {user?.role || 'User'} • {user?.org_name || 'Workspace'}
               </p>
             </div>
           </div>

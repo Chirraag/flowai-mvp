@@ -1,10 +1,9 @@
-import React, { useImperativeHandle, forwardRef } from "react";
+import React, { useImperativeHandle, forwardRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Bot } from "lucide-react";
 
 /**
@@ -29,13 +28,36 @@ export type CustomerSupportAgentConfigTabHandle = {
   validate: () => { valid: boolean; errors: string[] };
 };
 
-const CustomerSupportAgentConfigTab = forwardRef<CustomerSupportAgentConfigTabHandle>((_props, ref) => {
-  // Agent Configuration state
-  const [agentName, setAgentName] = React.useState("Customer Support Agent");
-  const [language, setLanguage] = React.useState("us-english");
-  const [voice, setVoice] = React.useState("alex");
+export interface CustomerSupportAgentConfigTabProps {
+  initialData?: {
+    agentName: string;
+    language: string;
+    voice: string;
+    agentInstructions: string;
+    humanTransferCriteria: string;
+  };
+}
+
+const CustomerSupportAgentConfigTab = forwardRef<CustomerSupportAgentConfigTabHandle, CustomerSupportAgentConfigTabProps>(({ initialData }, ref) => {
+  // Local state synced with initialData
+  const [agentName, setAgentName] = React.useState("");
+  const [language, setLanguage] = React.useState("");
+  const [voice, setVoice] = React.useState("");
   const [agentInstructions, setAgentInstructions] = React.useState("");
   const [humanTransferCriteria, setHumanTransferCriteria] = React.useState("");
+
+  // Sync local state with initialData
+  React.useEffect(() => {
+    if (initialData) {
+      setAgentName(initialData.agentName || "");
+      setLanguage(initialData.language || "");
+      setVoice(initialData.voice || "");
+      setAgentInstructions(initialData.agentInstructions || "");
+      setHumanTransferCriteria(initialData.humanTransferCriteria || "");
+    }
+  }, [initialData]);
+
+
 
   // Expose values and validation to parent page
   useImperativeHandle(ref, () => ({
@@ -53,9 +75,14 @@ const CustomerSupportAgentConfigTab = forwardRef<CustomerSupportAgentConfigTabHa
         errors.push("Agent name is required");
       }
 
+      if (!agentInstructions.trim()) {
+        errors.push("Agent instructions are required");
+      }
+
       return { valid: errors.length === 0, errors };
     },
   }));
+
 
   return (
     <div className="space-y-6">
@@ -66,7 +93,7 @@ const CustomerSupportAgentConfigTab = forwardRef<CustomerSupportAgentConfigTabHa
             <Bot className="h-4 w-4" />
             <h2 className="text-xl font-semibold text-gray-900">Agent Configuration</h2>
           </div>
-          <p className="text-sm text-gray-600 mb-6">Configure the basic settings and instrucitons for the customer support agent.</p>
+          <p className="text-sm text-gray-600 mb-6">Configure the basic settings and instructions for the customer support agent.</p>
 
           {/* Horizontal Input Line */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -76,58 +103,31 @@ const CustomerSupportAgentConfigTab = forwardRef<CustomerSupportAgentConfigTabHa
                 id="agent-name"
                 placeholder="Customer Support Agent"
                 value={agentName}
-                onChange={(e) => setAgentName(e.target.value)}
+                readOnly
                 className="h-11"
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="language">Language</Label>
-              <Select value={language} onValueChange={setLanguage}>
-                <SelectTrigger className="h-11">
-                  <SelectValue placeholder="Select language" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="us-english">US English</SelectItem>
-                  <SelectItem value="es-spanish">ES Spanish</SelectItem>
-                  <SelectItem value="cn-chinese">CN Chinese</SelectItem>
-                </SelectContent>
-              </Select>
+              <Input
+                id="language"
+                placeholder="e.g., English"
+                value={language}
+                readOnly
+                className="h-11"
+              />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="voice">Voice</Label>
-              <Select value={voice} onValueChange={setVoice}>
-                <SelectTrigger className="h-11">
-                  <SelectValue placeholder="Select voice" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="alex">
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-6 w-6">
-                        <AvatarFallback className="bg-blue-100 text-blue-600 text-xs">A</AvatarFallback>
-                      </Avatar>
-                      <span>Alex</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="jordan">
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-6 w-6">
-                        <AvatarFallback className="bg-pink-100 text-pink-600 text-xs">J</AvatarFallback>
-                      </Avatar>
-                      <span>Jordan</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="taylor">
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-6 w-6">
-                        <AvatarFallback className="bg-green-100 text-green-600 text-xs">T</AvatarFallback>
-                      </Avatar>
-                      <span>Taylor</span>
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <Input
+                id="voice"
+                placeholder="e.g., Alex"
+                value={voice}
+                readOnly
+                className="h-11"
+              />
             </div>
           </div>
 
@@ -138,22 +138,23 @@ const CustomerSupportAgentConfigTab = forwardRef<CustomerSupportAgentConfigTabHa
               id="agent-instructions"
               placeholder="Enter detailed instructions for the customer support agent..."
               value={agentInstructions}
-              onChange={(e) => setAgentInstructions(e.target.value)}
-              className="min-h-[500px] resize-none"
+              readOnly
+              className="min-h-[400px] resize-none"
             />
           </div>
 
           {/* Human Transfer Criteria Text Area */}
           <div className="space-y-2">
-            <Label htmlFor="transfer-criteria">Human Transfer Criteria</Label>
+            <Label htmlFor="human-transfer-criteria">Human Transfer Criteria</Label>
             <Textarea
-              id="transfer-criteria"
+              id="human-transfer-criteria"
               placeholder="Define criteria for when calls should be transferred to human agents..."
               value={humanTransferCriteria}
-              onChange={(e) => setHumanTransferCriteria(e.target.value)}
-              className="min-h-32 resize-none"
+              readOnly
+              className="min-h-[100px] resize-none"
             />
           </div>
+
         </CardContent>
       </Card>
     </div>

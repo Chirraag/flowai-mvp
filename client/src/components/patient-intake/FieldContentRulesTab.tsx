@@ -30,8 +30,15 @@ export type FieldContentRulesTabHandle = {
   validate: () => { valid: boolean; errors: string[] };
 };
 
-const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle>((_props, ref) => {
-  // Field Requirements state
+export interface FieldContentRulesTabProps {
+  initialData?: {
+    fieldRequirements: Record<string, string>;
+    specialInstructions: Record<string, string>;
+  };
+}
+
+const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle, FieldContentRulesTabProps>(({ initialData }, ref) => {
+  // Field Requirements state (default values, overridden by initialData if provided)
   const [patientName, setPatientName] = React.useState("required");
   const [dateOfBirth, setDateOfBirth] = React.useState("required");
   const [phoneNumber, setPhoneNumber] = React.useState("required");
@@ -44,6 +51,23 @@ const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle>((_props, ref
   const [menoresInstructions, setMenoresInstructions] = React.useState("");
   const [noInsuranceInstructions, setNoInsuranceInstructions] = React.useState("");
   const [languageBarrierInstructions, setLanguageBarrierInstructions] = React.useState("");
+
+  // Populate state from initialData if provided
+  React.useEffect(() => {
+    if (initialData) {
+      setPatientName(initialData.fieldRequirements.patientName || "required");
+      setDateOfBirth(initialData.fieldRequirements.dateOfBirth || "required");
+      setPhoneNumber(initialData.fieldRequirements.phoneNumber || "required");
+      setEmail(initialData.fieldRequirements.email || "optional");
+      setInsuranceId(initialData.fieldRequirements.insuranceId || "optional");
+      setEmergencyContact(initialData.fieldRequirements.emergencyContact || "required");
+      setPreferredLanguage(initialData.fieldRequirements.preferredLanguage || "optional");
+
+      setMenoresInstructions(initialData.specialInstructions.menoresInstructions || "");
+      setNoInsuranceInstructions(initialData.specialInstructions.noInsuranceInstructions || "");
+      setLanguageBarrierInstructions(initialData.specialInstructions.languageBarrierInstructions || "");
+    }
+  }, [initialData]);
 
   useImperativeHandle(ref, () => ({
     getValues: () => ({

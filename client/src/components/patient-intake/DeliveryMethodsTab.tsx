@@ -1,7 +1,7 @@
 import React, { useImperativeHandle, forwardRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { IOSSwitch } from "@/components/ui/ios-switch";
 import { Send, FileSignature } from "lucide-react";
 
@@ -28,8 +28,19 @@ export type DeliveryMethodsTabHandle = {
   validate: () => { valid: boolean; errors: string[] };
 };
 
-const DeliveryMethodsTab = forwardRef<DeliveryMethodsTabHandle>((_props, ref) => {
-  // Format Preferences state
+export interface DeliveryMethodsTabProps {
+  initialData?: {
+    formatPreferences: Record<string, boolean>;
+    consentMethods: {
+      digitalSignature: boolean;
+      verbalConsentRecording: boolean;
+      consentLanguage: string;
+    };
+  };
+}
+
+const DeliveryMethodsTab = forwardRef<DeliveryMethodsTabHandle, DeliveryMethodsTabProps>(({ initialData }, ref) => {
+  // Format Preferences state (default values, overridden by initialData if provided)
   const [textMessageLink, setTextMessageLink] = React.useState(true);
   const [voiceCall, setVoiceCall] = React.useState(false);
   const [qrCode, setQrCode] = React.useState(true);
@@ -39,7 +50,22 @@ const DeliveryMethodsTab = forwardRef<DeliveryMethodsTabHandle>((_props, ref) =>
   // Consent Methods state
   const [digitalSignature, setDigitalSignature] = React.useState(true);
   const [verbalConsentRecording, setVerbalConsentRecording] = React.useState(false);
-  const [consentLanguage, setConsentLanguage] = React.useState("english");
+  const [consentLanguage, setConsentLanguage] = React.useState("");
+
+  // Populate state from initialData if provided
+  React.useEffect(() => {
+    if (initialData) {
+      setTextMessageLink(initialData.formatPreferences.textMessageLink ?? true);
+      setVoiceCall(initialData.formatPreferences.voiceCall ?? false);
+      setQrCode(initialData.formatPreferences.qrCode ?? true);
+      setEmailLink(initialData.formatPreferences.emailLink ?? true);
+      setInPersonTablet(initialData.formatPreferences.inPersonTablet ?? false);
+
+      setDigitalSignature(initialData.consentMethods.digitalSignature ?? true);
+      setVerbalConsentRecording(initialData.consentMethods.verbalConsentRecording ?? false);
+      setConsentLanguage(initialData.consentMethods.consentLanguage ?? "");
+    }
+  }, [initialData]);
 
   useImperativeHandle(ref, () => ({
     getValues: () => ({
@@ -148,17 +174,14 @@ const DeliveryMethodsTab = forwardRef<DeliveryMethodsTabHandle>((_props, ref) =>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="consent-language">Consent Language</Label>
-              <Select value={consentLanguage} onValueChange={setConsentLanguage}>
-                <SelectTrigger className="h-11">
-                  <SelectValue placeholder="Select language" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="english">English</SelectItem>
-                  <SelectItem value="spanish">Spanish</SelectItem>
-                  <SelectItem value="chinese">Chinese</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="consent-language">Consent Text</Label>
+              <Textarea
+                id="consent-language"
+                placeholder="Enter the consent text that will be shown to patients..."
+                value={consentLanguage}
+                onChange={(e) => setConsentLanguage(e.target.value)}
+                className="min-h-24 resize-none"
+              />
             </div>
           </div>
         </CardContent>

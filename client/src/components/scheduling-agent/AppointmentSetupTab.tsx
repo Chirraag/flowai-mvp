@@ -1,40 +1,59 @@
-import React, { useImperativeHandle, forwardRef } from "react";
+import React, { useImperativeHandle, forwardRef, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { IOSSwitch } from "@/components/ui/ios-switch";
 import { Calendar, Users } from "lucide-react";
+import type { AppointmentSetupValues } from "@/types/schedulingAgent";
 
 /**
  * AppointmentSetupTab
  * - Configuration options for appointment types and settings
  * - Mirrors the launchpad tab styling and structure
  */
+export type AppointmentSetupTabProps = {
+  initialValues?: AppointmentSetupValues;
+};
+
 export type AppointmentSetupTabHandle = {
   /**
    * Returns the current values held by the tab.
    */
-  getValues: () => {
-    newPatientDuration: string;
-    followUpDuration: string;
-    procedureSpecific: string;
-    procedureDuration: string;
-    maxNewPatients: string;
-    maxFollowUps: string;
-  };
+  getValues: () => AppointmentSetupValues;
   /**
    * Lightweight validation for the tab.
    */
   validate: () => { valid: boolean; errors: string[] };
 };
 
-const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle>((_props, ref) => {
+const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSetupTabProps>((props, ref) => {
   const [newPatientDuration, setNewPatientDuration] = React.useState("");
   const [followUpDuration, setFollowUpDuration] = React.useState("");
   const [procedureSpecific, setProcedureSpecific] = React.useState("");
   const [procedureDuration, setProcedureDuration] = React.useState("");
   const [maxNewPatients, setMaxNewPatients] = React.useState("");
   const [maxFollowUps, setMaxFollowUps] = React.useState("");
+
+  // Appointment type toggles
+  const [newPatientEnabled, setNewPatientEnabled] = React.useState(true);
+  const [followUpEnabled, setFollowUpEnabled] = React.useState(true);
+  const [procedureEnabled, setProcedureEnabled] = React.useState(false);
+
+  // Set initial values when props change
+  useEffect(() => {
+    if (props.initialValues) {
+      setNewPatientDuration(props.initialValues.newPatientDuration);
+      setFollowUpDuration(props.initialValues.followUpDuration);
+      setProcedureSpecific(props.initialValues.procedureSpecific);
+      setProcedureDuration(props.initialValues.procedureDuration);
+      setMaxNewPatients(props.initialValues.maxNewPatients);
+      setMaxFollowUps(props.initialValues.maxFollowUps);
+      setNewPatientEnabled(props.initialValues.appointmentTypes.newPatient);
+      setFollowUpEnabled(props.initialValues.appointmentTypes.followUp);
+      setProcedureEnabled(props.initialValues.appointmentTypes.procedure);
+    }
+  }, [props.initialValues]);
 
   // Expose values and validation to parent page
   useImperativeHandle(ref, () => ({
@@ -45,6 +64,11 @@ const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle>((_props, ref) 
       procedureDuration,
       maxNewPatients,
       maxFollowUps,
+      appointmentTypes: {
+        newPatient: newPatientEnabled,
+        followUp: followUpEnabled,
+        procedure: procedureEnabled,
+      },
     }),
     validate: () => {
       const errors: string[] = [];
@@ -73,6 +97,36 @@ const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle>((_props, ref) 
           <CardDescription className="mb-6">
             Configure the types of appointments available for booking
           </CardDescription>
+
+          {/* Appointment Type Toggles */}
+          <div className="space-y-4 mb-6">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="new-patient-enabled" className="text-gray-900">New Patient Appointments</Label>
+              <IOSSwitch
+                id="new-patient-enabled"
+                checked={newPatientEnabled}
+                onCheckedChange={setNewPatientEnabled}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <Label htmlFor="follow-up-enabled" className="text-gray-900">Follow-up Appointments</Label>
+              <IOSSwitch
+                id="follow-up-enabled"
+                checked={followUpEnabled}
+                onCheckedChange={setFollowUpEnabled}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <Label htmlFor="procedure-enabled" className="text-gray-900">Procedure-Specific Appointments</Label>
+              <IOSSwitch
+                id="procedure-enabled"
+                checked={procedureEnabled}
+                onCheckedChange={setProcedureEnabled}
+              />
+            </div>
+          </div>
 
           <div className="space-y-4">
             {/* Row 1: New Patient and Follow-up Appointments */}

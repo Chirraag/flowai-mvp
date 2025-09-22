@@ -1,27 +1,12 @@
-import React, { useImperativeHandle, forwardRef, useCallback, useState } from "react";
+import React, { useImperativeHandle, forwardRef, useCallback, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Workflow, Plus, Save } from "lucide-react";
-import {
-  ReactFlow,
-  MiniMap,
-  Controls,
-  Background,
-  useNodesState,
-  useEdgesState,
-  addEdge,
-  Connection,
-  Edge,
-  Node,
-  Panel,
-} from '@xyflow/react';
-import '@xyflow/react/dist/style.css';
+import { Workflow } from "lucide-react";
+import EmbeddedWorkflowEditor from "@/components/business-workflows/EmbeddedWorkflowEditor";
 
 /**
  * WorkflowsTab
  * - Scheduling workflows and automation design
- * - Mirrors the launchpad tab styling and structure
- * - React Flow integration for workflow visualization
+ * - Uses EmbeddedWorkflowEditor for full workflow editing capabilities
  */
 export type WorkflowsTabHandle = {
   /**
@@ -37,43 +22,58 @@ export type WorkflowsTabHandle = {
 };
 
 const WorkflowsTab = forwardRef<WorkflowsTabHandle>((_props, ref) => {
-  // Empty initial workflow - no nodes or edges
-  const initialNodes: Node[] = [];
-  const initialEdges: Edge[] = [];
-
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-  const [workflowData, setWorkflowData] = useState<any>({ nodes, edges });
-
-  const onConnect = useCallback(
-    (params: Connection) => setEdges((eds) => addEdge(params, eds)),
-    [setEdges]
-  );
-
-  const onAddNode = useCallback(() => {
-    const newNode: Node = {
-      id: `${nodes.length + 1}`,
-      type: 'default',
-      position: {
-        x: Math.random() * 300 + 100,
-        y: Math.random() * 200 + 100
-      },
-      data: { label: `Step ${nodes.length + 1}` },
-      style: { background: '#f3f4f6', borderColor: '#6b7280' },
+  // Workflow loader function for scheduling agent
+  // Reuse the same fetching pattern used by index/editor:
+  // 1) GET list /api/v1/business-workflows
+  // 2) Select a matching workflow by name heuristics (exact/contains)
+  // 3) If not found, POST create a new workflow
+  // 4) GET /api/v1/business-workflows/:id to return canonical shape
+  const loadSchedulingWorkflow = useCallback(async () => {
+    const pickByName = (workflows: any[]) => {
+      const exact = workflows.find((w) => !w.isTemplate && (w.name === 'Scheduling Workflow' || w.name === 'Scheduling Agent'));
+      if (exact) return exact;
+      const byContains = workflows.find((w) => !w.isTemplate && typeof w.name === 'string' && w.name.toLowerCase().includes('scheduling'));
+      if (byContains) return byContains;
+      return null;
     };
-    setNodes((nds) => nds.concat(newNode));
-  }, [nodes.length, setNodes]);
 
-  const onSaveWorkflow = useCallback(() => {
-    const workflowState = { nodes, edges };
-    setWorkflowData(workflowState);
-    console.log('Workflow saved:', workflowState);
-  }, [nodes, edges]);
+    // 1) Fetch all workflows
+    const listRes = await fetch('/api/v1/business-workflows');
+    if (!listRes.ok) throw new Error('Failed to fetch workflows list');
+    const all = await listRes.json();
+
+    let selected = pickByName(all);
+
+    // 2) Create if missing
+    if (!selected) {
+      const createPayload = {
+        name: 'Scheduling Workflow',
+        description: 'Workflow for Scheduling Agent',
+        configuration: { nodes: [], edges: [] },
+        status: 'draft',
+        edgeType: 'default',
+        isTemplate: false,
+        version: '1.0',
+      };
+      const createRes = await fetch('/api/v1/business-workflows', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(createPayload),
+      });
+      if (!createRes.ok) throw new Error('Failed to create scheduling workflow');
+      selected = await createRes.json();
+    }
+
+    // 3) Return canonical record via GET by id
+    const detailRes = await fetch(`/api/v1/business-workflows/${selected.id}`);
+    if (!detailRes.ok) throw new Error('Failed to load scheduling workflow');
+    return detailRes.json();
+  }, []);
 
   // Expose values and validation to parent page
   useImperativeHandle(ref, () => ({
     getValues: () => ({
-      workflowData: { nodes, edges },
+      workflowData: {}, // Will be managed by EmbeddedWorkflowEditor
     }),
     validate: () => {
       const errors: string[] = [];
@@ -82,50 +82,37 @@ const WorkflowsTab = forwardRef<WorkflowsTabHandle>((_props, ref) => {
     },
   }));
 
+  const exportRef = useRef<(() => void) | null>(null);
+  const [nodesCount, setNodesCount] = useState(0);
+  const [updatedAt, setUpdatedAt] = useState<string>("");
+
   return (
     <div className="space-y-6">
       {/* Scheduling Workflows Card */}
       <Card className="border-gray-200">
         <CardContent className="p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Workflow className="h-4 w-4" />
-            <h2 className="text-xl font-semibold text-gray-900">Scheduling Workflows</h2>
-          </div>
-          <p className="text-sm text-gray-600 mb-6">Design automated workflows for scheduling processes</p>
-
-          {/* React Flow Canvas */}
-          <div className="h-96 mb-6 border border-gray-300 rounded-lg overflow-hidden">
-            <ReactFlow
-              nodes={nodes}
-              edges={edges}
-              onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onConnect={onConnect}
-              fitView
-              attributionPosition="top-right"
-            >
-              <Controls />
-              <MiniMap />
-              <Background gap={12} size={1} />
-              <Panel position="top-left">
-                <div className="text-xs text-gray-600 bg-white px-2 py-1 rounded border">
-                  Click "Add Node" to start building your workflow
-                </div>
-              </Panel>
-            </ReactFlow>
+          <div className="flex items-center justify-end mb-4">
+            <div className="flex items-center gap-3 text-sm text-gray-700">
+              <span>Nodes: <span className="font-medium">{nodesCount}</span></span>
+              <span>Last Saved: <span className="font-medium">{updatedAt ? new Date(updatedAt).toLocaleString() : '—'}</span></span>
+              <button
+                className="px-3 py-1 border rounded bg-[#F48024] hover:bg-[#F48024]/90 text-white"
+                onClick={() => exportRef.current && exportRef.current()}
+              >Export</button>
+            </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex items-center gap-3">
-            <Button variant="outline" className="h-10" onClick={onAddNode}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Node
-            </Button>
-            <Button variant="default" className="h-10" onClick={onSaveWorkflow}>
-              <Save className="h-4 w-4 mr-2" />
-              Save Workflow
-            </Button>
-          </div>
+          {/* Embedded Workflow Editor */}
+          <EmbeddedWorkflowEditor
+            agentType="Scheduling Agent"
+            workflowLoader={loadSchedulingWorkflow}
+            height="h-96"
+            onMetaChange={({ nodesCount, updatedAt }) => {
+              setNodesCount(nodesCount);
+              setUpdatedAt(updatedAt);
+            }}
+            exportRef={exportRef}
+          />
         </CardContent>
       </Card>
     </div>
