@@ -7,7 +7,6 @@ import {
   useRef,
 } from "react";
 import { queryClient } from "@/lib/queryClient";
-import { api } from "@/lib/api";
 
 interface User {
   id: number;
@@ -69,7 +68,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         try {
           // Validate token with API
           const response = await fetch(
-            "https://api.myflowai.com/auth/validate",
+            "/api/v1/auth/validate",
             {
               method: "POST",
               headers: {
@@ -157,7 +156,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const refreshTokenInternal = async (refreshToken: string) => {
     console.log("AuthContext: Refreshing token...");
     try {
-      const response = await fetch("https://api.myflowai.com/auth/refresh", {
+      const response = await fetch("/api/v1/auth/refresh", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -178,7 +177,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
           // Validate the new token to get user data
           const validateResponse = await fetch(
-            "https://api.myflowai.com/auth/validate",
+            "/api/v1/auth/validate",
             {
               method: "POST",
               headers: {
@@ -239,7 +238,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await fetch("https://api.myflowai.com/auth/login", {
+      const response = await fetch("/api/v1/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -294,7 +293,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const logout = async () => {
     try {
       if (token) {
-        await fetch("https://api.myflowai.com/auth/logout", {
+        await fetch("/api/v1/auth/logout", {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -354,6 +353,53 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
+  const switchOrganizationLegacy = async (orgId: number) => {
+    try {
+      const response = await fetch("/api/v1/auth/select-org", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ orgId }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.token) {
+          // Update tokens
+          setToken(data.token);
+          localStorage.setItem("auth_token", data.token);
+
+          if (data.refreshToken) {
+            localStorage.setItem("refresh_token", data.refreshToken);
+          }
+
+          // Update user data with new organization
+          if (data.user) {
+            const mappedUser: User = {
+              id: data.user.id,
+              username: data.user.username,
+              email: data.user.email,
+              role: data.user.role,
+              org_id: data.user.org_id,
+              org_name: data.user.org_name,
+              workspaceId: data.user.org_id,
+              workspaceName: data.user.org_name,
+              is_active: data.user.is_active,
+              last_login: new Date().toISOString(),
+            };
+            setUser(mappedUser);
+          }
+        }
+      } else {
+        throw new Error("Failed to switch organization");
+      }
+    } catch (error) {
+      console.error("Organization switch failed:", error);
+      throw error;
+    }
+  };
 
   const value = {
     user,
