@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,7 +10,6 @@ import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 import { ChevronDown, ChevronUp, Plus, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { api } from '@/lib/api';
 
 interface Organization {
   id: number;
@@ -74,18 +74,7 @@ export default function OrganizationSwitcher() {
 
     setSwitching(orgId);
     try {
-      const response = await api.post('/auth/select-org', { orgId });
-
-      if (response.success && response.token && response.user) {
-        // Update tokens
-        localStorage.setItem('auth_token', response.token);
-        if (response.refreshToken) {
-          localStorage.setItem('refresh_token', response.refreshToken);
-        }
-
-        // Navigate to the new organization's launchpad
-        window.location.href = `/${orgId}/launchpad`;
-      }
+      await switchOrganization(orgId);
 
       toast({
         title: "Organization Switched",
@@ -146,7 +135,7 @@ export default function OrganizationSwitcher() {
 
     setIsCreating(true);
     try {
-      const response = await api.post('/auth/create-organisation', {
+      const response = await api.post('https://api.myflowai.com/auth/create-organisation', {
         name: formData.name.trim(),
         retell_workspace_id: formData.retell_workspace_id.trim(),
         api_key: formData.api_key.trim()
@@ -162,16 +151,14 @@ export default function OrganizationSwitcher() {
         setShowAddDialog(false);
         setFormData({ name: '', retell_workspace_id: '', api_key: '' });
         
-        // Use the switchOrganization method to properly update context and redirect
+        // Redirect to the new organization using switchOrganization
         if (response.organisation?.id) {
           console.log('Redirecting to new organization:', response.organisation.id);
           await switchOrganization(response.organisation.id);
         } else {
-          console.log('No organization ID found in response, refreshing list instead');
-          // Fallback: refresh organizations list if no orgId returned
-          if (isExpanded) {
-            await fetchOrganizations();
-          }
+          console.log('No organization ID found in response');
+          // Refresh organizations list as fallback
+          await fetchOrganizations();
         }
       } else {
         throw new Error(response.message || 'Failed to create organization');
