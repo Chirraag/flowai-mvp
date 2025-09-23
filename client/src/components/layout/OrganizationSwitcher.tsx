@@ -163,9 +163,14 @@ export default function OrganizationSwitcher() {
         setFormData({ name: '', retell_workspace_id: '', api_key: '' });
         
         // Redirect to the new organization
-        if (response.orgId) {
-          window.location.href = `/${response.orgId}/launchpad`;
+        // Check for orgId in different possible response structures
+        const orgId = response.orgId || response.data?.orgId || response.organisation?.id;
+        
+        if (orgId) {
+          console.log('Redirecting to new organization:', orgId);
+          window.location.href = `/${orgId}/launchpad`;
         } else {
+          console.log('No orgId found in response, refreshing list instead');
           // Fallback: refresh organizations list if no orgId returned
           if (isExpanded) {
             await fetchOrganizations();
