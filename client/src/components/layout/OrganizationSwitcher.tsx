@@ -176,6 +176,18 @@ export default function OrganizationSwitcher() {
             await fetchOrganizations();
           }
         }
+        
+        // Based on the actual API response structure
+        if (response.organisation?.id) {
+          console.log('Redirecting to new organization:', response.organisation.id);
+          window.location.href = `/${response.organisation.id}/launchpad`;
+        } else {
+          console.log('No organization ID found in response, refreshing list instead');
+          // Fallback: refresh organizations list if no orgId returned
+          if (isExpanded) {
+            await fetchOrganizations();
+          }
+        }
       } else {
         throw new Error(response.message || 'Failed to create organization');
       }
