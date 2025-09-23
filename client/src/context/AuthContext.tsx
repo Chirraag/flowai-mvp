@@ -68,7 +68,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         try {
           // Validate token with API
           const response = await fetch(
-            "/api/v1/auth/validate",
+            "https://api.myflowai.com/auth/validate",
             {
               method: "POST",
               headers: {
@@ -156,7 +156,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const refreshTokenInternal = async (refreshToken: string) => {
     console.log("AuthContext: Refreshing token...");
     try {
-      const response = await fetch("/api/v1/auth/refresh", {
+      const response = await fetch("https://api.myflowai.com/auth/refresh", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -177,7 +177,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
           // Validate the new token to get user data
           const validateResponse = await fetch(
-            "/api/v1/auth/validate",
+            "https://api.myflowai.com/auth/validate",
             {
               method: "POST",
               headers: {
@@ -238,7 +238,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await fetch("/api/v1/auth/login", {
+      const response = await fetch("https://api.myflowai.com/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -293,7 +293,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const logout = async () => {
     try {
       if (token) {
-        await fetch("/api/v1/auth/logout", {
+        await fetch("https://api.myflowai.com/auth/logout", {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -355,7 +355,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const switchOrganizationLegacy = async (orgId: number) => {
     try {
-      const response = await fetch("/api/v1/auth/select-org", {
+      const response = await fetch("https://api.myflowai.com/auth/select-org", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

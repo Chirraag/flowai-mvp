@@ -135,7 +135,7 @@ export default function OrganizationSwitcher() {
 
     setIsCreating(true);
     try {
-      const response = await api.post('/api/v1/auth/create-organisation', {
+      const response = await api.post('https://api.myflowai.com/auth/create-organisation', {
         name: formData.name.trim(),
         retell_workspace_id: formData.retell_workspace_id.trim(),
         api_key: formData.api_key.trim()
