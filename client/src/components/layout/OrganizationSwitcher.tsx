@@ -135,7 +135,7 @@ export default function OrganizationSwitcher() {
 
     setIsCreating(true);
     try {
-      const response = await api.post('auth/create-organisation', {
+      const response = await api.post('/auth/create-organisation', {
         name: formData.name.trim(),
         retell_workspace_id: formData.retell_workspace_id.trim(),
         api_key: formData.api_key.trim()
