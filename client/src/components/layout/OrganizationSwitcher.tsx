@@ -162,9 +162,14 @@ export default function OrganizationSwitcher() {
         setShowAddDialog(false);
         setFormData({ name: '', retell_workspace_id: '', api_key: '' });
         
-        // Refresh the organizations list
-        if (isExpanded) {
-          await fetchOrganizations();
+        // Redirect to the new organization
+        if (response.orgId) {
+          window.location.href = `/${response.orgId}/launchpad`;
+        } else {
+          // Fallback: refresh organizations list if no orgId returned
+          if (isExpanded) {
+            await fetchOrganizations();
+          }
         }
       } else {
         throw new Error(response.message || 'Failed to create organization');
