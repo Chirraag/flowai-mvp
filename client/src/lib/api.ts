@@ -1,5 +1,5 @@
 // API utility functions with authentication
-const API_BASE_URL = "https://api.myflowai.com";
+const API_BASE_URL = "";
 
 export class ApiError extends Error {
   constructor(
