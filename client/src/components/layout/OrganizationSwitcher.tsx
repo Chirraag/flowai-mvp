@@ -162,25 +162,10 @@ export default function OrganizationSwitcher() {
         setShowAddDialog(false);
         setFormData({ name: '', retell_workspace_id: '', api_key: '' });
         
-        // Redirect to the new organization
-        // Check for orgId in different possible response structures
-        const orgId = response.orgId || response.data?.orgId || response.organisation?.id;
-        
-        if (orgId) {
-          console.log('Redirecting to new organization:', orgId);
-          window.location.href = `/${orgId}/launchpad`;
-        } else {
-          console.log('No orgId found in response, refreshing list instead');
-          // Fallback: refresh organizations list if no orgId returned
-          if (isExpanded) {
-            await fetchOrganizations();
-          }
-        }
-        
-        // Based on the actual API response structure
+        // Use the switchOrganization method to properly update context and redirect
         if (response.organisation?.id) {
           console.log('Redirecting to new organization:', response.organisation.id);
-          window.location.href = `/${response.organisation.id}/launchpad`;
+          await switchOrganization(response.organisation.id);
         } else {
           console.log('No organization ID found in response, refreshing list instead');
           // Fallback: refresh organizations list if no orgId returned
