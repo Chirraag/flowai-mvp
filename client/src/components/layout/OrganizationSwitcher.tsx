@@ -11,6 +11,24 @@ import { ChevronDown, ChevronUp, Plus, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import React, { useState, useEffect } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { api } from "@/lib/api";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Loader2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus, Check } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 interface Organization {
   id: number;
@@ -30,7 +48,9 @@ interface OrganizationSwitcherProps {
   isCollapsed?: boolean;
 }
 
-export default function OrganizationSwitcher({ isCollapsed = false }: OrganizationSwitcherProps) {
+export default function OrganizationSwitcher({
+  isCollapsed = false,
+}: OrganizationSwitcherProps) {
   const { user, switchOrganization } = useAuth();
   const { toast } = useToast();
   const [isExpanded, setIsExpanded] = useState(false);
@@ -40,9 +60,9 @@ export default function OrganizationSwitcher({ isCollapsed = false }: Organizati
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
-    retell_workspace_id: '',
-    api_key: ''
+    name: "",
+    retell_workspace_id: "",
+    api_key: "",
   });
 
   // Fetch organizations when component mounts or when expanded
@@ -55,12 +75,12 @@ export default function OrganizationSwitcher({ isCollapsed = false }: Organizati
   const fetchOrganizations = async () => {
     setLoading(true);
     try {
-      const response = await api.get<OrganizationsResponse>('/auth/all-orgs');
+      const response = await api.get<OrganizationsResponse>("/auth/all-orgs");
       if (response.success) {
         setOrganizations(response.organisations);
       }
     } catch (error) {
-      console.error('Failed to fetch organizations:', error);
+      console.error("Failed to fetch organizations:", error);
       toast({
         title: "Error",
         description: "Failed to load organizations",
@@ -83,10 +103,10 @@ export default function OrganizationSwitcher({ isCollapsed = false }: Organizati
 
       toast({
         title: "Organization Switched",
-        description: `Switched to ${organizations.find(org => org.id === orgId)?.name}`,
+        description: `Switched to ${organizations.find((org) => org.id === orgId)?.name}`,
       });
     } catch (error) {
-      console.error('Failed to switch organization:', error);
+      console.error("Failed to switch organization:", error);
       toast({
         title: "Error",
         description: "Failed to switch organization",
@@ -103,9 +123,9 @@ export default function OrganizationSwitcher({ isCollapsed = false }: Organizati
     setShowAddDialog(true);
     // Reset form data
     setFormData({
-      name: '',
-      retell_workspace_id: '',
-      api_key: ''
+      name: "",
+      retell_workspace_id: "",
+      api_key: "",
     });
   };
 
@@ -140,10 +160,10 @@ export default function OrganizationSwitcher({ isCollapsed = false }: Organizati
 
     setIsCreating(true);
     try {
-      const response = await api.post('/auth/create-organisation', {
+      const response = await api.post("/auth/create-organisation", {
         name: formData.name.trim(),
         retell_workspace_id: formData.retell_workspace_id.trim(),
-        api_key: formData.api_key.trim()
+        api_key: formData.api_key.trim(),
       });
 
       if (response.success) {
@@ -151,25 +171,57 @@ export default function OrganizationSwitcher({ isCollapsed = false }: Organizati
           title: "Success",
           description: `Organization "${formData.name}" created successfully`,
         });
-        
-        // Close dialog and refresh organizations list
+
+        // Close dialog first
         setShowAddDialog(false);
-        setFormData({ name: '', retell_workspace_id: '', api_key: '' });
-        
-        // Redirect to the new organization using switchOrganization
+        setFormData({ name: "", retell_workspace_id: "", api_key: "" });
+
+        // Refresh the organizations list to include the new org
+        await fetchOrganizations();
+
+        // Now switch to the new organization
         if (response.organisation?.id) {
-          console.log('Redirecting to new organization:', response.organisation.id);
-          await switchOrganization(response.organisation.id);
+          console.log(
+            "Switching to new organization:",
+            response.organisation.id,
+          );
+
+          // Small delay to ensure the list is updated in state
+          setTimeout(async () => {
+            try {
+              await switchOrganization(response.organisation.id);
+
+              // Additional toast to confirm the switch
+              toast({
+                title: "Switched Successfully",
+                description: `Now using ${response.organisation.name}`,
+              });
+            } catch (switchError) {
+              console.error(
+                "Failed to switch to new organization:",
+                switchError,
+              );
+              toast({
+                title: "Organization Created",
+                description:
+                  "Organization created successfully, but failed to switch. Please select it manually.",
+                variant: "destructive",
+              });
+            }
+          }, 100);
         } else {
-          console.log('No organization ID found in response');
-          // Refresh organizations list as fallback
-          await fetchOrganizations();
+          console.warn("No organization ID in response, cannot auto-switch");
+          toast({
+            title: "Note",
+            description:
+              "Organization created. Please select it from the list.",
+          });
         }
       } else {
-        throw new Error(response.message || 'Failed to create organization');
+        throw new Error(response.message || "Failed to create organization");
       }
     } catch (error: any) {
-      console.error('Failed to create organization:', error);
+      console.error("Failed to create organization:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to create organization",
@@ -181,17 +233,17 @@ export default function OrganizationSwitcher({ isCollapsed = false }: Organizati
   };
 
   const handleInputChange = (field: keyof typeof formData, value: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
   const getInitials = (name: string) => {
     return name
-      .split(' ')
-      .map(word => word.charAt(0))
-      .join('')
+      .split(" ")
+      .map((word) => word.charAt(0))
+      .join("")
       .toUpperCase()
       .slice(0, 2);
   };
@@ -199,23 +251,23 @@ export default function OrganizationSwitcher({ isCollapsed = false }: Organizati
   const getAvatarColor = (name: string) => {
     // Generate consistent colors based on organization name
     const colors = [
-      'bg-blue-500',
-      'bg-green-500', 
-      'bg-purple-500',
-      'bg-orange-500',
-      'bg-pink-500',
-      'bg-indigo-500',
-      'bg-teal-500',
-      'bg-red-500'
+      "bg-blue-500",
+      "bg-green-500",
+      "bg-purple-500",
+      "bg-orange-500",
+      "bg-pink-500",
+      "bg-indigo-500",
+      "bg-teal-500",
+      "bg-red-500",
     ];
     const index = name.length % colors.length;
     return colors[index];
   };
 
-  const currentOrg = organizations.find(org => org.id === user?.org_id) || {
+  const currentOrg = organizations.find((org) => org.id === user?.org_id) || {
     id: user?.org_id || 0,
-    name: user?.org_name || 'Unknown',
-    isCurrent: true
+    name: user?.org_name || "Unknown",
+    isCurrent: true,
   };
 
   return (
@@ -225,16 +277,20 @@ export default function OrganizationSwitcher({ isCollapsed = false }: Organizati
         variant="outline"
         className={cn(
           "w-full h-10 hover:bg-gray-50 rounded-lg border-gray-200 bg-white transition-all duration-200",
-          isCollapsed ? "justify-center px-2" : "justify-between px-3"
+          isCollapsed ? "justify-center px-2" : "justify-between px-3",
         )}
         onClick={() => setIsExpanded(!isExpanded)}
         title={isCollapsed ? currentOrg.name : undefined}
       >
-        <div className={cn(
-          "flex items-center min-w-0 h-6",
-          isCollapsed ? "gap-0" : "gap-2 flex-1"
-        )}>
-          <div className={`w-6 h-6 ${getAvatarColor(currentOrg.name)} rounded-full flex items-center justify-center text-white font-semibold text-xs`}>
+        <div
+          className={cn(
+            "flex items-center min-w-0 h-6",
+            isCollapsed ? "gap-0" : "gap-2 flex-1",
+          )}
+        >
+          <div
+            className={`w-6 h-6 ${getAvatarColor(currentOrg.name)} rounded-full flex items-center justify-center text-white font-semibold text-xs`}
+          >
             {getInitials(currentOrg.name)}
           </div>
           {!isCollapsed && (
@@ -246,7 +302,9 @@ export default function OrganizationSwitcher({ isCollapsed = false }: Organizati
           )}
         </div>
         {!isCollapsed && (
-          <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+          <ChevronDown
+            className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
+          />
         )}
       </Button>
 
@@ -259,16 +317,20 @@ export default function OrganizationSwitcher({ isCollapsed = false }: Organizati
             onClick={() => setIsExpanded(false)}
           />
 
-          <Card className={cn(
-            "absolute top-full mt-1 shadow-xl border border-gray-200 z-50 bg-white rounded-lg overflow-hidden",
-            isCollapsed ? "left-0 w-64" : "left-0 right-0" // Fixed width when collapsed
-          )}>
+          <Card
+            className={cn(
+              "absolute top-full mt-1 shadow-xl border border-gray-200 z-50 bg-white rounded-lg overflow-hidden",
+              isCollapsed ? "left-0 w-64" : "left-0 right-0", // Fixed width when collapsed
+            )}
+          >
             <CardContent className="p-0">
               <div className="max-h-72 overflow-y-auto">
                 {loading ? (
                   <div className="flex items-center justify-center py-6">
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-                    <span className="ml-2 text-sm text-gray-600">Loading organizations...</span>
+                    <span className="ml-2 text-sm text-gray-600">
+                      Loading organizations...
+                    </span>
                   </div>
                 ) : (
                   <div className="py-2">
@@ -281,7 +343,9 @@ export default function OrganizationSwitcher({ isCollapsed = false }: Organizati
                         disabled={switching === org.id}
                       >
                         <div className="flex items-center gap-3 w-full min-w-0">
-                          <div className={`w-6 h-6 ${getAvatarColor(org.name)} rounded-full flex items-center justify-center text-white font-semibold text-xs`}>
+                          <div
+                            className={`w-6 h-6 ${getAvatarColor(org.name)} rounded-full flex items-center justify-center text-white font-semibold text-xs`}
+                          >
                             {getInitials(org.name)}
                           </div>
                           <div className="text-left min-w-0 flex-1">
@@ -312,7 +376,9 @@ export default function OrganizationSwitcher({ isCollapsed = false }: Organizati
                     >
                       <div className="flex items-center gap-3">
                         <Plus className="h-4 w-4 text-gray-500 mr-2" />
-                        <span className="text-sm font-semibold">Add organisation</span>
+                        <span className="text-sm font-semibold">
+                          Add organisation
+                        </span>
                       </div>
                     </Button>
                   </div>
@@ -329,7 +395,7 @@ export default function OrganizationSwitcher({ isCollapsed = false }: Organizati
           <DialogHeader>
             <DialogTitle>Add New Organisation</DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="org-name">Organisation Name *</Label>
@@ -337,7 +403,7 @@ export default function OrganizationSwitcher({ isCollapsed = false }: Organizati
                 id="org-name"
                 placeholder="e.g., Test Healthcare Clinic"
                 value={formData.name}
-                onChange={(e) => handleInputChange('name', e.target.value)}
+                onChange={(e) => handleInputChange("name", e.target.value)}
                 disabled={isCreating}
               />
             </div>
@@ -348,7 +414,9 @@ export default function OrganizationSwitcher({ isCollapsed = false }: Organizati
                 id="retell-workspace"
                 placeholder="e.g., ws_abc123def456"
                 value={formData.retell_workspace_id}
-                onChange={(e) => handleInputChange('retell_workspace_id', e.target.value)}
+                onChange={(e) =>
+                  handleInputChange("retell_workspace_id", e.target.value)
+                }
                 disabled={isCreating}
               />
             </div>
@@ -359,7 +427,7 @@ export default function OrganizationSwitcher({ isCollapsed = false }: Organizati
                 id="api-key"
                 placeholder="e.g., key_81827a38956f6979a50fccd47183"
                 value={formData.api_key}
-                onChange={(e) => handleInputChange('api_key', e.target.value)}
+                onChange={(e) => handleInputChange("api_key", e.target.value)}
                 disabled={isCreating}
                 type="password"
               />
@@ -376,7 +444,12 @@ export default function OrganizationSwitcher({ isCollapsed = false }: Organizati
             </Button>
             <Button
               onClick={handleCreateOrganization}
-              disabled={isCreating || !formData.name.trim() || !formData.retell_workspace_id.trim() || !formData.api_key.trim()}
+              disabled={
+                isCreating ||
+                !formData.name.trim() ||
+                !formData.retell_workspace_id.trim() ||
+                !formData.api_key.trim()
+              }
               className="bg-blue-600 hover:bg-blue-700"
             >
               {isCreating ? (
@@ -385,7 +458,7 @@ export default function OrganizationSwitcher({ isCollapsed = false }: Organizati
                   Creating...
                 </>
               ) : (
-                'Create Organisation'
+                "Create Organisation"
               )}
             </Button>
           </div>
