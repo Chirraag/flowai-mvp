@@ -466,7 +466,7 @@ export default function Sidebar({
         onClick={handleSidebarClick}
       >
         <div className={cn(
-          "flex items-center border-b border-gray-200 h-14 px-3",
+          "flex items-center border-b border-gray-200 h-16 px-3",
           showLabels ? "justify-between" : "justify-center"
         )}>
           <div className="flex items-center">

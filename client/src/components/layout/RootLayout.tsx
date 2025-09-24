@@ -20,8 +20,6 @@ export default function RootLayout() {
   
   // Dynamic dimensions
   const sidebarWidth = effectiveExpanded ? 256 : 64; // px
-  const contentScale = effectiveExpanded ? 0.98 : 1.0;
-
   return (
     <div className="min-h-screen flex flex-col">
       <Sidebar 
@@ -37,9 +35,7 @@ export default function RootLayout() {
           isMobile ? "" : "md:ml-[var(--sidebar-width)]"
         )}
         style={{
-          '--sidebar-width': `${sidebarWidth}px`,
-          transform: isMobile ? 'none' : `scale(${contentScale})`,
-          transformOrigin: 'top left'
+          '--sidebar-width': `${sidebarWidth}px`
         } as React.CSSProperties}
       >
         <Header onMobileMenuToggle={toggleMobileMenu} />
