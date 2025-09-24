@@ -29,7 +29,7 @@ export default function LocationCard({
 
   return (
     <Card className="border-0 shadow-lg bg-white rounded-xl overflow-hidden" data-location-card>
-      <CardHeader className="bg-[#1C275E] text-white p-3">
+      <CardHeader className="bg-[#e2e8f0] text-[#1C275E] p-3 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-[#F48024]/20 rounded-lg flex items-center justify-center">
@@ -40,7 +40,7 @@ export default function LocationCard({
             <CardTitle className="text-lg font-semibold">{location.name || `Location ${index + 1}`}</CardTitle>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" className="bg-white text-black border border-black hover:bg-gray-50" onClick={onDelete}>
+            <Button variant="ghost" size="sm" className="bg-white text-[#1C275E] border border-[#1C275E] hover:bg-[#233072] hover:text-white focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2" onClick={onDelete}>
               Delete
             </Button>
             <TooltipProvider>
@@ -50,7 +50,7 @@ export default function LocationCard({
                     variant="ghost"
                     size="sm"
                     onClick={onToggleMinimize}
-                    className="bg-[#F48024] text-white hover:bg-[#C96A1E]"
+                    className="bg-[#F48024] text-white hover:bg-[#C96A1E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={isMinimized ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"}></path>
@@ -71,7 +71,7 @@ export default function LocationCard({
         <div className="space-y-2 mb-4">
           <Label className="text-xs font-medium text-[#1C275E]">Location Name</Label>
           <Input
-            className="border-2 border-gray-200 focus:border-[#1C275E] focus:ring-[#1C275E]/20 rounded-lg transition-all duration-300"
+            className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]"
             placeholder="Enter location name"
             value={location.name}
             onChange={(e) => onChange({ name: e.target.value })}
@@ -81,7 +81,7 @@ export default function LocationCard({
         <div className="space-y-2 mb-4">
           <Label className="text-xs font-medium text-[#1C275E]">Location ID</Label>
           <Input
-            className="border-2 border-gray-200 focus:border-[#1C275E] focus:ring-[#1C275E]/20 rounded-lg transition-all duration-300"
+            className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]"
             placeholder="External location ID (e.g., LOC001)"
             value={location.location_id}
             onChange={(e) => onChange({ location_id: e.target.value })}
@@ -92,7 +92,7 @@ export default function LocationCard({
           <div className="space-y-3">
             <Label className="text-xs font-medium text-[#1C275E]">Address Line 1</Label>
             <Input
-              className="border-2 border-gray-200 focus:border-[#1C275E] focus:ring-[#1C275E]/20 rounded-lg transition-all duration-300"
+              className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]"
               placeholder="Street Address"
               value={location.address_line1}
               onChange={(e) => onChange({ address_line1: e.target.value })}
@@ -101,7 +101,7 @@ export default function LocationCard({
           <div className="space-y-3">
             <Label className="text-xs font-medium text-[#1C275E]">Address Line 2</Label>
             <Input
-              className="border-2 border-gray-200 focus:border-[#1C275E] focus:ring-[#1C275E]/20 rounded-lg transition-all duration-300"
+              className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]"
               placeholder="Apt, Suite, etc."
               value={location.address_line2 || ""}
               onChange={(e) => onChange({ address_line2: e.target.value })}
@@ -113,7 +113,7 @@ export default function LocationCard({
           <div className="space-y-3 col-span-2">
             <Label className="text-xs font-medium text-[#1C275E]">City</Label>
             <Input
-              className="border-2 border-gray-200 focus:border-[#1C275E] focus:ring-[#1C275E]/20 rounded-lg transition-all duration-300"
+              className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]"
               placeholder="City"
               value={location.city}
               onChange={(e) => onChange({ city: e.target.value })}
@@ -122,7 +122,7 @@ export default function LocationCard({
           <div className="space-y-3 col-span-1">
             <Label className="text-xs font-medium text-[#1C275E]">State</Label>
             <Input
-              className="border-2 border-gray-200 focus:border-[#1C275E] focus:ring-[#1C275E]/20 rounded-lg transition-all duration-300"
+              className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]"
               placeholder="State"
               value={location.state}
               onChange={(e) => onChange({ state: e.target.value })}
@@ -131,7 +131,7 @@ export default function LocationCard({
           <div className="space-y-3 col-span-2">
             <Label className="text-xs font-medium text-[#1C275E]">Zip</Label>
             <Input
-              className="border-2 border-gray-200 focus:border-[#1C275E] focus:ring-[#1C275E]/20 rounded-lg transition-all duration-300"
+              className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]"
               placeholder="Zip"
               value={location.zip_code}
               onChange={(e) => onChange({ zip_code: e.target.value })}
@@ -143,7 +143,7 @@ export default function LocationCard({
           <div className="space-y-3">
             <Label className="text-xs font-medium text-[#1C275E]">Weekday Hours</Label>
             <Input
-              className="border-2 border-gray-200 focus:border-[#1C275E] focus:ring-[#1C275E]/20 rounded-lg transition-all duration-300"
+              className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]"
               placeholder="e.g., 8:00 AM - 5:00 PM"
               value={location.weekday_hours}
               onChange={(e) => onChange({ weekday_hours: e.target.value })}
@@ -152,7 +152,7 @@ export default function LocationCard({
           <div className="space-y-3">
             <Label className="text-xs font-medium text-[#1C275E]">Weekend Hours</Label>
             <Input
-              className="border-2 border-gray-200 focus:border-[#1C275E] focus:ring-[#1C275E]/20 rounded-lg transition-all duration-300"
+              className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]"
               placeholder="e.g., 9:00 AM - 2:00 PM or Closed"
               value={location.weekend_hours}
               onChange={(e) => onChange({ weekend_hours: e.target.value })}
@@ -164,7 +164,7 @@ export default function LocationCard({
         <div className="space-y-2 mb-4">
           <Label className="text-xs font-medium text-[#1C275E]">Parking Directions</Label>
           <Textarea
-            className="border-2 border-gray-200 focus:border-[#1C275E] focus:ring-[#1C275E]/20 rounded-lg transition-all duration-300 min-h-[60px]"
+            className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] min-h-[60px]"
             placeholder="Provide parking information and directions"
             value={location.parking_directions}
             onChange={(e) => onChange({ parking_directions: e.target.value })}

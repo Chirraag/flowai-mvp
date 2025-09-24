@@ -116,9 +116,9 @@ export function mapApiToDeliveryMethods(apiData: PatientIntakeApiData): Delivery
  */
 export function mapApiToAgentConfig(apiData: PatientIntakeApiData): PatientAgentConfigTabData {
   return {
-    agentName: apiData.agent_name || "Patient Intake Agent",
-    language: apiData.language || "en-US",
-    voice: apiData.voice || "alloy",
+    agentName: apiData.agent_name || "",
+    language: apiData.language || "",
+    voice: apiData.voice || "",
     agentInstructions: apiData.agent_instructions || "",
     humanTransferCriteria: apiData.human_transfer_criteria || "",
   };
@@ -200,33 +200,3 @@ export function mapAgentConfigToApi(tabData: PatientAgentConfigTabData) {
   };
 }
 
-// Helper function for testing mappers with sample data from patient.md
-export function testMappers() {
-  const sampleApiData: PatientIntakeApiData = {
-    id: "434c32f5-35e7-4e62-a761-adb01f6ce83e",
-    org_id: 3,
-    agent_name: "Patient Intake Assistant",
-    language: "en-US",
-    voice: "alloy",
-    agent_instructions: "You are a friendly patient intake assistant",
-    human_transfer_criteria: "Transfer if patient requests",
-    field_requirements: { patient_name: "required", email: "optional" },
-    special_instructions: { minors_instructions: "Parent required" },
-    delivery_methods: { text_message_link: true, qr_code: false },
-    signature_consent: { digital_signature: true, verbal_consent_recording: false, consent_language: "English", consent_languages_available: [] },
-    intake_forms: [],
-    modality_forms: [],
-    custom_forms: [],
-    workflows: [],
-    current_version: 1,
-    is_active: true,
-    created_at: "2025-09-18T08:45:30.872Z",
-    updated_at: "2025-09-18T03:24:27.080Z",
-  };
-
-  console.log("API to FieldContentRules:", mapApiToFieldContentRules(sampleApiData));
-  console.log("API to DeliveryMethods:", mapApiToDeliveryMethods(sampleApiData));
-  console.log("API to AgentConfig:", mapApiToAgentConfig(sampleApiData));
-  console.log("Reverse FieldContentRules:", mapFieldContentRulesToApi(mapApiToFieldContentRules(sampleApiData)));
-  // Add more tests as needed
-}

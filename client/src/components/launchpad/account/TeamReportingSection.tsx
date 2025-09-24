@@ -79,7 +79,7 @@ export default function TeamReportingSection({
                   <TableRow key={member.id} className="hover:bg-[#1C275E]/5">
                     <TableCell className="p-2">
                       <Input
-                        className="border-2 border-gray-200 focus:border-[#1C275E] focus:ring-[#1C275E]/20 rounded-lg transition-all duration-300"
+                        className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
                         placeholder="Enter title"
                         value={member.title}
                         onChange={(e) => onUpdate(member.id, 'title', e.target.value)}
@@ -88,7 +88,7 @@ export default function TeamReportingSection({
                     </TableCell>
                     <TableCell className="p-2">
                       <Input
-                        className="border-2 border-gray-200 focus:border-[#1C275E] focus:ring-[#1C275E]/20 rounded-lg transition-all duration-300"
+                        className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
                         placeholder="Full name"
                         value={member.name}
                         onChange={(e) => onUpdate(member.id, 'name', e.target.value)}
@@ -97,7 +97,7 @@ export default function TeamReportingSection({
                     </TableCell>
                     <TableCell className="p-2">
                       <Input
-                        className="border-2 border-gray-200 focus:border-[#1C275E] focus:ring-[#1C275E]/20 rounded-lg transition-all duration-300"
+                        className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
                         placeholder="email@practice.com"
                         value={member.email}
                         onChange={(e) => onUpdate(member.id, 'email', e.target.value)}
@@ -106,7 +106,7 @@ export default function TeamReportingSection({
                     </TableCell>
                     <TableCell className="p-2">
                       <Input
-                        className="border-2 border-gray-200 focus:border-[#1C275E] focus:ring-[#1C275E]/20 rounded-lg transition-all duration-300"
+                        className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
                         placeholder="(555) 123-4567"
                         value={member.phone}
                         onChange={(e) => onUpdate(member.id, 'phone', e.target.value)}

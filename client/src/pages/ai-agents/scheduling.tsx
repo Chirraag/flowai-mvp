@@ -375,46 +375,44 @@ export default function SchedulingAgent() {
       {/* Tabbed layout */}
       <Tabs defaultValue="appointment-setup" className="w-full">
         {/* Improved tab navigation with brand styling */}
-        <div className="bg-white rounded-none shadow-lg border border-gray-200 overflow-hidden mb-6">
-          <TabsList className="w-full grid grid-cols-6 gap-0 bg-transparent h-12 m-0 p-0">
-            <TabsTrigger
-              value="appointment-setup"
-              className="rounded-none data-[state=active]:bg-[#1c275e] data-[state=active]:text-white transition-all duration-200 font-medium text-center h-full flex items-center justify-center px-1 py-0 text-xs sm:text-sm border-0 leading-none"
-            >
-              Appointment Setup
-            </TabsTrigger>
-            <TabsTrigger
-              value="patient-eligibility"
-              className="rounded-none data-[state=active]:bg-[#1c275e] data-[state=active]:text-white transition-all duration-200 font-medium text-center h-full flex items-center justify-center px-1 py-0 text-xs sm:text-sm border-0 leading-none"
-            >
-              Patient & Eligibility
-            </TabsTrigger>
-            <TabsTrigger
-              value="scheduling-policies"
-              className="rounded-none data-[state=active]:bg-[#1c275e] data-[state=active]:text-white transition-all duration-200 font-medium text-center h-full flex items-center justify-center px-1 py-0 text-xs sm:text-sm border-0 leading-none"
-            >
-              Scheduling Policies
-            </TabsTrigger>
-            <TabsTrigger
-              value="provider-preferences"
-              className="rounded-none data-[state=active]:bg-[#1c275e] data-[state=active]:text-white transition-all duration-200 font-medium text-center h-full flex items-center justify-center px-1 py-0 text-xs sm:text-sm border-0 leading-none"
-            >
-              Provider Preferences
-            </TabsTrigger>
-            <TabsTrigger
-              value="workflows"
-              className="rounded-none data-[state=active]:bg-[#1c275e] data-[state=active]:text-white transition-all duration-200 font-medium text-center h-full flex items-center justify-center px-1 py-0 text-xs sm:text-sm border-0 leading-none"
-            >
-              Workflows
-            </TabsTrigger>
-            <TabsTrigger
-              value="agent-config"
-              className="rounded-none data-[state=active]:bg-[#1c275e] data-[state=active]:text-white transition-all duration-200 font-medium text-center h-full flex items-center justify-center px-1 py-0 text-xs sm:text-sm border-0 leading-none"
-            >
-              Agent Config
-            </TabsTrigger>
-          </TabsList>
-        </div>
+        <TabsList className="w-full flex gap-0 rounded-3xl outline outline-offset-[-1px] bg-muted p-1 overflow-hidden mb-6 h-12">
+          <TabsTrigger
+            value="appointment-setup"
+            className="flex-1 first:rounded-l-3xl last:rounded-r-3xl data-[state=active]:bg-[#1c275e] data-[state=active]:text-white transition-all duration-300 font-medium text-center h-full flex items-center justify-center px-1 py-0 text-xs sm:text-sm border-0 leading-none"
+          >
+            Appointment Setup
+          </TabsTrigger>
+          <TabsTrigger
+            value="patient-eligibility"
+            className="flex-1 first:rounded-l-3xl last:rounded-r-3xl data-[state=active]:bg-[#1c275e] data-[state=active]:text-white transition-all duration-300 font-medium text-center h-full flex items-center justify-center px-1 py-0 text-xs sm:text-sm border-0 leading-none"
+          >
+            Patient & Eligibility
+          </TabsTrigger>
+          <TabsTrigger
+            value="scheduling-policies"
+            className="flex-1 first:rounded-l-3xl last:rounded-r-3xl data-[state=active]:bg-[#1c275e] data-[state=active]:text-white transition-all duration-300 font-medium text-center h-full flex items-center justify-center px-1 py-0 text-xs sm:text-sm border-0 leading-none"
+          >
+            Scheduling Policies
+          </TabsTrigger>
+          <TabsTrigger
+            value="provider-preferences"
+            className="flex-1 first:rounded-l-3xl last:rounded-r-3xl data-[state=active]:bg-[#1c275e] data-[state=active]:text-white transition-all duration-300 font-medium text-center h-full flex items-center justify-center px-1 py-0 text-xs sm:text-sm border-0 leading-none"
+          >
+            Provider Preferences
+          </TabsTrigger>
+          <TabsTrigger
+            value="workflows"
+            className="flex-1 first:rounded-l-3xl last:rounded-r-3xl data-[state=active]:bg-[#1c275e] data-[state=active]:text-white transition-all duration-300 font-medium text-center h-full flex items-center justify-center px-1 py-0 text-xs sm:text-sm border-0 leading-none"
+          >
+            Workflows
+          </TabsTrigger>
+          <TabsTrigger
+            value="agent-config"
+            className="flex-1 first:rounded-l-3xl last:rounded-r-3xl data-[state=active]:bg-[#1c275e] data-[state=active]:text-white transition-all duration-300 font-medium text-center h-full flex items-center justify-center px-1 py-0 text-xs sm:text-sm border-0 leading-none"
+          >
+            Agent Config
+          </TabsTrigger>
+        </TabsList>
 
         {/* Appointment Setup tab */}
         <TabsContent value="appointment-setup">

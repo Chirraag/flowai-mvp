@@ -174,28 +174,26 @@ export default function CustomerSupportAgent() {
       {/* Enhanced tabbed layout with consistent styling */}
       <Tabs defaultValue="agent-config" className="w-full">
         {/* Enhanced tab navigation with brand styling */}
-        <div className="bg-white rounded-none shadow-lg border border-gray-200 overflow-hidden mb-6">
-          <TabsList className="w-full grid grid-cols-3 gap-0 bg-transparent h-12 m-0 p-0">
-            <TabsTrigger
-              value="agent-config"
-              className="rounded-none data-[state=active]:bg-[#1c275e] data-[state=active]:text-white transition-all duration-200 font-medium text-center h-full flex items-center justify-center px-1 py-0 text-xs sm:text-sm border-0 leading-none"
-            >
-              Agent Config
-            </TabsTrigger>
-            <TabsTrigger
-              value="frequently-asked-questions"
-              className="rounded-none data-[state=active]:bg-[#1c275e] data-[state=active]:text-white transition-all duration-200 font-medium text-center h-full flex items-center justify-center px-1 py-0 text-xs sm:text-sm border-0 leading-none"
-            >
-              FAQ Management
-            </TabsTrigger>
-            <TabsTrigger
-              value="workflows"
-              className="rounded-none data-[state=active]:bg-[#1c275e] data-[state=active]:text-white transition-all duration-200 font-medium text-center h-full flex items-center justify-center px-1 py-0 text-xs sm:text-sm border-0 leading-none"
-            >
-              Workflows
-            </TabsTrigger>
-          </TabsList>
-        </div>
+        <TabsList className="w-full flex gap-0 rounded-3xl outline outline-offset-[-1px] bg-muted p-1 overflow-hidden mb-6 h-12">
+          <TabsTrigger
+            value="agent-config"
+            className="flex-1 first:rounded-l-3xl last:rounded-r-3xl data-[state=active]:bg-[#1c275e] data-[state=active]:text-white transition-all duration-300 font-medium text-center h-full flex items-center justify-center px-1 py-0 text-xs sm:text-sm border-0 leading-none"
+          >
+            Agent Config
+          </TabsTrigger>
+          <TabsTrigger
+            value="frequently-asked-questions"
+            className="flex-1 first:rounded-l-3xl last:rounded-r-3xl data-[state=active]:bg-[#1c275e] data-[state=active]:text-white transition-all duration-300 font-medium text-center h-full flex items-center justify-center px-1 py-0 text-xs sm:text-sm border-0 leading-none"
+          >
+            FAQ Management
+          </TabsTrigger>
+          <TabsTrigger
+            value="workflows"
+            className="flex-1 first:rounded-l-3xl last:rounded-r-3xl data-[state=active]:bg-[#1c275e] data-[state=active]:text-white transition-all duration-300 font-medium text-center h-full flex items-center justify-center px-1 py-0 text-xs sm:text-sm border-0 leading-none"
+          >
+            Workflows
+          </TabsTrigger>
+        </TabsList>
 
         {/* Agent Config tab */}
         <TabsContent value="agent-config">

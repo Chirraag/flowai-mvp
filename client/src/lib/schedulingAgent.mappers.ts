@@ -162,9 +162,9 @@ export const apiToUi = {
    */
   agentConfig(api: SchedulingAgent): AgentConfigValues {
     return {
-      agentName: api.agent_name || 'Flow Scheduling Agent',
-      language: api.language || 'en-US',
-      voice: api.voice || 'nova',
+      agentName: api.agent_name || '',
+      language: api.language || '',
+      voice: api.voice || '',
       agentInstructions: api.agent_instructions || '',
       humanTransferCriteria: api.human_transfer_criteria || '',
     };

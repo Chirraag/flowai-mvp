@@ -60,7 +60,7 @@ export default function InfluencersCard({
             <TableRow key={inf.id} className="hover:bg-[#1C275E]/5">
               <TableCell className="p-2">
                 <Input
-                  className="border-2 border-gray-200 focus:border-[#1C275E] focus:ring-[#1C275E]/20 rounded-lg transition-all duration-300"
+                  className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
                   placeholder="Enter title"
                   value={inf.title}
                   onChange={(e) => onUpdate(inf.id, 'title', e.target.value)}
@@ -70,7 +70,7 @@ export default function InfluencersCard({
               <TableCell className="p-2">
                 <div className="space-y-1">
                   <Input
-                    className="border-2 border-gray-200 focus:border-[#1C275E] focus:ring-[#1C275E]/20 rounded-lg transition-all duration-300"
+                    className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
                     placeholder="Full name"
                     value={inf.name}
                     onChange={(e) => onUpdate(inf.id, 'name', e.target.value)}
@@ -82,7 +82,7 @@ export default function InfluencersCard({
               <TableCell className="p-2">
                 <div className="space-y-1">
                   <Input
-                    className="border-2 border-gray-200 focus:border-[#1C275E] focus:ring-[#1C275E]/20 rounded-lg transition-all duration-300"
+                    className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
                     placeholder="email@practice.com"
                     value={inf.email}
                     onChange={(e) => onUpdate(inf.id, 'email', e.target.value)}
@@ -93,7 +93,7 @@ export default function InfluencersCard({
               </TableCell>
               <TableCell className="p-2">
                 <Input
-                  className="border-2 border-gray-200 focus:border-[#1C275E] focus:ring-[#1C275E]/20 rounded-lg transition-all duration-300"
+                  className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
                   placeholder="(555) 123-4567"
                   value={inf.phone}
                   onChange={(e) => onUpdate(inf.id, 'phone', e.target.value)}

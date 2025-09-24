@@ -663,39 +663,39 @@ export default function Launchpad() {
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="w-full flex gap-1 rounded-xl border bg-muted p-1 overflow-hidden">
+        <TabsList className="w-full flex gap-0 rounded-3xl outline outline-offset-[-1px] bg-muted p-1 overflow-hidden">
           <TabsTrigger
             value="account"
-            className="flex-1 rounded-lg transition-all duration-300 font-medium hover:bg-white/60 hover:text-[#1C275E] data-[state=active]:bg-[#1C275E] data-[state=active]:text-white data-[state=active]:shadow-none"
+            className="flex-1 first:rounded-l-3xl last:rounded-r-3xl transition-all duration-300 font-medium hover:bg-white/60 hover:text-[#1C275E] data-[state=active]:bg-[#1C275E] data-[state=active]:text-white data-[state=active]:shadow-none"
           >
             Account
           </TabsTrigger>
           <TabsTrigger
             value="locations"
-            className="flex-1 rounded-lg transition-all duration-300 font-medium hover:bg-white/60 hover:text-[#1C275E] data-[state=active]:bg-[#1C275E] data-[state=active]:text-white data-[state=active]:shadow-none"
+            className="flex-1 first:rounded-l-3xl last:rounded-r-3xl transition-all duration-300 font-medium hover:bg-white/60 hover:text-[#1C275E] data-[state=active]:bg-[#1C275E] data-[state=active]:text-white data-[state=active]:shadow-none"
           >
             Locations
           </TabsTrigger>
           <TabsTrigger
             value="specialties"
-            className="flex-1 rounded-lg transition-all duration-300 font-medium hover:bg-white/60 hover:text-[#1C275E] data-[state=active]:bg-[#1C275E] data-[state=active]:text-white data-[state=active]:shadow-none"
+            className="flex-1 first:rounded-l-3xl last:rounded-r-3xl transition-all duration-300 font-medium hover:bg-white/60 hover:text-[#1C275E] data-[state=active]:bg-[#1C275E] data-[state=active]:text-white data-[state=active]:shadow-none"
           >
             Specialties
           </TabsTrigger>
           <TabsTrigger
             value="insurance"
-            className="flex-1 rounded-lg transition-all duration-300 font-medium hover:bg-white/60 hover:text-[#1C275E] data-[state=active]:bg-[#1C275E] data-[state=active]:text-white data-[state=active]:shadow-none"
+            className="flex-1 first:rounded-l-3xl last:rounded-r-3xl transition-all duration-300 font-medium hover:bg-white/60 hover:text-[#1C275E] data-[state=active]:bg-[#1C275E] data-[state=active]:text-white data-[state=active]:shadow-none"
           >
             Insurance
           </TabsTrigger>
-          <TabsTrigger value="knowledge" className="flex-1 rounded-lg transition-all duration-300 font-medium hover:bg-white/60 hover:text-[#1C275E] data-[state=active]:bg-[#1C275E] data-[state=active]:text-white data-[state=active]:shadow-none">
+          <TabsTrigger value="knowledge" className="flex-1 first:rounded-l-3xl last:rounded-r-3xl transition-all duration-300 font-medium hover:bg-white/60 hover:text-[#1C275E] data-[state=active]:bg-[#1C275E] data-[state=active]:text-white data-[state=active]:shadow-none">
             Knowledge
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="account" className="space-y-4">
           {/* Account Details Sticky Header */}
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-[#1C275E]/5 rounded-xl">
+          <Card className="border-0 shadow-lg bg-white rounded-xl">
             <CardHeader className="sticky top-0 z-50 bg-[#1C275E] text-white p-3 border-b border-[#1C275E]/20 shadow-sm rounded-t-xl">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -715,14 +715,14 @@ export default function Launchpad() {
                         documentsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
                       }
                     }}
-                    className="bg-white text-[#1C275E] border-white hover:bg-gray-100"
+                    className="bg-transparent text-[#e6eff7] border-[#95a3b8] hover:bg-[#233072] hover:text-white"
                   >
                     View Documents
                   </Button>
                   <Button
                     onClick={handleSaveAccount}
                     disabled={updateAccountDetails.isPending}
-                    className="min-w-[100px] bg-teal-600 hover:bg-teal-700 text-white"
+                    className="min-w-[100px] bg-[#2f7a5d] hover:bg-[#276651] active:bg-[#1f5040] text-white focus:ring-2 focus:ring-[#22b07d] focus:ring-offset-2"
                   >
                     {updateAccountDetails.isPending ? "Saving..." : "Save"}
                   </Button>
@@ -731,8 +731,8 @@ export default function Launchpad() {
             </CardHeader>
             <CardContent className="p-4 space-y-4">
 
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-[#1C275E]/5 rounded-xl overflow-hidden">
-            <CardHeader className="bg-[#1C275E] text-white p-3">
+          <Card className="border-0 shadow-lg bg-white rounded-xl overflow-hidden">
+            <CardHeader className="bg-[#e2e8f0] text-[#1C275E] p-3 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-[#F48024]/20 rounded-lg flex items-center justify-center">
@@ -743,10 +743,7 @@ export default function Launchpad() {
                   <CardTitle className="text-lg font-semibold">Overview</CardTitle>
                 </div>
                 <div className="flex items-center gap-2">
-                  <ContextualHelp
-                    content="Enter your practice's basic information including name, website, and headquarters address."
-                    position="left"
-                  />
+
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -754,7 +751,7 @@ export default function Launchpad() {
                           variant="ghost"
                           size="sm"
                           onClick={() => toggleCardMinimize('account-overview')}
-                          className="bg-[#F48024] text-white hover:bg-[#C96A1E]"
+                          className="bg-[#F48024] text-white hover:bg-[#C96A1E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={minimizedCards['account-overview'] ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"}></path>
@@ -785,8 +782,8 @@ export default function Launchpad() {
             )}
           </Card>
 
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-[#1C275E]/5 rounded-xl overflow-hidden">
-            <CardHeader className="bg-[#1C275E] text-white p-3">
+          <Card className="border-0 shadow-lg bg-white rounded-xl overflow-hidden">
+            <CardHeader className="bg-[#e2e8f0] text-[#1C275E] p-3 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-[#F48024]/20 rounded-lg flex items-center justify-center">
@@ -804,7 +801,7 @@ export default function Launchpad() {
                     variant="default"
                     size="sm"
                     onClick={() => addPerson(setDecisionMakers)}
-                    className="min-h-[36px] bg-[#F48024] hover:bg-[#F48024]/90 text-white"
+                    className="min-h-[36px] bg-[#f49024] hover:bg-[#d87f1f] text-white"
                   >
                     + Add Person
                   </Button>
@@ -815,7 +812,7 @@ export default function Launchpad() {
                           variant="ghost"
                           size="sm"
                           onClick={() => toggleCardMinimize('decision-makers')}
-                          className="bg-[#F48024] text-white hover:bg-[#C96A1E]"
+                          className="bg-[#F48024] text-white hover:bg-[#C96A1E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={minimizedCards['decision-makers'] ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"}></path>
@@ -841,8 +838,8 @@ export default function Launchpad() {
             )}
           </Card>
 
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-[#1C275E]/5 rounded-xl overflow-hidden">
-            <CardHeader className="bg-[#1C275E] text-white p-3">
+          <Card className="border-0 shadow-lg bg-white rounded-xl overflow-hidden">
+            <CardHeader className="bg-[#e2e8f0] text-[#1C275E] p-3 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-[#F48024]/20 rounded-lg flex items-center justify-center">
@@ -860,7 +857,7 @@ export default function Launchpad() {
                     variant="default"
                     size="sm"
                     onClick={() => addPerson(setInfluencers)}
-                    className="min-h-[36px] bg-[#F48024] hover:bg-[#F48024]/90 text-white"
+                    className="min-h-[36px] bg-[#f49024] hover:bg-[#d87f1f] text-white"
                   >
                     + Add Person
                   </Button>
@@ -871,7 +868,7 @@ export default function Launchpad() {
                           variant="ghost"
                           size="sm"
                           onClick={() => toggleCardMinimize('influencers')}
-                          className="bg-[#F48024] text-white hover:bg-[#C96A1E]"
+                          className="bg-[#F48024] text-white hover:bg-[#C96A1E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={minimizedCards['influencers'] ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"}></path>
@@ -897,8 +894,8 @@ export default function Launchpad() {
             )}
           </Card>
 
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-[#1C275E]/5 rounded-xl overflow-hidden">
-            <CardHeader className="flex flex-row items-center justify-between bg-[#1C275E] text-white p-3">
+          <Card className="border-0 shadow-lg bg-white rounded-xl overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between bg-[#e2e8f0] text-[#1C275E] p-3 border-b border-gray-200">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-[#F48024]/20 rounded-lg flex items-center justify-center">
                   <svg className="w-5 h-5 text-[#F48024]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -941,8 +938,8 @@ export default function Launchpad() {
             )}
           </Card>
 
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-[#1C275E]/5 rounded-xl overflow-hidden">
-            <CardHeader className="bg-[#1C275E] text-white p-3">
+          <Card className="border-0 shadow-lg bg-white rounded-xl overflow-hidden">
+            <CardHeader className="bg-[#e2e8f0] text-[#1C275E] p-3 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-[#F48024]/20 rounded-lg flex items-center justify-center">
@@ -1007,8 +1004,8 @@ export default function Launchpad() {
             )}
           </Card>
 
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-[#1C275E]/5 rounded-xl overflow-hidden">
-            <CardHeader className="bg-[#1C275E] text-white p-3">
+          <Card className="border-0 shadow-lg bg-white rounded-xl overflow-hidden">
+            <CardHeader className="bg-[#e2e8f0] text-[#1C275E] p-3 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-[#F48024]/20 rounded-lg flex items-center justify-center">
@@ -1057,8 +1054,8 @@ export default function Launchpad() {
             )}
           </Card>
 
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-[#1C275E]/5 rounded-xl overflow-hidden">
-            <CardHeader className="bg-[#1C275E] text-white p-3">
+          <Card className="border-0 shadow-lg bg-white rounded-xl overflow-hidden">
+            <CardHeader className="bg-[#e2e8f0] text-[#1C275E] p-3 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-[#F48024]/20 rounded-lg flex items-center justify-center">
@@ -1099,8 +1096,8 @@ export default function Launchpad() {
             )}
           </Card>
 
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-[#1C275E]/5 rounded-xl overflow-hidden">
-            <CardHeader className="bg-[#1C275E] text-white p-3">
+          <Card className="border-0 shadow-lg bg-white rounded-xl overflow-hidden">
+            <CardHeader className="bg-[#e2e8f0] text-[#1C275E] p-3 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-[#F48024]/20 rounded-lg flex items-center justify-center">
@@ -1286,7 +1283,7 @@ export default function Launchpad() {
 
         <TabsContent value="insurance">
           {/* Insurance Sticky Header */}
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-[#1C275E]/5 rounded-xl">
+          <Card className="border-0 shadow-lg bg-white rounded-xl">
             <CardHeader className="sticky top-0 z-50 bg-[#1C275E] text-white p-3 border-b border-[#1C275E]/20 shadow-sm rounded-t-xl">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -1306,14 +1303,14 @@ export default function Launchpad() {
                         documentsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
                       }
                     }}
-                    className="bg-white text-[#1C275E] border-white hover:bg-gray-100"
+                    className="bg-transparent text-[#e6eff7] border-[#95a3b8] hover:bg-[#233072] hover:text-white"
                   >
                     View Documents
                   </Button>
                   <Button
                     onClick={handleSaveInsurance}
                     disabled={updateInsurance.isPending}
-                    className="min-w-[100px] bg-teal-600 hover:bg-teal-700 text-white"
+                    className="min-w-[100px] bg-[#2f7a5d] hover:bg-[#276651] active:bg-[#1f5040] text-white focus:ring-2 focus:ring-[#22b07d] focus:ring-offset-2"
                   >
                     {updateInsurance.isPending ? "Saving..." : "Save"}
                   </Button>
