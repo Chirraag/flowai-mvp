@@ -24,7 +24,7 @@ export default function AccountOverviewCard({
           <div className="relative">
             <Input
               id="account-name"
-              className="pl-4 pr-4 py-3 border-2 border-gray-200 focus:border-[#1C275E] focus:ring-[#1C275E]/20 rounded-lg transition-all duration-300"
+              className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
               placeholder="Enter practice name"
               value={accountName}
               onChange={(e) => onChange("accountName", e.target.value)}
@@ -37,7 +37,7 @@ export default function AccountOverviewCard({
           <div className="relative">
             <Input
               id="website"
-              className="pl-4 pr-4 py-3 border-2 border-gray-200 focus:border-[#1C275E] focus:ring-[#1C275E]/20 rounded-lg transition-all duration-300"
+              className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
               placeholder="https://yourpractice.com"
               value={websiteAddress}
               onChange={(e) => onChange("websiteAddress", e.target.value)}
@@ -51,7 +51,7 @@ export default function AccountOverviewCard({
         <div className="relative">
           <Textarea
             id="address"
-            className="pl-4 pr-4 py-2 border-2 border-gray-200 focus:border-[#1C275E] focus:ring-[#1C275E]/20 rounded-lg transition-all duration-300 min-h-[80px]"
+            className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2 min-h-[80px]"
             placeholder="Enter complete address"
             value={headquartersAddress}
             onChange={(e) => onChange("headquartersAddress", e.target.value)}

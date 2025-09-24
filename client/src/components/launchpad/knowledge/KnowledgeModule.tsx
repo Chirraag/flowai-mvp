@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useCreateCuratedKB, useDeleteCuratedKB } from "@/lib/launchpad.api";
@@ -17,6 +18,7 @@ interface KnowledgeModuleProps {
 export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount }: KnowledgeModuleProps) {
   const { toast } = useToast();
   const [viewingDocument, setViewingDocument] = useState<CuratedKBEntry | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
   
   const createCuratedKB = useCreateCuratedKB(orgId);
   const deleteCuratedKB = useDeleteCuratedKB(orgId);
@@ -134,9 +136,14 @@ export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount }: Kn
           )}
           {imageError ? (
             <div className="text-center p-8">
-              <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+              <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <AlertCircle className="h-6 w-6 text-red-500" />
+              </div>
               <p className="text-red-600 mb-4">Failed to load image</p>
-              <Button onClick={() => window.open(document.url, '_blank')}>
+              <Button
+                onClick={() => window.open(document.url, '_blank')}
+                className="bg-[#f49024] hover:bg-[#d87f1f] text-white focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+              >
                 Open in New Tab
               </Button>
             </div>
@@ -165,20 +172,26 @@ export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount }: Kn
         <div className="space-y-4">
           {pdfError ? (
             <div className="text-center p-8">
-              <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+              <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <AlertCircle className="h-6 w-6 text-red-500" />
+              </div>
               <p className="text-red-600 mb-4">Failed to load PDF</p>
-              <Button onClick={() => window.open(document.url, '_blank')}>
+              <Button
+                onClick={() => window.open(document.url, '_blank')}
+                className="bg-[#f49024] hover:bg-[#d87f1f] text-white focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+              >
                 Open in New Tab
               </Button>
             </div>
           ) : (
             <>
-              <div className="flex items-center justify-between border-b pb-2">
-                <span className="text-sm text-muted-foreground">PDF Document</span>
-                <Button 
-                  variant="outline" 
+              <div className="flex items-center justify-between border-b border-gray-200 pb-2">
+                <span className="text-sm text-[#1C275E] font-medium">PDF Document</span>
+                <Button
+                  variant="outline"
                   size="sm"
                   onClick={() => window.open(document.url, '_blank')}
+                  className="bg-transparent text-[#1C275E] border-[#1C275E] hover:bg-[#233072] hover:text-white focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
                 >
                   Open in New Tab
                 </Button>
@@ -201,22 +214,24 @@ export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount }: Kn
       
       return (
         <div className="space-y-4">
-          <div className="flex items-center justify-between border-b pb-2">
-            <span className="text-sm text-muted-foreground">
+          <div className="flex items-center justify-between border-b border-gray-200 pb-2">
+            <span className="text-sm text-[#1C275E] font-medium">
               {getFileExtension(filename).toUpperCase()} Document
             </span>
             <div className="flex gap-2">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
                 onClick={() => window.open(officeViewerUrl, '_blank')}
+                className="bg-transparent text-[#1C275E] border-[#1C275E] hover:bg-[#233072] hover:text-white focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
               >
                 View in Office Online
               </Button>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
                 onClick={() => window.open(document.url, '_blank')}
+                className="bg-[#f49024] hover:bg-[#d87f1f] text-white focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
               >
                 Download
               </Button>
@@ -237,94 +252,157 @@ export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount }: Kn
     // Fallback for other files
     return (
       <div className="text-center p-8">
-        <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-        <p className="text-muted-foreground mb-2 font-medium">{filename}</p>
+        <div className="w-12 h-12 bg-[#F48024]/20 rounded-lg flex items-center justify-center mx-auto mb-4">
+          <FileText className="h-6 w-6 text-[#F48024]" />
+        </div>
+        <p className="text-[#1C275E] mb-2 font-medium">{filename}</p>
         <p className="text-sm text-muted-foreground mb-4">
           This file type may not display properly in the browser.
         </p>
-        <Button onClick={() => window.open(document.url, '_blank')}>
+        <Button
+          onClick={() => window.open(document.url, '_blank')}
+          className="bg-[#f49024] hover:bg-[#d87f1f] text-white focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+        >
           Open in New Tab
         </Button>
       </div>
     );
   };
 
+  // Filter documents based on search term
+  const filteredDocuments = React.useMemo(() => {
+    if (!curatedKb) return [];
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) return curatedKb;
+    return curatedKb.filter(doc => 
+      doc.name.toLowerCase().includes(term)
+    );
+  }, [curatedKb, searchTerm]);
+
   const isGenerating = createCuratedKB.isPending;
   const isDeleting = deleteCuratedKB.isPending;
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle>
-          Curated Knowledge Base {curatedKbCount ? `(${curatedKbCount})` : ''}
-        </CardTitle>
-        <div className="flex gap-2">
-          <Button
-            variant="default"
-            onClick={handleGenerate}
-            disabled={isGenerating || isDeleting || !orgId}
-          >
-            {isGenerating ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              "Generate Knowledge Base"
-            )}
-          </Button>
+    <Card className="border-0 shadow-lg bg-white rounded-xl">
+      <CardHeader className="sticky top-0 z-50 bg-[#1C275E] text-white p-3 border-b border-[#1C275E]/20 shadow-sm rounded-t-xl">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-[#F48024]/20 rounded-lg flex items-center justify-center">
+              <svg
+                className="w-5 h-5 text-[#F48024]"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14,2 14,8 20,8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <polyline points="10,9 9,9 8,9"></polyline>
+              </svg>
+            </div>
+            <CardTitle className="text-lg font-semibold">
+              Curated Knowledge Base {curatedKbCount ? `(${curatedKbCount})` : ''}
+            </CardTitle>
+          </div>
+          <div className="flex items-center gap-3">
+            <Input
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search documents..."
+              aria-label="Search documents"
+              className="h-8 w-[160px] sm:w-[220px] md:w-[280px] bg-white text-[#1C275E] placeholder:text-[#1C275E]/60 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]"
+            />
+            <Button
+              variant="default"
+              onClick={handleGenerate}
+              disabled={isGenerating || isDeleting || !orgId}
+              className="bg-[#f49024] hover:bg-[#d87f1f] text-white focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                "Generate Knowledge Base"
+              )}
+            </Button>
+          </div>
         </div>
       </CardHeader>
-      <CardContent className="p-6 space-y-3">
-        {curatedKb && curatedKb.length > 0 ? (
-          curatedKb.map((document) => (
-            <div key={document.s3_key} className="border rounded-lg p-4 bg-muted/30">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <FileText className="h-5 w-5 text-blue-600" />
-                  <div>
-                    <p className="font-medium text-sm">{document.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(document.uploaded_at).toLocaleString()}
-                    </p>
+      <CardContent className="p-4 space-y-4">
+        {curatedKb && curatedKb.length > 0 && filteredDocuments.length > 0 ? (
+          filteredDocuments.map((document) => (
+            <Card key={document.s3_key} className="border-0 shadow-lg bg-white rounded-xl overflow-hidden">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-[#F48024]/20 rounded-lg flex items-center justify-center">
+                      <FileText className="h-5 w-5 text-[#F48024]" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm text-[#1C275E]">{document.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(document.uploaded_at).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setViewingDocument(document)}
+                      className="bg-white text-[#1C275E] border-[#1C275E] hover:bg-[#233072] hover:text-white focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+                    >
+                      <Eye className="h-4 w-4 mr-1" />
+                      View
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDownload(document.url)}
+                      className="bg-transparent text-[#1C275E] border-[#1C275E] hover:bg-[#233072] hover:text-white focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+                    >
+                      <Download className="h-4 w-4 mr-1" />
+                      Download
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDelete(document.url)}
+                      disabled={isDeleting}
+                      className="bg-transparent text-[#c0352b] border-[#c0352b] hover:bg-[#c0352b] hover:text-white focus:ring-2 focus:ring-[#c0352b] focus:ring-offset-2"
+                    >
+                      {isDeleting ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
+                    </Button>
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setViewingDocument(document)}
-                  >
-                    <Eye className="h-4 w-4 mr-1" />
-                    View
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDownload(document.url)}
-                  >
-                    <Download className="h-4 w-4 mr-1" />
-                    Download
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDelete(document.url)}
-                    disabled={isDeleting}
-                  >
-                    {isDeleting ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           ))
+        ) : curatedKb && curatedKb.length > 0 && filteredDocuments.length === 0 ? (
+          <div className="text-center py-8">
+            <div className="w-12 h-12 bg-[#F48024]/20 rounded-lg flex items-center justify-center mx-auto mb-4">
+              <FileText className="h-6 w-6 text-[#F48024]" />
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              No documents match your search "{searchTerm}". Try adjusting your search terms.
+            </p>
+          </div>
         ) : (
           <div className="text-center py-8">
-            <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <div className="w-12 h-12 bg-[#F48024]/20 rounded-lg flex items-center justify-center mx-auto mb-4">
+              <FileText className="h-6 w-6 text-[#F48024]" />
+            </div>
             <p className="text-sm text-muted-foreground mb-4">
               No knowledge base generated yet. Click "Generate Knowledge Base" to create a curated document based on your organization's data.
             </p>

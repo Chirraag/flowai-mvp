@@ -21,7 +21,7 @@ export default function OpportunitySizingCard({
           <div className="relative">
             <Input
               type="number"
-              className="pl-4 pr-4 py-3 border-2 border-gray-200 focus:border-[#1C275E] focus:ring-[#1C275E]/20 rounded-lg transition-all duration-300"
+              className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
               placeholder="Total monthly orders"
               value={opportunitySizing.monthly_orders_count ?? ""}
               onChange={(e) => onChange({
@@ -36,7 +36,7 @@ export default function OpportunitySizingCard({
           <div className="relative">
             <Input
               type="number"
-              className="pl-4 pr-4 py-3 border-2 border-gray-200 focus:border-[#1C275E] focus:ring-[#1C275E]/20 rounded-lg transition-all duration-300"
+              className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
               placeholder="Total monthly scheduled patients"
               value={opportunitySizing.monthly_patients_scheduled ?? ""}
               onChange={(e) => onChange({
@@ -51,7 +51,7 @@ export default function OpportunitySizingCard({
           <div className="relative">
             <Input
               type="number"
-              className="pl-4 pr-4 py-3 border-2 border-gray-200 focus:border-[#1C275E] focus:ring-[#1C275E]/20 rounded-lg transition-all duration-300"
+              className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
               placeholder="Total monthly check-ins"
               value={opportunitySizing.monthly_patients_checked_in ?? ""}
               onChange={(e) => onChange({

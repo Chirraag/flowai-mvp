@@ -164,7 +164,7 @@ export default function SystemsIntegrationCard({
         <div>
           <Label className="text-sm">Insurance Verification System</Label>
           <Input
-            className="mt-1"
+            className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
             placeholder="System name or process"
             value={insuranceVerificationSystem}
             onChange={(e) => onChangeField("insuranceVerificationSystem", e.target.value)}
@@ -174,7 +174,7 @@ export default function SystemsIntegrationCard({
         <div>
           <Label className="text-sm">Insurance Verification Details</Label>
           <Textarea
-            className="mt-1"
+            className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
             placeholder="Describe the verification process or system details"
             value={insuranceVerificationDetails}
             onChange={(e) => onChangeField("insuranceVerificationDetails", e.target.value)}
@@ -184,7 +184,7 @@ export default function SystemsIntegrationCard({
         <div>
           <Label className="text-sm">Additional Information</Label>
           <Textarea
-            className="mt-1"
+            className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
             placeholder="Any additional integration details..."
             value={additionalInfo}
             onChange={(e) => onChangeField("additionalInfo", e.target.value)}
@@ -194,7 +194,7 @@ export default function SystemsIntegrationCard({
         <div>
           <Label className="text-sm">Clinical Notes</Label>
           <Textarea
-            className="mt-1"
+            className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
             placeholder="Clinical notes relevant to systems"
             value={clinicalNotes}
             onChange={(e) => onChangeField("clinicalNotes", e.target.value)}

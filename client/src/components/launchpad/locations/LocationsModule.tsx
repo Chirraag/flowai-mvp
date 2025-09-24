@@ -107,7 +107,7 @@ export default function LocationsModule({
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search locations..."
               aria-label="Search locations"
-              className="h-8 w-[160px] sm:w-[220px] md:w-[280px] bg-white text-[#1C275E] placeholder:text-[#1C275E]/60"
+              className="h-8 w-[160px] sm:w-[220px] md:w-[280px] bg-white text-[#1C275E] placeholder:text-[#1C275E]/60 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]"
             />
             <Button
               variant="outline"
@@ -117,7 +117,7 @@ export default function LocationsModule({
                   documentsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
               }}
-              className="bg-white text-[#1C275E] border-white hover:bg-gray-100"
+              className="bg-transparent text-[#e6eff7] border-[#95a3b8] hover:bg-[#233072] hover:text-white"
             >
               View Documents
             </Button>
@@ -125,12 +125,12 @@ export default function LocationsModule({
               <Button
                 onClick={onSave}
                 disabled={isSaving}
-                className="min-w-[100px] bg-teal-600 hover:bg-teal-700 text-white"
+                className="min-w-[100px] bg-[#2f7a5d] hover:bg-[#276651] active:bg-[#1f5040] text-white focus:ring-2 focus:ring-[#22b07d] focus:ring-offset-2"
               >
                 {isSaving ? "Saving..." : "Save"}
               </Button>
             )}
-            <Button variant="default" onClick={handleAddLocation} className="bg-[#F48024] hover:bg-[#F48024]/90 text-white">Add Location</Button>
+            <Button variant="default" onClick={handleAddLocation} className="bg-[#f49024] hover:bg-[#d87f1f] text-white">Add Location</Button>
           </div>
         </div>
       </CardHeader>

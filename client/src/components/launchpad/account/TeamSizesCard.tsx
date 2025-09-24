@@ -33,7 +33,7 @@ export default function TeamSizesCard({
           <div className="relative">
             <Input
               type="number"
-              className="pl-4 pr-4 py-3 border-2 border-gray-200 focus:border-[#1C275E] focus:ring-[#1C275E]/20 rounded-lg transition-all duration-300"
+              className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
               placeholder="Number of employees"
               value={orderEntryTeamSize ?? ""}
               onChange={(e) => onChange("orderEntryTeamSize", e.target.value === "" ? undefined : Number(e.target.value))}
@@ -46,7 +46,7 @@ export default function TeamSizesCard({
           <div className="relative">
             <Input
               type="number"
-              className="pl-4 pr-4 py-3 border-2 border-gray-200 focus:border-[#1C275E] focus:ring-[#1C275E]/20 rounded-lg transition-all duration-300"
+              className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
               placeholder="Number of employees"
               value={schedulingTeamSize ?? ""}
               onChange={(e) => onChange("schedulingTeamSize", e.target.value === "" ? undefined : Number(e.target.value))}
@@ -59,7 +59,7 @@ export default function TeamSizesCard({
           <div className="relative">
             <Input
               type="number"
-              className="pl-4 pr-4 py-3 border-2 border-gray-200 focus:border-[#1C275E] focus:ring-[#1C275E]/20 rounded-lg transition-all duration-300"
+              className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
               placeholder="Number of employees"
               value={patientIntakeTeamSize ?? ""}
               onChange={(e) => onChange("patientIntakeTeamSize", e.target.value === "" ? undefined : Number(e.target.value))}
@@ -72,7 +72,7 @@ export default function TeamSizesCard({
           <div className="relative">
             <Input
               type="number"
-              className="pl-4 pr-4 py-3 border-2 border-gray-200 focus:border-[#1C275E] focus:ring-[#1C275E]/20 rounded-lg transition-all duration-300"
+              className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
               placeholder="Number of employees"
               value={rcmTeamSize ?? ""}
               onChange={(e) => onChange("rcmTeamSize", e.target.value === "" ? undefined : Number(e.target.value))}

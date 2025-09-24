@@ -58,6 +58,14 @@ export default function SpecialtiesModule({
 
   // Active tab state for each specialty card
   const [activeTabs, setActiveTabs] = React.useState<Record<string, string>>({});
+  const [serviceSelections, setServiceSelections] = React.useState<Record<string, number | null>>({});
+
+  const [removeServiceDialog, setRemoveServiceDialog] = React.useState<{
+    open: boolean;
+    specialtyId?: string;
+    serviceIndex?: number;
+    serviceName?: string;
+  }>({ open: false });
 
 
   // Deletion confirmation dialog state
@@ -125,8 +133,19 @@ export default function SpecialtiesModule({
       if (!specialtyRefs.current[spec.id]) {
         specialtyRefs.current[spec.id] = React.createRef<HTMLDivElement>();
       }
+      setServiceSelections(prev => {
+        const current = prev[spec.id];
+        if (current === undefined || current === null || current >= spec.services.length) {
+          return { ...prev, [spec.id]: spec.services.length > 0 ? null : null };
+        }
+        return prev;
+      });
     });
   }, [specialties]);
+
+  const handleSelectService = (specialtyId: string, index: number | null) => {
+    setServiceSelections(prev => ({ ...prev, [specialtyId]: index }));
+  };
   return (
     <Card className="border-0 shadow-lg bg-white rounded-xl">
       <CardHeader className="sticky top-0 z-50 bg-[#1C275E] text-white p-3 border-b border-[#1C275E]/20 shadow-sm rounded-t-xl">
@@ -155,7 +174,7 @@ export default function SpecialtiesModule({
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search specialties..."
               aria-label="Search specialties"
-              className="h-8 w-[160px] sm:w-[220px] md:w-[280px] bg-white text-[#1C275E] placeholder:text-[#1C275E]/60"
+              className="h-8 w-[160px] sm:w-[220px] md:w-[280px] bg-white text-[#1C275E] placeholder:text-[#1C275E]/60 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]"
             />
             <Button
               variant="outline"
@@ -165,7 +184,7 @@ export default function SpecialtiesModule({
                   documentsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
               }}
-              className="bg-white text-[#1C275E] border-white hover:bg-gray-100"
+              className="bg-transparent text-[#e6eff7] border-[#95a3b8] hover:bg-[#233072] hover:text-white"
             >
               View Documents
             </Button>
@@ -173,12 +192,12 @@ export default function SpecialtiesModule({
               <Button
                 onClick={onSave}
                 disabled={isSaving}
-                className="min-w-[100px] bg-teal-600 hover:bg-teal-700 text-white"
+                className="min-w-[100px] bg-[#2f7a5d] hover:bg-[#276651] active:bg-[#1f5040] text-white focus:ring-2 focus:ring-[#22b07d] focus:ring-offset-2"
               >
                 {isSaving ? "Saving..." : "Save"}
               </Button>
             )}
-            <Button variant="default" onClick={handleAddSpecialty} className="bg-[#F48024] hover:bg-[#F48024]/90 text-white">Add Specialty</Button>
+            <Button variant="default" onClick={handleAddSpecialty} className="bg-[#f49024] hover:bg-[#d87f1f] text-white">Add Specialty</Button>
           </div>
         </div>
       </CardHeader>
@@ -186,7 +205,7 @@ export default function SpecialtiesModule({
         {hasUnresolved && (
           <div className="text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-3 text-sm flex items-center justify-between">
             <div>Some specialties reference unknown location codes: {Array.from(new Set(unresolvedAll)).join(', ')}. Add the missing locations in the Locations tab or update selections.</div>
-            <a href="#" className="underline ml-2" onClick={(e) => {
+                                  <a href="#" className="text-[#1c275e] hover:underline ml-2" onClick={(e) => {
               e.preventDefault();
               onSwitchTab?.('locations');
             }}>Add Location</a>
@@ -199,7 +218,7 @@ export default function SpecialtiesModule({
           const cardId = `specialty-${spec.id}`;
           return (
             <Card key={spec.id} className="border-0 shadow-lg bg-white rounded-xl overflow-hidden" data-specialty-card>
-              <CardHeader className="bg-[#1C275E] text-white p-3">
+              <CardHeader className="bg-[#e2e8f0] text-[#1C275E] p-3 border-b border-gray-200">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-[#F48024]/20 rounded-lg flex items-center justify-center">
@@ -220,7 +239,7 @@ export default function SpecialtiesModule({
                     <CardTitle className="text-lg font-semibold">{spec.specialty_name || "Specialty"}</CardTitle>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="sm" className="bg-white text-black border border-black hover:bg-gray-50" onClick={() => handleDeleteSpecialty(spec.id, spec.specialty_name || 'this specialty')}>Delete</Button>
+                    <Button variant="ghost" size="sm" className="bg-white text-[#1C275E] border border-[#1C275E] hover:bg-[#233072] hover:text-white focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2" onClick={() => handleDeleteSpecialty(spec.id, spec.specialty_name || 'this specialty')}>Delete</Button>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -228,7 +247,7 @@ export default function SpecialtiesModule({
                             variant="ghost"
                             size="sm"
                             onClick={() => toggleCardMinimize(cardId)}
-                            className="bg-[#F48024] text-white hover:bg-[#C96A1E]"
+                            className="bg-[#F48024] text-white hover:bg-[#C96A1E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
                           >
                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={minimizedCards[cardId] ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"}></path>
@@ -274,7 +293,7 @@ export default function SpecialtiesModule({
                     <TabsContent value="basic" className="p-4 space-y-4">
                       <div className="flex-1">
                         <Label className="text-sm font-medium">Specialty Name</Label>
-                        <Input className="mt-1" placeholder="e.g., Cardiology" value={spec.specialty_name} onChange={(e) => onUpdate(spec.id, { specialty_name: e.target.value })} />
+                        <Input className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]" placeholder="e.g., Cardiology" value={spec.specialty_name} onChange={(e) => onUpdate(spec.id, { specialty_name: e.target.value })} />
                       </div>
 
                       <div>
@@ -286,7 +305,7 @@ export default function SpecialtiesModule({
                                 placeholder="Search locations..."
                                 value={locationSearchTerm}
                                 onChange={(e) => setLocationSearchTerm(e.target.value)}
-                                className="text-sm"
+                                className="text-sm border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]"
                               />
                             </div>
                             <div className="flex flex-wrap gap-2 max-h-64 overflow-y-auto">
@@ -306,7 +325,7 @@ export default function SpecialtiesModule({
                                       className={`relative px-3 py-1 rounded-full text-xs font-medium transition-colors ${
                                         spec.location_ids.includes(location.location_id)
                                           ? 'bg-[#1C275E] text-white border-[#1C275E] hover:bg-[#233072] hover:text-white'
-                                          : 'bg-white text-[#1C275E] border-gray-300 hover:bg-gray-200'
+                                          : 'bg-white text-[#1C275E] border-[#1C275E] hover:bg-[#1C275E] hover:text-white'
                                       }`}
                                       onClick={() => {
                                         const next = new Set(spec.location_ids);
@@ -359,150 +378,235 @@ export default function SpecialtiesModule({
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           <div>
                             <Label className="text-sm font-medium">Physician Names Source</Label>
-                            <Input className="mt-1" placeholder="Source type (e.g., EMR)" value={spec.physician_names_source_type || ""} onChange={(e) => onUpdate(spec.id, { physician_names_source_type: e.target.value })} />
+                            <Input className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]" placeholder="Source type (e.g., EMR)" value={spec.physician_names_source_type || ""} onChange={(e) => onUpdate(spec.id, { physician_names_source_type: e.target.value })} />
                           </div>
                           <div>
                             <Label className="text-sm font-medium">Source Link</Label>
-                            <Input className="mt-1" placeholder="URL" value={spec.physician_names_source_link || ""} onChange={(e) => onUpdate(spec.id, { physician_names_source_link: e.target.value })} />
+                            <Input className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]" placeholder="URL" value={spec.physician_names_source_link || ""} onChange={(e) => onUpdate(spec.id, { physician_names_source_link: e.target.value })} />
                           </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           <div>
                             <Label className="text-sm font-medium">New Patients Source</Label>
-                            <Input className="mt-1" placeholder="Source type" value={spec.new_patients_source_type || ""} onChange={(e) => onUpdate(spec.id, { new_patients_source_type: e.target.value })} />
+                            <Input className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]" placeholder="Source type" value={spec.new_patients_source_type || ""} onChange={(e) => onUpdate(spec.id, { new_patients_source_type: e.target.value })} />
                           </div>
                           <div>
                             <Label className="text-sm font-medium">Source Link</Label>
-                            <Input className="mt-1" placeholder="URL" value={spec.new_patients_source_link || ""} onChange={(e) => onUpdate(spec.id, { new_patients_source_link: e.target.value })} />
+                            <Input className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]" placeholder="URL" value={spec.new_patients_source_link || ""} onChange={(e) => onUpdate(spec.id, { new_patients_source_link: e.target.value })} />
                           </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           <div>
                             <Label className="text-sm font-medium">Physician Locations Source</Label>
-                            <Input className="mt-1" placeholder="Source type" value={spec.physician_locations_source_type || ""} onChange={(e) => onUpdate(spec.id, { physician_locations_source_type: e.target.value })} />
+                            <Input className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]" placeholder="Source type" value={spec.physician_locations_source_type || ""} onChange={(e) => onUpdate(spec.id, { physician_locations_source_type: e.target.value })} />
                           </div>
                           <div>
                             <Label className="text-sm font-medium">Source Link</Label>
-                            <Input className="mt-1" placeholder="URL" value={spec.physician_locations_source_link || ""} onChange={(e) => onUpdate(spec.id, { physician_locations_source_link: e.target.value })} />
+                            <Input className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]" placeholder="URL" value={spec.physician_locations_source_link || ""} onChange={(e) => onUpdate(spec.id, { physician_locations_source_link: e.target.value })} />
                           </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           <div>
                             <Label className="text-sm font-medium">Physician Credentials Source</Label>
-                            <Input className="mt-1" placeholder="Source type" value={spec.physician_credentials_source_type || ""} onChange={(e) => onUpdate(spec.id, { physician_credentials_source_type: e.target.value })} />
+                            <Input className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]" placeholder="Source type" value={spec.physician_credentials_source_type || ""} onChange={(e) => onUpdate(spec.id, { physician_credentials_source_type: e.target.value })} />
                           </div>
                           <div>
                             <Label className="text-sm font-medium">Source Link</Label>
-                            <Input className="mt-1" placeholder="URL" value={spec.physician_credentials_source_link || ""} onChange={(e) => onUpdate(spec.id, { physician_credentials_source_link: e.target.value })} />
+                            <Input className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]" placeholder="URL" value={spec.physician_credentials_source_link || ""} onChange={(e) => onUpdate(spec.id, { physician_credentials_source_link: e.target.value })} />
                           </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           <div>
                             <Label className="text-sm font-medium">Services Offered Source</Label>
-                            <Input className="mt-1" placeholder="Source type" value={spec.services_offered_source_type || ""} onChange={(e) => onUpdate(spec.id, { services_offered_source_type: e.target.value })} />
+                            <Input className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]" placeholder="Source type" value={spec.services_offered_source_type || ""} onChange={(e) => onUpdate(spec.id, { services_offered_source_type: e.target.value })} />
                           </div>
                           <div>
                             <Label className="text-sm font-medium">Source Link</Label>
-                            <Input className="mt-1" placeholder="URL" value={spec.services_offered_source_link || ""} onChange={(e) => onUpdate(spec.id, { services_offered_source_link: e.target.value })} />
+                            <Input className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]" placeholder="URL" value={spec.services_offered_source_link || ""} onChange={(e) => onUpdate(spec.id, { services_offered_source_link: e.target.value })} />
                           </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           <div>
                             <Label className="text-sm font-medium">Patient Prep Source</Label>
-                            <Input className="mt-1" placeholder="Source type" value={spec.patient_prep_source_type || ""} onChange={(e) => onUpdate(spec.id, { patient_prep_source_type: e.target.value })} />
+                            <Input className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]" placeholder="Source type" value={spec.patient_prep_source_type || ""} onChange={(e) => onUpdate(spec.id, { patient_prep_source_type: e.target.value })} />
                           </div>
                           <div>
                             <Label className="text-sm font-medium">Source Link</Label>
-                            <Input className="mt-1" placeholder="URL" value={spec.patient_prep_source_link || ""} onChange={(e) => onUpdate(spec.id, { patient_prep_source_link: e.target.value })} />
+                            <Input className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]" placeholder="URL" value={spec.patient_prep_source_link || ""} onChange={(e) => onUpdate(spec.id, { patient_prep_source_link: e.target.value })} />
                           </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           <div>
                             <Label className="text-sm font-medium">Patient FAQs Source</Label>
-                            <Input className="mt-1" placeholder="Source type" value={spec.patient_faqs_source_type || ""} onChange={(e) => onUpdate(spec.id, { patient_faqs_source_type: e.target.value })} />
+                            <Input className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]" placeholder="Source type" value={spec.patient_faqs_source_type || ""} onChange={(e) => onUpdate(spec.id, { patient_faqs_source_type: e.target.value })} />
                           </div>
                           <div>
                             <Label className="text-sm font-medium">Source Link</Label>
-                            <Input className="mt-1" placeholder="URL" value={spec.patient_faqs_source_link || ""} onChange={(e) => onUpdate(spec.id, { patient_faqs_source_link: e.target.value })} />
+                            <Input className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]" placeholder="URL" value={spec.patient_faqs_source_link || ""} onChange={(e) => onUpdate(spec.id, { patient_faqs_source_link: e.target.value })} />
                           </div>
                         </div>
                       </div>
                     </TabsContent>
 
-                    <TabsContent value="services" className="p-4 space-y-4">
-                      <div>
-                        <Label className="text-sm font-medium">Services</Label>
-                        <div className="space-y-4 mt-2">
-                          {spec.services.map((svc, i) => (
-                            <div key={i}>
-                              <div className="border-2 border-gray-200 rounded-lg p-4 space-y-3 bg-white shadow-sm">
-                                <div className="space-y-1">
-                                  <Label className="text-sm font-medium text-[#1C275E]">Service Name</Label>
-                                  <Input placeholder="e.g., MRI Scan, Blood Test" value={svc.name} onChange={(e) => {
-                                    const next: SpecialtyServiceEntry[] = spec.services.slice();
-                                    next[i] = { ...next[i], name: e.target.value };
-                                    onUpdate(spec.id, { services: next });
-                                  }} />
-                                </div>
-                                <div className="space-y-1">
-                                  <Label className="text-sm font-medium text-[#1C275E]">Patient Preparation Requirements</Label>
-                                  <Textarea placeholder="Describe what patients need to do before this service" value={svc.patient_prep_requirements || ""} onChange={(e) => {
-                                    const next = spec.services.slice();
-                                    next[i] = { ...next[i], patient_prep_requirements: e.target.value };
-                                    onUpdate(spec.id, { services: next });
-                                  }} />
-                                </div>
-                                <div className="space-y-1">
-                                  <Label className="text-sm font-medium text-[#1C275E]">Frequently Asked Questions</Label>
-                                  <Textarea placeholder="Common questions and answers about this service" value={svc.faq || ""} onChange={(e) => {
-                                    const next = spec.services.slice();
-                                    next[i] = { ...next[i], faq: e.target.value };
-                                    onUpdate(spec.id, { services: next });
-                                  }} />
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                  <div className="space-y-1">
-                                    <Label className="text-sm font-medium text-[#1C275E]">Service Information Name</Label>
-                                    <Input placeholder="e.g., Procedure Details, Cost Information" value={svc.service_information_name || ""} onChange={(e) => {
-                                      const next = spec.services.slice();
-                                      next[i] = { ...next[i], service_information_name: e.target.value };
-                                      onUpdate(spec.id, { services: next });
-                                    }} />
+                    <TabsContent value="services" className="p-4">
+                      {(() => {
+                        const services = spec.services;
+                        const selectedIndex = serviceSelections[spec.id] ?? null;
+                        const selectedService = selectedIndex !== null ? services[selectedIndex] : null;
+
+                        const nameCounts = services.reduce<Record<string, number>>((acc, service) => {
+                          const key = (service.name?.trim().toLowerCase() || 'untitled service');
+                          acc[key] = (acc[key] ?? 0) + 1;
+                          return acc;
+                        }, {});
+
+                        const occurrenceTracker: Record<string, number> = {};
+
+                        const handleAddService = () => {
+                          const nextServices = [...services, { name: "" } as SpecialtyServiceEntry];
+                          onUpdate(spec.id, { services: nextServices });
+                          handleSelectService(spec.id, services.length);
+                        };
+
+                        const handleServiceFieldChange = (field: keyof SpecialtyServiceEntry, value: string | null) => {
+                          if (selectedIndex === null) return;
+                          const next = services.slice();
+                          next[selectedIndex] = {
+                            ...next[selectedIndex],
+                            [field]: field === 'name' ? (value ?? '') : value,
+                          } as SpecialtyServiceEntry;
+                          onUpdate(spec.id, { services: next });
+                        };
+
+                        const displayName = (service: SpecialtyServiceEntry, index: number) => {
+                          const key = (service.name?.trim().toLowerCase() || 'untitled service');
+                          occurrenceTracker[key] = (occurrenceTracker[key] ?? 0) + 1;
+                          const baseName = service.name?.trim() || 'Untitled service';
+                          return nameCounts[key] > 1 ? `${baseName} (${occurrenceTracker[key]})` : baseName;
+                        };
+
+                        return (
+                          <div className="flex gap-4">
+                            <div className="w-64 shrink-0 border border-[#cbd5e1] rounded-lg bg-[#f1f5f9] p-3 space-y-3">
+                              <Button
+                                size="sm"
+                                className="w-full bg-[#f49024] hover:bg-[#d87f1f] text-white"
+                                onClick={handleAddService}
+                              >
+                                Add Service
+                              </Button>
+                              <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
+                                {services.length === 0 ? (
+                                  <p className="text-xs text-muted-foreground text-center py-6">No services yet</p>
+                                ) : (
+                                  services.map((service, index) => {
+                                    const label = displayName(service, index);
+                                    const isSelected = selectedIndex === index;
+                                    return (
+                                      <Button
+                                        key={index}
+                                        variant={isSelected ? 'default' : 'ghost'}
+                                        size="sm"
+                                        className={`w-full justify-start text-left text-xs font-medium transition-colors ${
+                                          isSelected
+                                            ? 'bg-[#1C275E] text-white hover:bg-[#233072]'
+                                            : 'text-[#1C275E] hover:bg-[#e2e8f0]'
+                                        }`}
+                                        onClick={() => handleSelectService(spec.id, index)}
+                                      >
+                                        {label}
+                                      </Button>
+                                    );
+                                  })
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex-1 border border-gray-200 rounded-lg bg-white shadow-sm p-4">
+                              {selectedService ? (
+                                <div className="space-y-3 text-sm">
+                                  <div className="flex items-start justify-between">
+                                    <div className="flex-1 mr-4">
+                                      <Label className="text-xs font-semibold text-[#1C275E] uppercase tracking-wide">Service Name</Label>
+                                      <Input
+                                        className="mt-1 h-8 text-sm border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]"
+                                        placeholder="e.g., MRI Scan, Blood Test"
+                                        value={selectedService.name}
+                                        onChange={(e) => handleServiceFieldChange('name', e.target.value)}
+                                      />
+                                    </div>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="bg-transparent text-[#c0352b] border-[#c0352b] hover:bg-[#c0352b] hover:text-white"
+                                      onClick={() =>
+                                        setRemoveServiceDialog({
+                                          open: true,
+                                          specialtyId: spec.id,
+                                          serviceIndex: selectedIndex ?? undefined,
+                                          serviceName: selectedService.name?.trim() || 'Untitled service',
+                                        })
+                                      }
+                                    >
+                                      Remove
+                                    </Button>
                                   </div>
-                                  <div className="space-y-1">
-                                    <Label className="text-sm font-medium text-[#1C275E]">Information Source</Label>
-                                    <Input
-                                      placeholder="Source of this information"
-                                      value={svc.service_information_source || ""}
-                                      onChange={(e) => {
-                                        const next = spec.services.slice();
-                                        next[i] = { ...next[i], service_information_source: e.target.value };
-                                        onUpdate(spec.id, { services: next });
-                                      }}
+
+                                  <div className="space-y-2">
+                                    <Label className="text-xs font-semibold text-[#1C275E] uppercase tracking-wide">Patient Preparation Requirements</Label>
+                                    <Textarea
+                                      className="min-h-[120px] text-sm border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]"
+                                      placeholder="Describe what patients need to do before this service"
+                                      value={selectedService.patient_prep_requirements || ''}
+                                      onChange={(e) => handleServiceFieldChange('patient_prep_requirements', e.target.value)}
                                     />
                                   </div>
+
+                                  <div className="space-y-2">
+                                    <Label className="text-xs font-semibold text-[#1C275E] uppercase tracking-wide">Frequently Asked Questions</Label>
+                                    <Textarea
+                                      className="min-h-[120px] text-sm border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]"
+                                      placeholder="Common questions and answers about this service"
+                                      value={selectedService.faq || ''}
+                                      onChange={(e) => handleServiceFieldChange('faq', e.target.value)}
+                                    />
+                                  </div>
+
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div className="space-y-2">
+                                      <Label className="text-xs font-semibold text-[#1C275E] uppercase tracking-wide">Service Information Name</Label>
+                                      <Input
+                                        className="h-8 text-sm border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]"
+                                        placeholder="e.g., Procedure Details, Cost Information"
+                                        value={selectedService.service_information_name || ''}
+                                        onChange={(e) => handleServiceFieldChange('service_information_name', e.target.value)}
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <Label className="text-xs font-semibold text-[#1C275E] uppercase tracking-wide">Information Source</Label>
+                                      <Input
+                                        className="h-8 text-sm border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]"
+                                        placeholder="Source of this information"
+                                        value={selectedService.service_information_source || ''}
+                                        onChange={(e) => handleServiceFieldChange('service_information_source', e.target.value)}
+                                      />
+                                    </div>
+                                  </div>
                                 </div>
-                                <div className="flex justify-end">
-                                  <Button variant="default" size="sm" className="bg-white text-black border border-black hover:bg-gray-50" onClick={() => {
-                                    const next = spec.services.filter((_, idx) => idx !== i);
-                                    onUpdate(spec.id, { services: next });
-                                  }}>Remove</Button>
+                              ) : (
+                                <div className="flex h-[320px] items-center justify-center text-sm text-muted-foreground">
+                                  Select a service from the sidebar to view and edit details.
                                 </div>
-                              </div>
-                              {i < spec.services.length - 1 && (
-                                <div className="border-t-2 border-gray-600 my-4"></div>
                               )}
                             </div>
-                          ))}
-                          <Button variant="default" size="sm" onClick={() => onUpdate(spec.id, { services: [...spec.services, { name: "" }] })} className="bg-[#F48024] hover:bg-[#F48024]/90 text-white">Add Service</Button>
-                        </div>
-                      </div>
+                          </div>
+                        );
+                      })()}
                     </TabsContent>
                   </Tabs>
                 </CardContent>
@@ -529,7 +633,7 @@ export default function SpecialtiesModule({
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmDelete}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-[#c0352b] hover:bg-[#a02c24] text-white"
             >
               Delete
             </AlertDialogAction>
@@ -537,6 +641,63 @@ export default function SpecialtiesModule({
         </AlertDialogContent>
       </AlertDialog>
 
+      <AlertDialog
+        open={removeServiceDialog.open}
+        onOpenChange={(open) => {
+          if (!open) setRemoveServiceDialog({ open: false });
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Service</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove "{removeServiceDialog.serviceName}" from this specialty?
+              This change will be applied when you click Save.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setRemoveServiceDialog({ open: false })}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-[#c0352b] hover:bg-[#a02c24] text-white"
+              onClick={() => {
+                if (
+                  removeServiceDialog.specialtyId &&
+                  removeServiceDialog.serviceIndex !== undefined
+                ) {
+                  const specialty = specialties.find(
+                    (spec) => spec.id === removeServiceDialog.specialtyId
+                  );
+                  if (specialty) {
+                    const nextServices = specialty.services.filter(
+                      (_, idx) => idx !== removeServiceDialog.serviceIndex
+                    );
+                    onUpdate(removeServiceDialog.specialtyId, { services: nextServices });
+                    const currentSelection = serviceSelections[removeServiceDialog.specialtyId];
+                    if (
+                      currentSelection !== null &&
+                      currentSelection === removeServiceDialog.serviceIndex
+                    ) {
+                      handleSelectService(removeServiceDialog.specialtyId, null);
+                    } else if (
+                      currentSelection !== null &&
+                      removeServiceDialog.serviceIndex !== undefined &&
+                      currentSelection > removeServiceDialog.serviceIndex
+                    ) {
+                      handleSelectService(
+                        removeServiceDialog.specialtyId,
+                        currentSelection - 1
+                      );
+                    }
+                  }
+                }
+                setRemoveServiceDialog({ open: false });
+              }}
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
