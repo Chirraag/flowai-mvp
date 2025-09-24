@@ -26,6 +26,7 @@ export interface CustomerSupportAgentConfig {
   language: string;
   voice: string;
   agent_instructions: string;
+  human_transfer_criteria: string;
 }
 
 export interface UpdateFAQsRequest {

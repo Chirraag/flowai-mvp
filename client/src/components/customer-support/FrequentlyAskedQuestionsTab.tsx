@@ -1,5 +1,5 @@
 import React, { useImperativeHandle, forwardRef, useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -151,14 +151,25 @@ const FrequentlyAskedQuestionsTab = forwardRef<FrequentlyAskedQuestionsTabHandle
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-2 mb-2">
-          <HelpCircle className="h-5 w-5 text-blue-600" />
-          <h2 className="text-2xl font-semibold text-gray-900">FAQ Management</h2>
-        </div>
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-          <span className="ml-2 text-gray-600">Loading FAQs...</span>
-        </div>
+        <Card className="border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+          <CardHeader className="bg-gradient-to-r from-[#1c275e] to-[#2a3570] text-white p-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-[#f48024]/20 rounded-lg flex items-center justify-center">
+                <HelpCircle className="h-5 w-5 text-[#f48024]" />
+              </div>
+              <div>
+                <CardTitle className="text-xl font-semibold text-white">FAQ Management</CardTitle>
+                <p className="text-gray-200 text-sm mt-1">Loading frequently asked questions...</p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-[#f48024]" />
+              <span className="ml-2 text-gray-600">Loading FAQs...</span>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -167,159 +178,193 @@ const FrequentlyAskedQuestionsTab = forwardRef<FrequentlyAskedQuestionsTabHandle
   if (error) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-2 mb-2">
-          <HelpCircle className="h-5 w-5 text-red-600" />
-          <h2 className="text-2xl font-semibold text-gray-900">FAQ Management</h2>
-        </div>
-        <div className="text-center py-8">
-          <p className="text-red-600">Failed to load FAQs. Please try again.</p>
-        </div>
+        <Card className="border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+          <CardHeader className="bg-gradient-to-r from-[#1c275e] to-[#2a3570] text-white p-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-[#f48024]/20 rounded-lg flex items-center justify-center">
+                <HelpCircle className="h-5 w-5 text-[#f48024]" />
+              </div>
+              <div>
+                <CardTitle className="text-xl font-semibold text-white">FAQ Management</CardTitle>
+                <p className="text-gray-200 text-sm mt-1">Manage frequently asked questions for customer support</p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="text-center py-8">
+              <p className="text-red-600">Failed to load FAQs. Please try again.</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* FAQ Management Section Header */}
-      <div className="flex items-center gap-2 mb-2">
-        <HelpCircle className="h-5 w-5 text-blue-600" />
-        <h2 className="text-2xl font-semibold text-gray-900">FAQ Management</h2>
-      </div>
-      <p className="text-sm text-gray-600 mb-6">
-        Manage frequently asked questions for the customer support agent
-      </p>
+      {/* Enhanced FAQ Management Section */}
+      <Card className="border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-[#1c275e] to-[#2a3570] text-white p-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-[#f48024]/20 rounded-lg flex items-center justify-center">
+              <HelpCircle className="h-5 w-5 text-[#f48024]" />
+            </div>
+            <div>
+              <CardTitle className="text-xl font-semibold text-white">FAQ Management</CardTitle>
+              <p className="text-gray-200 text-sm mt-1">Manage frequently asked questions for the customer support agent</p>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-6">
 
-      {/* FAQ Cards */}
-      <div className="space-y-3">
-        {faqs.map((faq, index) => (
-          <Card key={index} className="border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200">
-            <CardContent className="p-4">
-              <div className="space-y-3">
-                {/* Question Section */}
-                <div className="space-y-1">
-                  <span className="inline-block px-2 py-0.5 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full uppercase tracking-wide">
-                    Question
-                  </span>
-                  <p className="text-base font-semibold text-gray-900 leading-snug">
-                    {faq.question}
-                  </p>
-                </div>
+          {/* FAQ Cards */}
+          <div className="space-y-3">
+            {faqs.map((faq, index) => (
+              <Card key={index} className="border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200">
+                <CardContent className="p-4">
+                  <div className="space-y-3">
+                    {/* Question Section */}
+                    <div className="space-y-1">
+                      <span className="inline-block px-2 py-0.5 bg-[#f48024]/10 text-[#f48024] text-xs font-semibold rounded-full uppercase tracking-wide">
+                        Question
+                      </span>
+                      <p className="text-base font-semibold text-gray-900 leading-snug">
+                        {faq.question}
+                      </p>
+                    </div>
 
-                {/* Answer Section */}
-                <div className="space-y-1">
-                  <span className="inline-block px-2 py-0.5 bg-green-100 text-green-800 text-xs font-semibold rounded-full uppercase tracking-wide">
-                    Answer
-                  </span>
-                  <p className="text-sm text-gray-700 leading-snug">
-                    {faq.answer}
-                  </p>
-                </div>
+                    {/* Answer Section */}
+                    <div className="space-y-1">
+                      <span className="inline-block px-2 py-0.5 bg-[#1c275e]/10 text-[#1c275e] text-xs font-semibold rounded-full uppercase tracking-wide">
+                        Answer
+                      </span>
+                      <p className="text-sm text-gray-700 leading-snug">
+                        {faq.answer}
+                      </p>
+                    </div>
 
-                {/* Action Buttons */}
-                <div className="flex gap-2 pt-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEditFAQ(faq)}
-                    disabled={updateFAQsMutation.isPending}
-                    className="flex items-center gap-1 h-8 px-3 text-xs hover:bg-blue-50 hover:border-blue-300"
-                  >
-                    <Pencil className="h-3 w-3" />
-                    Edit
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDeleteFAQ(index)}
-                    disabled={updateFAQsMutation.isPending}
-                    className="flex items-center gap-1 h-8 px-3 text-xs text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400"
-                  >
-                    {updateFAQsMutation.isPending ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-3 w-3" />
-                    )}
-                    Delete
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                    {/* Action Buttons */}
+                    <div className="flex gap-2 pt-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditFAQ(faq)}
+                        disabled={updateFAQsMutation.isPending}
+                        className="flex items-center gap-1 h-8 px-3 text-xs hover:bg-[#f48024]/5 hover:border-[#f48024]"
+                      >
+                        <Pencil className="h-3 w-3" />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteFAQ(index)}
+                        disabled={updateFAQsMutation.isPending}
+                        className="flex items-center gap-1 h-8 px-3 text-xs text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400"
+                      >
+                        {updateFAQsMutation.isPending ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-3 w-3" />
+                        )}
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
 
-        {/* Empty state */}
-        {faqs.length === 0 && (
-          <Card className="border border-dashed border-gray-300">
-            <CardContent className="p-8 text-center">
-              <HelpCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No FAQs yet</h3>
-              <p className="text-gray-600 mb-4">Add your first frequently asked question to get started.</p>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+            {/* Empty state */}
+            {faqs.length === 0 && (
+              <Card className="border border-dashed border-gray-300">
+                <CardContent className="p-8 text-center">
+                  <HelpCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No FAQs yet</h3>
+                  <p className="text-gray-600 mb-4">Add your first frequently asked question to get started.</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
 
-      {/* Add New FAQ Button */}
-      <div className="pt-3">
-        <Button
-          onClick={handleAddNewFAQ}
-          disabled={updateFAQsMutation.isPending}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 text-sm disabled:opacity-50"
-        >
-          <Plus className="h-4 w-4" />
-          Add New FAQ
-        </Button>
-      </div>
+          {/* Add New FAQ Button */}
+          <div className="pt-6">
+            <Button
+              onClick={handleAddNewFAQ}
+              disabled={updateFAQsMutation.isPending}
+              className="flex items-center gap-2 bg-[#f48024] hover:bg-[#e66f20] text-white px-4 py-2 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 text-sm disabled:opacity-50"
+            >
+              <Plus className="h-4 w-4" />
+              Add New FAQ
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Document Upload Section */}
-      <DocumentUpload
-        title="Knowledge Documents"
-        documents={agentData?.documents || []}
-        onUpload={uploadDocumentMutation.mutateAsync}
-        onDelete={deleteDocumentMutation.mutateAsync}
-        isUploading={uploadDocumentMutation.isPending}
-        isDeleting={deleteDocumentMutation.isPending}
-        maxFileSize={10}
-        allowedTypes={[
-          'application/pdf',
-          'application/msword',
-          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-          'text/plain',
-          'image/jpeg',
-          'image/png',
-          'image/gif'
-        ]}
-      />
+      {/* Enhanced Document Upload Section */}
+      <Card className="border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-[#2a3570] to-[#1c275e] text-white p-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-[#f48024]/20 rounded-lg flex items-center justify-center">
+              <HelpCircle className="h-5 w-5 text-[#f48024]" />
+            </div>
+            <div>
+              <CardTitle className="text-xl font-semibold text-white">Knowledge Documents</CardTitle>
+              <p className="text-gray-200 text-sm mt-1">Upload and manage training documents for the customer support agent</p>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-6">
+          <DocumentUpload
+            title=""
+            documents={agentData?.documents || []}
+            onUpload={uploadDocumentMutation.mutateAsync}
+            onDelete={deleteDocumentMutation.mutateAsync}
+            isUploading={uploadDocumentMutation.isPending}
+            isDeleting={deleteDocumentMutation.isPending}
+            maxFileSize={10}
+            allowedTypes={[
+              'application/pdf',
+              'application/msword',
+              'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+              'text/plain',
+              'image/jpeg',
+              'image/png',
+              'image/gif'
+            ]}
+          />
+        </CardContent>
+      </Card>
 
-      {/* Add/Edit FAQ Dialog */}
+      {/* Enhanced Add/Edit FAQ Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-[#1c275e]">
               {editingFAQ ? 'Edit FAQ' : 'Add New FAQ'}
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="question">Question</Label>
+              <Label htmlFor="question" className="text-sm font-semibold text-[#1c275e]">Question</Label>
               <Textarea
                 id="question"
                 placeholder="Enter the frequently asked question..."
                 value={dialogQuestion}
                 onChange={(e) => setDialogQuestion(e.target.value)}
-                className="min-h-[80px]"
+                className="min-h-[80px] border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="answer">Answer</Label>
+              <Label htmlFor="answer" className="text-sm font-semibold text-[#1c275e]">Answer</Label>
               <Textarea
                 id="answer"
                 placeholder="Enter the detailed answer..."
                 value={dialogAnswer}
                 onChange={(e) => setDialogAnswer(e.target.value)}
-                className="min-h-[120px]"
+                className="min-h-[120px] border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
               />
             </div>
           </div>
@@ -329,13 +374,14 @@ const FrequentlyAskedQuestionsTab = forwardRef<FrequentlyAskedQuestionsTabHandle
               variant="outline"
               onClick={() => setIsDialogOpen(false)}
               disabled={updateFAQsMutation.isPending}
+              className="hover:bg-gray-50"
             >
               Cancel
             </Button>
             <Button
               onClick={handleSaveFAQ}
               disabled={updateFAQsMutation.isPending || !dialogQuestion.trim() || !dialogAnswer.trim()}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-[#f48024] hover:bg-[#e66f20]"
             >
               {updateFAQsMutation.isPending ? (
                 <>

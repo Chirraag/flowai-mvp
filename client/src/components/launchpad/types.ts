@@ -14,10 +14,6 @@ export const US_STATES = [
   "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY"
 ];
 
-export type LocationSpecialtyServices = {
-  speciality_name: string;
-  services: string[];
-};
 
 export type OrgLocation = {
   id: string; // UI local id
@@ -33,7 +29,6 @@ export type OrgLocation = {
   specialties_text?: string; // Free text specialties
   services_text?: string; // Free text services
   parking_directions: string;
-  specialties_services: LocationSpecialtyServices[];
   is_active: boolean;
 };
 

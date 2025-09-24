@@ -34,7 +34,7 @@ export const SPECIALTIES = [
 
 export const NAVIGATION_ITEMS = [
   {
-    title: "MAIN",
+    title: "",
     items: [
       {
         name: "Launchpad",

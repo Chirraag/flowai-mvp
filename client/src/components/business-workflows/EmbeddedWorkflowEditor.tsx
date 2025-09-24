@@ -52,6 +52,7 @@ interface EmbeddedWorkflowEditorProps {
   height?: string;
   onMetaChange?: (meta: { id: number | null; name: string; nodesCount: number; edgesCount: number; updatedAt: string }) => void;
   exportRef?: React.MutableRefObject<(() => void) | null>;
+  saveRef?: React.MutableRefObject<(() => Promise<void>) | null>;
 }
 
 const EmbeddedWorkflowEditor: React.FC<EmbeddedWorkflowEditorProps> = ({
@@ -59,7 +60,8 @@ const EmbeddedWorkflowEditor: React.FC<EmbeddedWorkflowEditorProps> = ({
   workflowLoader,
   height = "h-96",
   onMetaChange,
-  exportRef
+  exportRef,
+  saveRef
 }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -307,6 +309,13 @@ const EmbeddedWorkflowEditor: React.FC<EmbeddedWorkflowEditorProps> = ({
     }
   }, [workflowId, workflowName, workflowDescription, nodes, edges, workflowActive, edgeType, agentType, toast, emitMeta]);
 
+  // Expose save function through ref
+  useEffect(() => {
+    if (saveRef) {
+      saveRef.current = handleSave;
+    }
+  }, [saveRef, handleSave]);
+
   // Keep meta in sync when nodes/edges or updatedAt change
   useEffect(() => {
     emitMeta();
@@ -327,14 +336,6 @@ const EmbeddedWorkflowEditor: React.FC<EmbeddedWorkflowEditorProps> = ({
           <h3 className="text-lg font-semibold">{agentType} Workflow</h3>
           <p className="text-sm text-gray-600">{workflowName || 'No workflow loaded'}</p>
         </div>
-        <Button
-          onClick={handleSave}
-          disabled={saving || !workflowId}
-          size="sm"
-          className="bg-[#1C275E] hover:bg-[#1C275E]/90 text-white"
-        >
-          {saving ? 'Saving...' : 'Save Workflow'}
-        </Button>
       </div>
 
       {/* React Flow Canvas */}

@@ -1,5 +1,5 @@
 import { useAuth } from "@/context/AuthContext";
-import { Menu, LogOut, User } from "lucide-react";
+import { Menu, LogOut } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,7 +8,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useLocation, Link } from "wouter";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -76,12 +76,12 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
 
   return (
     <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm">
-      <div className="flex items-center justify-between max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
-        <div className="flex items-center">
+      <div className="flex w-full items-center gap-3 px-4 sm:px-6 lg:px-8 py-1.5 sm:py-2">
+        <div className="flex flex-1 items-center gap-3 min-w-0">
           {isMobile && (
             <button
               type="button"
-              className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg mr-3"
+              className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg"
               onClick={onMobileMenuToggle}
             >
               <Menu className="h-6 w-6" />
@@ -93,7 +93,7 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
         </div>
 
         {/* User Menu */}
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center gap-3 flex-shrink-0">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">

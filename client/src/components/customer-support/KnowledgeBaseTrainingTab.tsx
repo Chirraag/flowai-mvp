@@ -1,5 +1,5 @@
 import React, { useImperativeHandle, forwardRef } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BookOpen, Upload, Eye, Download, Trash2 } from "lucide-react";
@@ -107,22 +107,26 @@ const KnowledgeBaseTrainingTab = forwardRef<KnowledgeBaseTrainingTabHandle>((_pr
   }));
 
   return (
-    <div className="space-y-8">
-      {/* Header Section */}
-      <div className="flex items-center gap-2 mb-2">
-        <BookOpen className="h-5 w-5 text-blue-600" />
-        <h2 className="text-2xl font-semibold text-gray-900">Knowledge Base & Training</h2>
-      </div>
-      <p className="text-sm text-gray-600 mb-6">
-        Manage training documents and resources for the customer support agent
-      </p>
-
-      {/* File Upload Section */}
-      <Card className="border border-gray-200 rounded-lg">
+    <div className="space-y-6">
+      {/* Enhanced Header Section */}
+      <Card className="border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-[#1c275e] to-[#2a3570] text-white p-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-[#f48024]/20 rounded-lg flex items-center justify-center">
+              <BookOpen className="h-5 w-5 text-[#f48024]" />
+            </div>
+            <div>
+              <CardTitle className="text-xl font-semibold text-white">Knowledge Base & Training</CardTitle>
+              <p className="text-gray-200 text-sm mt-1">Manage training documents and resources for the customer support agent</p>
+            </div>
+          </div>
+        </CardHeader>
         <CardContent className="p-6">
+
+          {/* File Upload Section */}
           <div className="space-y-4 text-center">
             <div className="flex items-center justify-center">
-              <h3 className="text-lg font-medium text-gray-900">Upload Documents</h3>
+              <h3 className="text-lg font-medium text-[#1c275e]">Upload Documents</h3>
             </div>
 
             {/* Hidden file input */}
@@ -138,7 +142,7 @@ const KnowledgeBaseTrainingTab = forwardRef<KnowledgeBaseTrainingTabHandle>((_pr
             {/* Choose Files Button */}
             <Button
               onClick={handleChooseFiles}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 mx-auto"
+              className="flex items-center gap-2 bg-[#f48024] hover:bg-[#e66f20] text-white px-6 py-3 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 mx-auto"
             >
               <Upload className="h-5 w-5" />
               Choose Files
@@ -147,11 +151,11 @@ const KnowledgeBaseTrainingTab = forwardRef<KnowledgeBaseTrainingTabHandle>((_pr
             {/* Uploaded Files List */}
             {uploadedFiles.length > 0 && (
               <div className="mt-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Selected Files:</h4>
+                <h4 className="text-sm font-medium text-[#1c275e] mb-2">Selected Files:</h4>
                 <ul className="space-y-1">
                   {uploadedFiles.map((fileName, index) => (
                     <li key={index} className="text-sm text-gray-600 flex items-center gap-2">
-                      <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                      <span className="w-2 h-2 bg-[#f48024] rounded-full"></span>
                       {fileName}
                     </li>
                   ))}
@@ -167,87 +171,98 @@ const KnowledgeBaseTrainingTab = forwardRef<KnowledgeBaseTrainingTabHandle>((_pr
       </Card>
 
       {/* Curated Knowledge Section */}
-      <div className="space-y-4">
-        <h3 className="text-xl font-semibold text-gray-900">Curated Knowledge</h3>
-
-        {/* Document Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {curatedDocuments.map((doc, index) => (
-            <Card
-              key={doc.id}
-              className="border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 hover:border-gray-300"
-            >
-              <CardContent className="p-5">
-                <div className="space-y-3 text-sm">
-                  {/* Document Header */}
-                  <div className="flex items-start justify-between gap-3">
-                    <h4 className="text-base font-semibold text-gray-900 leading-tight flex-1">
-                      {doc.title}
-                    </h4>
-                  </div>
-
-                  {/* File Size directly under title */}
-                  {doc.fileSize && (
-                    <p className="text-xs text-gray-500">Size: {doc.fileSize}</p>
-                  )}
-
-                  {/* Uploaded date */}
-                  <p className="text-xs text-gray-500">
-                    Uploaded: {doc.uploadedAt || '2024-01-01'}
-                  </p>
-
-                  {/* Category */}
-                  <p className="text-xs text-gray-600">
-                    Category: {categoriesByIndex[index] || 'General'}
-                  </p>
-
-                  {/* Tags / Badges */}
-                  {doc.tags && doc.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-2 pt-1">
-                      {doc.tags.map((tag, i) => (
-                        <Badge key={i} className="text-[10px] font-medium px-2 py-0.5 bg-gray-100 text-gray-800 hover:bg-gray-200">
-                          {tag}
-                        </Badge>
-                      ))}
+      <Card className="border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-[#2a3570] to-[#1c275e] text-white p-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-[#f48024]/20 rounded-lg flex items-center justify-center">
+              <BookOpen className="h-5 w-5 text-[#f48024]" />
+            </div>
+            <div>
+              <CardTitle className="text-xl font-semibold text-white">Curated Knowledge</CardTitle>
+              <p className="text-gray-200 text-sm mt-1">Pre-loaded training documents and resources</p>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-6">
+          {/* Document Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            {curatedDocuments.map((doc, index) => (
+              <Card
+                key={doc.id}
+                className="border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 hover:border-gray-300"
+              >
+                <CardContent className="p-5">
+                  <div className="space-y-3 text-sm">
+                    {/* Document Header */}
+                    <div className="flex items-start justify-between gap-3">
+                      <h4 className="text-base font-semibold text-[#1c275e] leading-tight flex-1">
+                        {doc.title}
+                      </h4>
                     </div>
-                  )}
 
-                  {/* Action Buttons */}
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleViewDocument(doc.id)}
-                      className="flex-1 flex items-center justify-center gap-1 hover:bg-blue-50 hover:border-blue-300"
-                    >
-                      <Eye className="h-3 w-3" />
-                      View
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDownloadDocument(doc.id)}
-                      className="flex-1 flex items-center justify-center gap-1 hover:bg-green-50 hover:border-green-300"
-                    >
-                      <Download className="h-3 w-3" />
-                      Download
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDeleteDocument(doc.id)}
-                      className="flex-1 flex items-center justify-center gap-1 text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                      Delete
-                    </Button>
+                    {/* File Size directly under title */}
+                    {doc.fileSize && (
+                      <p className="text-xs text-gray-500">Size: {doc.fileSize}</p>
+                    )}
+
+                    {/* Uploaded date */}
+                    <p className="text-xs text-gray-500">
+                      Uploaded: {doc.uploadedAt || '2024-01-01'}
+                    </p>
+
+                    {/* Category */}
+                    <p className="text-xs text-gray-600">
+                      Category: {categoriesByIndex[index] || 'General'}
+                    </p>
+
+                    {/* Tags / Badges */}
+                    {doc.tags && doc.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        {doc.tags.map((tag, i) => (
+                          <Badge key={i} className="text-[10px] font-medium px-2 py-0.5 bg-[#f48024]/10 text-[#f48024] hover:bg-[#f48024]/20">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewDocument(doc.id)}
+                        className="flex-1 flex items-center justify-center gap-1 hover:bg-[#f48024]/5 hover:border-[#f48024]"
+                      >
+                        <Eye className="h-3 w-3" />
+                        View
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDownloadDocument(doc.id)}
+                        className="flex-1 flex items-center justify-center gap-1 hover:bg-green-50 hover:border-green-300"
+                      >
+                        <Download className="h-3 w-3" />
+                        Download
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteDocument(doc.id)}
+                        className="flex-1 flex items-center justify-center gap-1 text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        Delete
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 });

@@ -7,27 +7,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { OrgLocation } from "@/components/launchpad/types";
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
-interface SpecialtyRefs {
-  [key: string]: React.RefObject<HTMLDivElement>;
-}
 
 interface LocationCardProps {
   location: OrgLocation;
   index: number;
   onChange: (updates: Partial<OrgLocation>) => void;
   onDelete: () => void;
-  onEditSpecialtyServices: (specialityIndex: number) => void;
   isMinimized?: boolean;
   onToggleMinimize?: () => void;
 }
@@ -37,48 +23,10 @@ export default function LocationCard({
   index,
   onChange,
   onDelete,
-  onEditSpecialtyServices,
   isMinimized = false,
   onToggleMinimize,
 }: LocationCardProps) {
-  const specialtyRefs = React.useRef<SpecialtyRefs>({});
 
-  // Initialize refs for all specialties
-  React.useEffect(() => {
-    location.specialties_services.forEach((_, index) => {
-      if (!specialtyRefs.current[index]) {
-        specialtyRefs.current[index] = React.createRef<HTMLDivElement>();
-      }
-    });
-  }, [location.specialties_services]);
-
-  // Specialty removal confirmation dialog state
-  const [specialtyDeleteDialog, setSpecialtyDeleteDialog] = React.useState<{
-    open: boolean;
-    specialtyIndex?: number;
-    specialtyName?: string;
-  }>({ open: false });
-
-  const handleAddSpecialty = () => {
-    onChange({ specialties_services: [...location.specialties_services, { speciality_name: "", services: [] }] });
-  };
-
-  // Specialty removal confirmation handlers
-  const handleDeleteSpecialty = (specialtyIndex: number, specialtyName: string) => {
-    setSpecialtyDeleteDialog({
-      open: true,
-      specialtyIndex,
-      specialtyName
-    });
-  };
-
-  const handleConfirmSpecialtyDelete = () => {
-    if (specialtyDeleteDialog.specialtyIndex !== undefined) {
-      const newSpecs = location.specialties_services.filter((_, i) => i !== specialtyDeleteDialog.specialtyIndex);
-      onChange({ specialties_services: newSpecs });
-      setSpecialtyDeleteDialog({ open: false });
-    }
-  };
   return (
     <Card className="border-0 shadow-lg bg-white rounded-xl overflow-hidden" data-location-card>
       <CardHeader className="bg-[#1C275E] text-white p-3">
@@ -212,40 +160,6 @@ export default function LocationCard({
           </div>
         </div>
 
-        <div className="space-y-4 mb-4">
-          <Label className="text-base font-semibold text-[#1C275E]">Specialties & Services</Label>
-            <div className="space-y-3">
-              {location.specialties_services.map((spec, sIndex) => (
-                <div key={`specialty-${sIndex}`} ref={specialtyRefs.current[sIndex]} className="flex items-center gap-2 p-3 border-2 border-gray-200 rounded-lg bg-white hover:border-[#1C275E]/30 transition-all duration-300">
-                  <Input
-                    className="border-0 bg-transparent focus:ring-0"
-                    value={spec.speciality_name}
-                    onChange={(e) => {
-                      const newSpecs = location.specialties_services.slice();
-                      newSpecs[sIndex] = { ...newSpecs[sIndex], speciality_name: e.target.value };
-                      onChange({ specialties_services: newSpecs });
-                    }}
-                    placeholder="Specialty name"
-                  />
-                  <Button type="button" variant="outline" size="sm" onClick={() => onEditSpecialtyServices(sIndex)} className="border-[#F48024] text-[#F48024] hover:bg-[#F48024] hover:text-white">
-                    Edit Services ({spec.services.length})
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="default"
-                    size="sm"
-                    className="bg-white text-black border border-black hover:bg-gray-50"
-                    onClick={() => handleDeleteSpecialty(sIndex, spec.speciality_name)}
-                  >
-                    Remove
-                  </Button>
-                </div>
-              ))}
-              <Button type="button" variant="default" size="sm" onClick={handleAddSpecialty} className="bg-[#F48024] hover:bg-[#F48024]/90 text-white">
-                Add Specialty
-              </Button>
-            </div>
-        </div>
 
         <div className="space-y-2 mb-4">
           <Label className="text-xs font-medium text-[#1C275E]">Parking Directions</Label>
@@ -257,38 +171,17 @@ export default function LocationCard({
           />
         </div>
 
-        <div className="flex items-center space-x-2">
+        {/* <div className="flex items-center space-x-2">
           <Switch
             id={`location-active-${location.id}`}
             checked={location.is_active}
             onCheckedChange={(checked) => onChange({ is_active: checked })}
           />
           <Label htmlFor={`location-active-${location.id}`} className="text-xs font-medium text-[#1C275E]">Is Active</Label>
-        </div>
+        </div> */}
         </CardContent>
       )}
 
-      {/* Specialty Deletion Confirmation Dialog */}
-      <AlertDialog open={specialtyDeleteDialog.open} onOpenChange={() => setSpecialtyDeleteDialog({ open: false })}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to remove this specialty?
-              This change will be applied when you click Save.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmSpecialtyDelete}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Remove
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </Card>
   );
 }
