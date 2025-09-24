@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Loader2 } from 'lucide-react';
 import { ChevronDown, ChevronUp, Plus, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { api } from '@/lib/api';
@@ -33,6 +38,13 @@ export default function OrganizationSwitcher({ isCollapsed = false }: Organizati
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(false);
   const [switching, setSwitching] = useState<number | null>(null);
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    retell_workspace_id: '',
+    api_key: ''
+  });
 
   // Fetch organizations when component mounts or when expanded
   useEffect(() => {
@@ -68,18 +80,7 @@ export default function OrganizationSwitcher({ isCollapsed = false }: Organizati
 
     setSwitching(orgId);
     try {
-      const response = await api.post('/auth/select-org', { orgId });
-
-      if (response.success && response.token && response.user) {
-        // Update tokens
-        localStorage.setItem('auth_token', response.token);
-        if (response.refreshToken) {
-          localStorage.setItem('refresh_token', response.refreshToken);
-        }
-
-        // Navigate to the new organization's launchpad
-        window.location.href = `/${orgId}/launchpad`;
-      }
+      await switchOrganization(orgId);
 
       toast({
         title: "Organization Switched",
@@ -99,12 +100,92 @@ export default function OrganizationSwitcher({ isCollapsed = false }: Organizati
   };
 
   const handleAddOrganization = () => {
-    // For now, show a toast - this would typically open a modal or navigate to a creation page
-    toast({
-      title: "Add Organization",
-      description: "Organization creation feature coming soon",
-    });
     setIsExpanded(false);
+    setShowAddDialog(true);
+    // Reset form data
+    setFormData({
+      name: '',
+      retell_workspace_id: '',
+      api_key: ''
+    });
+  };
+
+  const handleCreateOrganization = async () => {
+    // Validate required fields
+    if (!formData.name.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Organization name is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.retell_workspace_id.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Retell workspace ID is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.api_key.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "API key is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      const response = await api.post('/auth/create-organisation', {
+        name: formData.name.trim(),
+        retell_workspace_id: formData.retell_workspace_id.trim(),
+        api_key: formData.api_key.trim()
+      });
+
+      if (response.success) {
+        toast({
+          title: "Success",
+          description: `Organization "${formData.name}" created successfully`,
+        });
+        
+        // Close dialog and refresh organizations list
+        setShowAddDialog(false);
+        setFormData({ name: '', retell_workspace_id: '', api_key: '' });
+        
+        // Redirect to the new organization using switchOrganization
+        if (response.organisation?.id) {
+          console.log('Redirecting to new organization:', response.organisation.id);
+          await switchOrganization(response.organisation.id);
+        } else {
+          console.log('No organization ID found in response');
+          // Refresh organizations list as fallback
+          await fetchOrganizations();
+        }
+      } else {
+        throw new Error(response.message || 'Failed to create organization');
+      }
+    } catch (error: any) {
+      console.error('Failed to create organization:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create organization",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const handleInputChange = (field: keyof typeof formData, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
   const getInitials = (name: string) => {
@@ -232,7 +313,7 @@ export default function OrganizationSwitcher({ isCollapsed = false }: Organizati
                     >
                       <div className="flex items-center gap-3">
                         <Plus className="h-4 w-4 text-gray-500 mr-2" />
-                        <span className="text-sm font-semibold">Add another workspace</span>
+                        <span className="text-sm font-semibold">Add organisation</span>
                       </div>
                     </Button>
                   </div>
@@ -242,6 +323,75 @@ export default function OrganizationSwitcher({ isCollapsed = false }: Organizati
           </Card>
         </>
       )}
+
+      {/* Add Organization Dialog */}
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Add New Organisation</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="org-name">Organisation Name *</Label>
+              <Input
+                id="org-name"
+                placeholder="e.g., Test Healthcare Clinic"
+                value={formData.name}
+                onChange={(e) => handleInputChange('name', e.target.value)}
+                disabled={isCreating}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="retell-workspace">Retell Workspace ID *</Label>
+              <Input
+                id="retell-workspace"
+                placeholder="e.g., ws_abc123def456"
+                value={formData.retell_workspace_id}
+                onChange={(e) => handleInputChange('retell_workspace_id', e.target.value)}
+                disabled={isCreating}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="api-key">API Key *</Label>
+              <Input
+                id="api-key"
+                placeholder="e.g., key_81827a38956f6979a50fccd47183"
+                value={formData.api_key}
+                onChange={(e) => handleInputChange('api_key', e.target.value)}
+                disabled={isCreating}
+                type="password"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setShowAddDialog(false)}
+              disabled={isCreating}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateOrganization}
+              disabled={isCreating || !formData.name.trim() || !formData.retell_workspace_id.trim() || !formData.api_key.trim()}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {isCreating ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Creating...
+                </>
+              ) : (
+                'Create Organisation'
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
