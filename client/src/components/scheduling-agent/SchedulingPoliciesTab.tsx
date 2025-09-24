@@ -1,9 +1,10 @@
 import React, { useImperativeHandle, forwardRef, useEffect } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { IOSSwitch } from "@/components/ui/ios-switch";
-import { Clock, Users } from "lucide-react";
+import { Clock, Users, Calendar, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import type { SchedulingPoliciesValues } from "@/types/schedulingAgent";
 
 /**
@@ -13,6 +14,8 @@ import type { SchedulingPoliciesValues } from "@/types/schedulingAgent";
  */
 export type SchedulingPoliciesTabProps = {
   initialValues?: SchedulingPoliciesValues;
+  onSave?: (values: SchedulingPoliciesValues) => Promise<void>;
+  isSaving?: boolean;
 };
 
 export type SchedulingPoliciesTabHandle = {
@@ -26,7 +29,7 @@ export type SchedulingPoliciesTabHandle = {
   validate: () => { valid: boolean; errors: string[] };
 };
 
-const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, SchedulingPoliciesTabProps>((props, ref) => {
+const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, SchedulingPoliciesTabProps>(({ initialValues, onSave, isSaving = false }, ref) => {
   // Walk-in Policy state
   const [acceptWalkIns, setAcceptWalkIns] = React.useState(true);
   const [allowSameDayAppointments, setAllowSameDayAppointments] = React.useState(true);
@@ -36,16 +39,37 @@ const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, Scheduling
   const [minimumCancellationNotice, setMinimumCancellationNotice] = React.useState("24");
   const [noShowFee, setNoShowFee] = React.useState("50");
 
+  // Track unsaved changes
+  const [hasUnsavedChanges, setHasUnsavedChanges] = React.useState(false);
+
   // Set initial values when props change
   useEffect(() => {
-    if (props.initialValues) {
-      setAcceptWalkIns(props.initialValues.walkInPolicy.acceptWalkIns);
-      setAllowSameDayAppointments(props.initialValues.walkInPolicy.allowSameDayAppointments);
-      setSameDayCutoffTime(props.initialValues.walkInPolicy.sameDayCutoffTime);
-      setMinimumCancellationNotice(props.initialValues.cancellationPolicy.minimumCancellationNotice);
-      setNoShowFee(props.initialValues.cancellationPolicy.noShowFee);
+    if (initialValues) {
+      setAcceptWalkIns(initialValues.walkInPolicy.acceptWalkIns);
+      setAllowSameDayAppointments(initialValues.walkInPolicy.allowSameDayAppointments);
+      setSameDayCutoffTime(initialValues.walkInPolicy.sameDayCutoffTime);
+      setMinimumCancellationNotice(initialValues.cancellationPolicy.minimumCancellationNotice);
+      setNoShowFee(initialValues.cancellationPolicy.noShowFee);
+      setHasUnsavedChanges(false);
     }
-  }, [props.initialValues]);
+  }, [initialValues]);
+
+  // Track changes
+  const handleFieldChange = () => {
+    setHasUnsavedChanges(true);
+  };
+
+  // Save handler
+  const handleSave = async () => {
+    if (!onSave) return;
+
+    const currentRef = (ref as React.MutableRefObject<SchedulingPoliciesTabHandle | null>).current;
+    const currentValues = currentRef?.getValues();
+    if (currentValues) {
+      await onSave(currentValues);
+      setHasUnsavedChanges(false);
+    }
+  };
 
   // Expose values and validation to parent page
   useImperativeHandle(ref, () => ({
@@ -82,18 +106,49 @@ const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, Scheduling
 
   return (
     <div className="space-y-6">
-      {/* Walk-ins & Same-day Policy Card */}
-      <Card className="border-gray-200">
-        <CardContent className="p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Users className="h-4 w-4" />
-            <h2 className="text-xl font-semibold text-gray-900">Walk-ins & Same-day Policy</h2>
+      {/* Enhanced Walk-ins & Same-day Policy Card */}
+      <Card className="border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-[#1c275e] to-[#2a3570] text-white p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-[#f48024]/20 rounded-lg flex items-center justify-center">
+                <Calendar className="h-5 w-5 text-[#f48024]" />
+              </div>
+              <div>
+                <CardTitle className="text-xl font-semibold text-white">Walk-ins & Same-day Policy</CardTitle>
+                <p className="text-gray-200 text-sm mt-1">Configure policies for urgent and same-day appointments</p>
+              </div>
+            </div>
+            {onSave && (
+              <div className="flex items-center gap-3">
+                {hasUnsavedChanges && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="w-2 h-2 bg-[#f48024] rounded-full animate-pulse"></div>
+                    <span className="text-gray-200">Unsaved changes</span>
+                  </div>
+                )}
+                <Button
+                  onClick={handleSave}
+                  disabled={isSaving || !hasUnsavedChanges}
+                  className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+                >
+                  {isSaving ? "Saving..." : "Save"}
+                </Button>
+              </div>
+            )}
           </div>
-          <p className="text-sm text-gray-600 mb-6">Configure policies for urgent and same-day appointments</p>
+        </CardHeader>
+        <CardContent className="p-6">
 
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="accept-walk-ins" className="text-gray-900">Accept Walk-ins</Label>
+          {/* Enhanced Policy Toggles */}
+          <div className="space-y-6 mb-8">
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-[#f48024]/20 rounded-lg flex items-center justify-center">
+                  <Users className="h-4 w-4 text-[#f48024]" />
+                </div>
+                <Label htmlFor="accept-walk-ins" className="text-[#1c275e] font-medium">Accept Walk-ins</Label>
+              </div>
               <IOSSwitch
                 id="accept-walk-ins"
                 checked={acceptWalkIns}
@@ -101,25 +156,36 @@ const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, Scheduling
               />
             </div>
 
-            <div className="flex items-center justify-between">
-              <Label htmlFor="same-day-appointments" className="text-gray-900">Allow Same-day Appointments</Label>
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-[#1c275e]/20 rounded-lg flex items-center justify-center">
+                  <Calendar className="h-4 w-4 text-[#1c275e]" />
+                </div>
+                <Label htmlFor="same-day-appointments" className="text-[#1c275e] font-medium">Allow Same-day Appointments</Label>
+              </div>
               <IOSSwitch
                 id="same-day-appointments"
                 checked={allowSameDayAppointments}
-                onCheckedChange={setAllowSameDayAppointments}
+                onCheckedChange={(checked) => {
+                  setAllowSameDayAppointments(checked);
+                  handleFieldChange();
+                }}
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="cutoff-time">Same-day Cutoff Time</Label>
+            <div className="space-y-2 p-4 bg-gray-50 rounded-lg">
+              <Label htmlFor="cutoff-time" className="text-sm font-semibold text-[#1c275e]">Same-day Cutoff Time</Label>
               <div className="relative">
-                <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#1c275e]" />
                 <Input
                   id="cutoff-time"
                   type="time"
                   value={sameDayCutoffTime}
-                  onChange={(e) => setSameDayCutoffTime(e.target.value)}
-                  className="h-11 pl-10"
+                  onChange={(e) => {
+                    setSameDayCutoffTime(e.target.value);
+                    handleFieldChange();
+                  }}
+                  className="h-11 pl-10 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
                 />
               </div>
             </div>
@@ -127,32 +193,43 @@ const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, Scheduling
         </CardContent>
       </Card>
 
-      {/* No-show & Cancellation Policy Card */}
-      <Card className="border-gray-200">
-        <CardContent className="p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Clock className="h-4 w-4" />
-            <h2 className="text-xl font-semibold text-gray-900">No-show & Cancellation Policy</h2>
+      {/* Enhanced No-show & Cancellation Policy Card */}
+      <Card className="border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-[#2a3570] to-[#1c275e] text-white p-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-[#f48024]/20 rounded-lg flex items-center justify-center">
+              <AlertCircle className="h-5 w-5 text-[#f48024]" />
+            </div>
+            <div>
+              <CardTitle className="text-xl font-semibold text-white">No-show & Cancellation Policy</CardTitle>
+              <p className="text-gray-200 text-sm mt-1">Set policies for cancellations and no-shows</p>
+            </div>
           </div>
-          <p className="text-sm text-gray-600 mb-6">Set policies for cancellations and no-shows</p>
+        </CardHeader>
+        <CardContent className="p-6">
 
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+          {/* Enhanced Cancellation Policy Form */}
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h3 className="text-lg font-semibold text-[#1c275e] mb-4">Cancellation & No-Show Rules</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="cancellation-notice">Minimum Cancellation Notice (hours)</Label>
+                <Label htmlFor="cancellation-notice" className="text-sm font-semibold text-[#1c275e]">Minimum Cancellation Notice (hours)</Label>
                 <Input
                   id="cancellation-notice"
                   type="number"
                   min="1"
                   placeholder="24"
                   value={minimumCancellationNotice}
-                  onChange={(e) => setMinimumCancellationNotice(e.target.value)}
-                  className="h-11"
+                  onChange={(e) => {
+                    setMinimumCancellationNotice(e.target.value);
+                    handleFieldChange();
+                  }}
+                  className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="no-show-fee">No-show Fee ($)</Label>
+                <Label htmlFor="no-show-fee" className="text-sm font-semibold text-[#1c275e]">No-show Fee ($)</Label>
                 <Input
                   id="no-show-fee"
                   type="number"
@@ -160,8 +237,11 @@ const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, Scheduling
                   step="0.01"
                   placeholder="50.00"
                   value={noShowFee}
-                  onChange={(e) => setNoShowFee(e.target.value)}
-                  className="h-11"
+                  onChange={(e) => {
+                    setNoShowFee(e.target.value);
+                    handleFieldChange();
+                  }}
+                  className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
                 />
               </div>
             </div>

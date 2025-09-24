@@ -21,7 +21,6 @@ interface LocationsModuleProps {
   onAdd: () => void;
   onUpdate: (id: string, updates: Partial<OrgLocation>) => void;
   onRemove: (id: string) => void;
-  onEditSpecialtyServices: (locationId: string, specialityIndex: number) => void;
   onSave?: () => void;
   isSaving?: boolean;
 }
@@ -31,7 +30,6 @@ export default function LocationsModule({
   onAdd,
   onUpdate,
   onRemove,
-  onEditSpecialtyServices,
   onSave,
   isSaving = false,
 }: LocationsModuleProps) {
@@ -153,7 +151,6 @@ export default function LocationsModule({
                 index={originalIndex >= 0 ? originalIndex : 0}
                 onChange={(updates) => onUpdate(loc.id, updates)}
                 onDelete={() => handleDeleteLocation(loc.id, loc.name || `Location ${originalIndex + 1}`)}
-                onEditSpecialtyServices={(specialityIndex) => onEditSpecialtyServices(loc.id, specialityIndex)}
                 isMinimized={minimizedCards[cardId]}
                 onToggleMinimize={() => toggleCardMinimize(cardId)}
               />

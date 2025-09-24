@@ -328,6 +328,68 @@
   @apply flex items-center px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors duration-200;
 }
 
+/* Sidebar collapse/expand transitions */
+.sidebar-transition {
+  transition: width 300ms ease-in-out;
+}
+
+.sidebar-collapsed {
+  width: 4rem; /* 64px */
+}
+
+.sidebar-expanded {
+  width: 16rem; /* 256px */
+}
+
+/* Main content scale and margin transitions */
+.main-content-transition {
+  transition: transform 300ms ease-in-out, margin-left 300ms ease-in-out;
+  transform-origin: top left;
+}
+
+.main-content-pushed {
+  transform: scale(0.98);
+}
+
+.main-content-normal {
+  transform: scale(1.0);
+}
+
+/* Icon-only navigation styles */
+.nav-icon-only {
+  @apply justify-center p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200;
+}
+
+/* Smooth label transitions */
+.nav-label-transition {
+  transition: opacity 200ms ease-in-out, transform 200ms ease-in-out;
+}
+
+.nav-label-hidden {
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+.nav-label-visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Hover effects for collapsed sidebar */
+.sidebar-hover-effect:hover {
+  background-color: rgba(59, 130, 246, 0.05);
+  border-radius: 8px;
+}
+
+/* Icon scaling on hover */
+.nav-icon-hover {
+  transition: transform 200ms ease-in-out;
+}
+
+.nav-icon-hover:hover {
+  transform: scale(1.1);
+}
+
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }

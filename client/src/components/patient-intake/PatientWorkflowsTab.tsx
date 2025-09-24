@@ -1,6 +1,7 @@
 import React, { useImperativeHandle, forwardRef, useCallback, useRef, useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Workflow } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Workflow, Save } from "lucide-react";
 import EmbeddedWorkflowEditor from "@/components/business-workflows/EmbeddedWorkflowEditor";
 
 /**
@@ -83,24 +84,67 @@ const PatientWorkflowsTab = forwardRef<PatientWorkflowsTabHandle>((_props, ref) 
   }));
 
   const exportRef = useRef<(() => void) | null>(null);
+  const saveRef = useRef<(() => Promise<void>) | null>(null);
   const [nodesCount, setNodesCount] = useState(0);
   const [updatedAt, setUpdatedAt] = useState<string>("");
+  const [saving, setSaving] = useState(false);
+
+  // Handle save workflow
+  const handleSave = async () => {
+    if (saveRef.current) {
+      setSaving(true);
+      try {
+        await saveRef.current();
+      } finally {
+        setSaving(false);
+      }
+    }
+  };
 
   return (
     <div className="space-y-6">
-      {/* Patient Intake Workflows Card */}
-      <Card className="border-gray-200">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-end mb-4">
-            <div className="flex items-center gap-3 text-sm text-gray-700">
-              <span>Nodes: <span className="font-medium">{nodesCount}</span></span>
-              <span>Last Saved: <span className="font-medium">{updatedAt ? new Date(updatedAt).toLocaleString() : '—'}</span></span>
+      {/* Enhanced Patient Intake Workflows Card */}
+      <Card className="border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-[#1c275e] to-[#2a3570] text-white p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-[#f48024]/20 rounded-lg flex items-center justify-center">
+                <Workflow className="h-5 w-5 text-[#f48024]" />
+              </div>
+              <div>
+                <CardTitle className="text-xl font-semibold text-white">Workflow Designer</CardTitle>
+                <p className="text-gray-200 text-sm mt-1">Design and configure patient intake automation workflows</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 text-sm text-gray-200">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-[#f48024] rounded-full"></div>
+                  <span className="font-medium">Nodes: {nodesCount}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-[#1c275e] rounded-full"></div>
+                  <span className="font-medium">Last Saved: {updatedAt ? new Date(updatedAt).toLocaleString() : '—'}</span>
+                </div>
+              </div>
+              <Button
+                onClick={handleSave}
+                disabled={saving}
+                className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2"
+              >
+                <Save className="h-4 w-4" />
+                {saving ? "Saving..." : "Save Workflow"}
+              </Button>
               <button
-                className="px-3 py-1 border rounded bg-[#F48024] hover:bg-[#F48024]/90 text-white"
+                className="px-4 py-2 rounded-lg bg-[#f48024] hover:bg-[#e66f20] text-white font-medium shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2"
                 onClick={() => exportRef.current && exportRef.current()}
-              >Export</button>
+              >
+                Export Workflow
+              </button>
             </div>
           </div>
+        </CardHeader>
+        <CardContent className="p-6">
 
           {/* Embedded Workflow Editor */}
           <EmbeddedWorkflowEditor
@@ -112,6 +156,7 @@ const PatientWorkflowsTab = forwardRef<PatientWorkflowsTabHandle>((_props, ref) 
               setUpdatedAt(updatedAt);
             }}
             exportRef={exportRef}
+            saveRef={saveRef}
           />
         </CardContent>
       </Card>

@@ -1,16 +1,29 @@
-import React, { useImperativeHandle, forwardRef } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import React, { useImperativeHandle, forwardRef, useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Shield, FileCheck } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Shield, FileCheck, Save, Loader2 } from "lucide-react";
 
 /**
  * FieldContentRulesTab
  * - Field requirements and special instructions configuration
- * - Mirrors the launchpad tab styling and structure
+ * - Enhanced with brand styling and sophisticated save system
  */
+export type FieldContentRulesTabProps = {
+  initialData?: {
+    fieldRequirements: Record<string, string>;
+    specialInstructions: Record<string, string>;
+  };
+  onSave?: (values: any) => Promise<void>;
+  isSaving?: boolean;
+};
+
 export type FieldContentRulesTabHandle = {
+  /**
+   * Returns the current values held by the tab.
+   */
   getValues: () => {
     fieldRequirements: {
       patientName: string;
@@ -27,33 +40,32 @@ export type FieldContentRulesTabHandle = {
       languageBarrierInstructions: string;
     };
   };
+  /**
+   * Lightweight validation for the tab.
+   */
   validate: () => { valid: boolean; errors: string[] };
 };
 
-export interface FieldContentRulesTabProps {
-  initialData?: {
-    fieldRequirements: Record<string, string>;
-    specialInstructions: Record<string, string>;
-  };
-}
-
-const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle, FieldContentRulesTabProps>(({ initialData }, ref) => {
+const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle, FieldContentRulesTabProps>(({ initialData, onSave, isSaving = false }, ref) => {
   // Field Requirements state (default values, overridden by initialData if provided)
-  const [patientName, setPatientName] = React.useState("required");
-  const [dateOfBirth, setDateOfBirth] = React.useState("required");
-  const [phoneNumber, setPhoneNumber] = React.useState("required");
-  const [email, setEmail] = React.useState("optional");
-  const [insuranceId, setInsuranceId] = React.useState("optional");
-  const [emergencyContact, setEmergencyContact] = React.useState("required");
-  const [preferredLanguage, setPreferredLanguage] = React.useState("optional");
+  const [patientName, setPatientName] = useState("required");
+  const [dateOfBirth, setDateOfBirth] = useState("required");
+  const [phoneNumber, setPhoneNumber] = useState("required");
+  const [email, setEmail] = useState("optional");
+  const [insuranceId, setInsuranceId] = useState("optional");
+  const [emergencyContact, setEmergencyContact] = useState("required");
+  const [preferredLanguage, setPreferredLanguage] = useState("optional");
 
   // Special Instructions state
-  const [menoresInstructions, setMenoresInstructions] = React.useState("");
-  const [noInsuranceInstructions, setNoInsuranceInstructions] = React.useState("");
-  const [languageBarrierInstructions, setLanguageBarrierInstructions] = React.useState("");
+  const [menoresInstructions, setMenoresInstructions] = useState("");
+  const [noInsuranceInstructions, setNoInsuranceInstructions] = useState("");
+  const [languageBarrierInstructions, setLanguageBarrierInstructions] = useState("");
+
+  // Change tracking
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Populate state from initialData if provided
-  React.useEffect(() => {
+  useEffect(() => {
     if (initialData) {
       setPatientName(initialData.fieldRequirements.patientName || "required");
       setDateOfBirth(initialData.fieldRequirements.dateOfBirth || "required");
@@ -66,8 +78,32 @@ const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle, FieldContent
       setMenoresInstructions(initialData.specialInstructions.menoresInstructions || "");
       setNoInsuranceInstructions(initialData.specialInstructions.noInsuranceInstructions || "");
       setLanguageBarrierInstructions(initialData.specialInstructions.languageBarrierInstructions || "");
+      setHasUnsavedChanges(false);
     }
   }, [initialData]);
+
+  // Track changes
+  const handleFieldChange = () => {
+    setHasUnsavedChanges(true);
+  };
+
+  // Save handler
+  const handleSave = async () => {
+    if (!onSave) return;
+
+    const currentRef = (ref as React.MutableRefObject<FieldContentRulesTabHandle | null>).current;
+    const validation = currentRef?.validate();
+    if (validation && !validation.valid) {
+      // Validation errors will be handled by the parent
+      return;
+    }
+
+    const currentValues = currentRef?.getValues();
+    if (currentValues) {
+      await onSave(currentValues);
+      setHasUnsavedChanges(false);
+    }
+  };
 
   useImperativeHandle(ref, () => ({
     getValues: () => ({
@@ -86,25 +122,66 @@ const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle, FieldContent
         languageBarrierInstructions,
       },
     }),
-    validate: () => ({ valid: true, errors: [] }),
+    validate: () => {
+      const errors: string[] = [];
+      // Basic validation can be added here if needed
+      return { valid: errors.length === 0, errors };
+    },
   }));
 
   return (
     <div className="space-y-6">
-      {/* Required vs Optional Fields Card */}
-      <Card className="border-gray-200">
-        <CardContent className="p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <FileCheck className="h-4 w-4" />
-            <h2 className="text-xl font-semibold text-gray-900">Required vs Optional Fields</h2>
+      {/* Enhanced Required vs Optional Fields Card */}
+      <Card className="border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-[#1c275e] to-[#2a3570] text-white p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-[#f48024]/20 rounded-lg flex items-center justify-center">
+                <FileCheck className="h-5 w-5 text-[#f48024]" />
+              </div>
+              <div>
+                <CardTitle className="text-xl font-semibold text-white">Required vs Optional Fields</CardTitle>
+                <p className="text-gray-200 text-sm mt-1">Configure field requirements for intake forms</p>
+              </div>
+            </div>
+            {onSave && (
+              <div className="flex items-center gap-3">
+                {hasUnsavedChanges && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="w-2 h-2 bg-[#f48024] rounded-full animate-pulse"></div>
+                    <span className="text-gray-200">Unsaved changes</span>
+                  </div>
+                )}
+                <Button
+                  onClick={handleSave}
+                  disabled={isSaving || !hasUnsavedChanges}
+                  className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      Save
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
           </div>
-          <p className="text-sm text-gray-600 mb-6">Configure field requirements for intake forms</p>
-
+        </CardHeader>
+        <CardContent className="p-6">
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="patient-name" className="text-gray-900">Patient Name</Label>
-              <Select value={patientName} onValueChange={setPatientName}>
-                <SelectTrigger className="w-32 h-9">
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <Label htmlFor="patient-name" className="text-[#1c275e] font-medium">Patient Name</Label>
+              <Select value={patientName} onValueChange={(value) => {
+                setPatientName(value);
+                handleFieldChange();
+              }}>
+                <SelectTrigger className="w-32 h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]">
                   <SelectValue placeholder="Select" />
                 </SelectTrigger>
                 <SelectContent>
@@ -114,10 +191,13 @@ const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle, FieldContent
               </Select>
             </div>
 
-            <div className="flex items-center justify-between">
-              <Label htmlFor="date-of-birth" className="text-gray-900">Date of Birth</Label>
-              <Select value={dateOfBirth} onValueChange={setDateOfBirth}>
-                <SelectTrigger className="w-32 h-9">
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <Label htmlFor="date-of-birth" className="text-[#1c275e] font-medium">Date of Birth</Label>
+              <Select value={dateOfBirth} onValueChange={(value) => {
+                setDateOfBirth(value);
+                handleFieldChange();
+              }}>
+                <SelectTrigger className="w-32 h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]">
                   <SelectValue placeholder="Select" />
                 </SelectTrigger>
                 <SelectContent>
@@ -127,10 +207,13 @@ const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle, FieldContent
               </Select>
             </div>
 
-            <div className="flex items-center justify-between">
-              <Label htmlFor="phone-number" className="text-gray-900">Phone Number</Label>
-              <Select value={phoneNumber} onValueChange={setPhoneNumber}>
-                <SelectTrigger className="w-32 h-9">
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <Label htmlFor="phone-number" className="text-[#1c275e] font-medium">Phone Number</Label>
+              <Select value={phoneNumber} onValueChange={(value) => {
+                setPhoneNumber(value);
+                handleFieldChange();
+              }}>
+                <SelectTrigger className="w-32 h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]">
                   <SelectValue placeholder="Select" />
                 </SelectTrigger>
                 <SelectContent>
@@ -140,10 +223,13 @@ const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle, FieldContent
               </Select>
             </div>
 
-            <div className="flex items-center justify-between">
-              <Label htmlFor="email" className="text-gray-900">Email</Label>
-              <Select value={email} onValueChange={setEmail}>
-                <SelectTrigger className="w-32 h-9">
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <Label htmlFor="email" className="text-[#1c275e] font-medium">Email</Label>
+              <Select value={email} onValueChange={(value) => {
+                setEmail(value);
+                handleFieldChange();
+              }}>
+                <SelectTrigger className="w-32 h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]">
                   <SelectValue placeholder="Select" />
                 </SelectTrigger>
                 <SelectContent>
@@ -153,10 +239,13 @@ const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle, FieldContent
               </Select>
             </div>
 
-            <div className="flex items-center justify-between">
-              <Label htmlFor="insurance-id" className="text-gray-900">Insurance ID</Label>
-              <Select value={insuranceId} onValueChange={setInsuranceId}>
-                <SelectTrigger className="w-32 h-9">
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <Label htmlFor="insurance-id" className="text-[#1c275e] font-medium">Insurance ID</Label>
+              <Select value={insuranceId} onValueChange={(value) => {
+                setInsuranceId(value);
+                handleFieldChange();
+              }}>
+                <SelectTrigger className="w-32 h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]">
                   <SelectValue placeholder="Select" />
                 </SelectTrigger>
                 <SelectContent>
@@ -166,10 +255,13 @@ const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle, FieldContent
               </Select>
             </div>
 
-            <div className="flex items-center justify-between">
-              <Label htmlFor="emergency-contact" className="text-gray-900">Emergency Contact</Label>
-              <Select value={emergencyContact} onValueChange={setEmergencyContact}>
-                <SelectTrigger className="w-32 h-9">
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <Label htmlFor="emergency-contact" className="text-[#1c275e] font-medium">Emergency Contact</Label>
+              <Select value={emergencyContact} onValueChange={(value) => {
+                setEmergencyContact(value);
+                handleFieldChange();
+              }}>
+                <SelectTrigger className="w-32 h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]">
                   <SelectValue placeholder="Select" />
                 </SelectTrigger>
                 <SelectContent>
@@ -179,10 +271,13 @@ const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle, FieldContent
               </Select>
             </div>
 
-            <div className="flex items-center justify-between">
-              <Label htmlFor="preferred-language" className="text-gray-900">Preferred Language</Label>
-              <Select value={preferredLanguage} onValueChange={setPreferredLanguage}>
-                <SelectTrigger className="w-32 h-9">
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <Label htmlFor="preferred-language" className="text-[#1c275e] font-medium">Preferred Language</Label>
+              <Select value={preferredLanguage} onValueChange={(value) => {
+                setPreferredLanguage(value);
+                handleFieldChange();
+              }}>
+                <SelectTrigger className="w-32 h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]">
                   <SelectValue placeholder="Select" />
                 </SelectTrigger>
                 <SelectContent>
@@ -195,46 +290,60 @@ const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle, FieldContent
         </CardContent>
       </Card>
 
-      {/* Special Instructions & Edge Cases Card */}
-      <Card className="border-gray-200">
-        <CardContent className="p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Shield className="h-4 w-4" />
-            <h2 className="text-xl font-semibold text-gray-900">Special Instructions & Edge Cases</h2>
+      {/* Enhanced Special Instructions & Edge Cases Card */}
+      <Card className="border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-[#2a3570] to-[#1c275e] text-white p-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-[#f48024]/20 rounded-lg flex items-center justify-center">
+              <Shield className="h-5 w-5 text-[#f48024]" />
+            </div>
+            <div>
+              <CardTitle className="text-xl font-semibold text-white">Special Instructions & Edge Cases</CardTitle>
+              <p className="text-gray-200 text-sm mt-1">Configure special intake handling</p>
+            </div>
           </div>
-          <p className="text-sm text-gray-600 mb-6">Configure special intake handling</p>
-
+        </CardHeader>
+        <CardContent className="p-6">
           <div className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="menores-instructions">Minores (Under 18) Instructions</Label>
+              <Label htmlFor="menores-instructions" className="text-sm font-semibold text-[#1c275e]">Minors (Under 18) Instructions</Label>
               <Textarea
                 id="menores-instructions"
                 placeholder="Enter special instructions for patients under 18..."
                 value={menoresInstructions}
-                onChange={(e) => setMenoresInstructions(e.target.value)}
-                className="min-h-24 resize-none"
+                onChange={(e) => {
+                  setMenoresInstructions(e.target.value);
+                  handleFieldChange();
+                }}
+                className="min-h-24 resize-none border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="no-insurance-instructions">No Insurance Instructions</Label>
+              <Label htmlFor="no-insurance-instructions" className="text-sm font-semibold text-[#1c275e]">No Insurance Instructions</Label>
               <Textarea
                 id="no-insurance-instructions"
                 placeholder="Enter instructions for patients without insurance..."
                 value={noInsuranceInstructions}
-                onChange={(e) => setNoInsuranceInstructions(e.target.value)}
-                className="min-h-24 resize-none"
+                onChange={(e) => {
+                  setNoInsuranceInstructions(e.target.value);
+                  handleFieldChange();
+                }}
+                className="min-h-24 resize-none border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="language-barrier-instructions">Language Barrier Instructions</Label>
+              <Label htmlFor="language-barrier-instructions" className="text-sm font-semibold text-[#1c275e]">Language Barrier Instructions</Label>
               <Textarea
                 id="language-barrier-instructions"
                 placeholder="Enter instructions for handling language barriers..."
                 value={languageBarrierInstructions}
-                onChange={(e) => setLanguageBarrierInstructions(e.target.value)}
-                className="min-h-24 resize-none"
+                onChange={(e) => {
+                  setLanguageBarrierInstructions(e.target.value);
+                  handleFieldChange();
+                }}
+                className="min-h-24 resize-none border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
               />
             </div>
           </div>

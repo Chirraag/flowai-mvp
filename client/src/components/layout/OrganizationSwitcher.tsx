@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { ChevronDown, ChevronUp, Plus, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { api } from '@/lib/api';
+import { cn } from '@/lib/utils';
 
 interface Organization {
   id: number;
@@ -21,7 +22,11 @@ interface OrganizationsResponse {
   accessType: string;
 }
 
-export default function OrganizationSwitcher() {
+interface OrganizationSwitcherProps {
+  isCollapsed?: boolean;
+}
+
+export default function OrganizationSwitcher({ isCollapsed = false }: OrganizationSwitcherProps) {
   const { user, switchOrganization } = useAuth();
   const { toast } = useToast();
   const [isExpanded, setIsExpanded] = useState(false);
@@ -138,20 +143,31 @@ export default function OrganizationSwitcher() {
       {/* Main Organization Button */}
       <Button
         variant="outline"
-        className="w-full justify-between p-3 h-auto hover:bg-gray-50 rounded-lg border-gray-200 bg-white"
+        className={cn(
+          "w-full h-10 hover:bg-gray-50 rounded-lg border-gray-200 bg-white transition-all duration-200",
+          isCollapsed ? "justify-center px-2" : "justify-between px-3"
+        )}
         onClick={() => setIsExpanded(!isExpanded)}
+        title={isCollapsed ? currentOrg.name : undefined}
       >
-        <div className="flex items-center gap-3 min-w-0 flex-1">
-          <div className={`w-8 h-8 ${getAvatarColor(currentOrg.name)} rounded-full flex items-center justify-center text-white font-semibold text-sm`}>
+        <div className={cn(
+          "flex items-center min-w-0 h-6",
+          isCollapsed ? "gap-0" : "gap-2 flex-1"
+        )}>
+          <div className={`w-6 h-6 ${getAvatarColor(currentOrg.name)} rounded-full flex items-center justify-center text-white font-semibold text-xs`}>
             {getInitials(currentOrg.name)}
           </div>
-          <div className="text-left min-w-0 flex-1">
-            <p className="text-sm font-semibold text-gray-900 truncate">
-              {currentOrg.name}
-            </p>
-          </div>
+          {!isCollapsed && (
+            <div className="text-left min-w-0 flex-1">
+              <p className="text-[13px] font-semibold text-gray-900 truncate leading-5">
+                {currentOrg.name}
+              </p>
+            </div>
+          )}
         </div>
-        <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+        {!isCollapsed && (
+          <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+        )}
       </Button>
 
       {/* Expanded Organizations List */}
@@ -163,7 +179,10 @@ export default function OrganizationSwitcher() {
             onClick={() => setIsExpanded(false)}
           />
 
-          <Card className="absolute top-full left-0 right-0 mt-1 shadow-xl border border-gray-200 z-50 bg-white rounded-lg overflow-hidden">
+          <Card className={cn(
+            "absolute top-full mt-1 shadow-xl border border-gray-200 z-50 bg-white rounded-lg overflow-hidden",
+            isCollapsed ? "left-0 w-64" : "left-0 right-0" // Fixed width when collapsed
+          )}>
             <CardContent className="p-0">
               <div className="max-h-72 overflow-y-auto">
                 {loading ? (
@@ -182,6 +201,9 @@ export default function OrganizationSwitcher() {
                         disabled={switching === org.id}
                       >
                         <div className="flex items-center gap-3 w-full min-w-0">
+                          <div className={`w-6 h-6 ${getAvatarColor(org.name)} rounded-full flex items-center justify-center text-white font-semibold text-xs`}>
+                            {getInitials(org.name)}
+                          </div>
                           <div className="text-left min-w-0 flex-1">
                             <p className="text-sm font-semibold text-gray-900 truncate">
                               {org.name}

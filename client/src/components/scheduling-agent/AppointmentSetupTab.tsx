@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { IOSSwitch } from "@/components/ui/ios-switch";
+import { Button } from "@/components/ui/button";
 import { Calendar, Users } from "lucide-react";
 import type { AppointmentSetupValues } from "@/types/schedulingAgent";
 
@@ -14,6 +15,8 @@ import type { AppointmentSetupValues } from "@/types/schedulingAgent";
  */
 export type AppointmentSetupTabProps = {
   initialValues?: AppointmentSetupValues;
+  onSave?: (values: AppointmentSetupValues) => Promise<void>;
+  isSaving?: boolean;
 };
 
 export type AppointmentSetupTabHandle = {
@@ -27,7 +30,7 @@ export type AppointmentSetupTabHandle = {
   validate: () => { valid: boolean; errors: string[] };
 };
 
-const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSetupTabProps>((props, ref) => {
+const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSetupTabProps>(({ initialValues, onSave, isSaving = false }, ref) => {
   const [newPatientDuration, setNewPatientDuration] = React.useState("");
   const [followUpDuration, setFollowUpDuration] = React.useState("");
   const [procedureSpecific, setProcedureSpecific] = React.useState("");
@@ -40,20 +43,47 @@ const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSet
   const [followUpEnabled, setFollowUpEnabled] = React.useState(true);
   const [procedureEnabled, setProcedureEnabled] = React.useState(false);
 
+  // Track unsaved changes
+  const [hasUnsavedChanges, setHasUnsavedChanges] = React.useState(false);
+
   // Set initial values when props change
   useEffect(() => {
-    if (props.initialValues) {
-      setNewPatientDuration(props.initialValues.newPatientDuration);
-      setFollowUpDuration(props.initialValues.followUpDuration);
-      setProcedureSpecific(props.initialValues.procedureSpecific);
-      setProcedureDuration(props.initialValues.procedureDuration);
-      setMaxNewPatients(props.initialValues.maxNewPatients);
-      setMaxFollowUps(props.initialValues.maxFollowUps);
-      setNewPatientEnabled(props.initialValues.appointmentTypes.newPatient);
-      setFollowUpEnabled(props.initialValues.appointmentTypes.followUp);
-      setProcedureEnabled(props.initialValues.appointmentTypes.procedure);
+    if (initialValues) {
+      setNewPatientDuration(initialValues.newPatientDuration);
+      setFollowUpDuration(initialValues.followUpDuration);
+      setProcedureSpecific(initialValues.procedureSpecific);
+      setProcedureDuration(initialValues.procedureDuration);
+      setMaxNewPatients(initialValues.maxNewPatients);
+      setMaxFollowUps(initialValues.maxFollowUps);
+      setNewPatientEnabled(initialValues.appointmentTypes.newPatient);
+      setFollowUpEnabled(initialValues.appointmentTypes.followUp);
+      setProcedureEnabled(initialValues.appointmentTypes.procedure);
+      setHasUnsavedChanges(false);
     }
-  }, [props.initialValues]);
+  }, [initialValues]);
+
+  // Track changes
+  const handleFieldChange = () => {
+    setHasUnsavedChanges(true);
+  };
+
+  // Save handler
+  const handleSave = async () => {
+    if (!onSave) return;
+
+    const currentRef = (ref as React.MutableRefObject<AppointmentSetupTabHandle | null>).current;
+    const validation = currentRef?.validate();
+    if (validation && !validation.valid) {
+      // Validation errors will be handled by the parent
+      return;
+    }
+
+    const currentValues = currentRef?.getValues();
+    if (currentValues) {
+      await onSave(currentValues);
+      setHasUnsavedChanges(false);
+    }
+  };
 
   // Expose values and validation to parent page
   useImperativeHandle(ref, () => ({
@@ -87,54 +117,106 @@ const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSet
 
   return (
     <div className="space-y-6">
-      {/* Appointment Types Offered Card */}
-      <Card className="border-gray-200">
-        <CardContent className="p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Calendar className="h-4 w-4" />
-            <h2 className="text-xl font-semibold text-gray-900">Appointment Types Offered</h2>
+      {/* Enhanced Appointment Types Offered Card */}
+      <Card className="border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-[#1c275e] to-[#2a3570] text-white p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-[#f48024]/20 rounded-lg flex items-center justify-center">
+                <Calendar className="h-5 w-5 text-[#f48024]" />
+              </div>
+              <div>
+                <CardTitle className="text-xl font-semibold text-white">Appointment Types Offered</CardTitle>
+                <p className="text-gray-200 text-sm mt-1">Configure the types of appointments available for booking</p>
+              </div>
+            </div>
+            {onSave && (
+              <div className="flex items-center gap-3">
+                {hasUnsavedChanges && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="w-2 h-2 bg-[#f48024] rounded-full animate-pulse"></div>
+                    <span className="text-gray-200">Unsaved changes</span>
+                  </div>
+                )}
+                <Button
+                  onClick={handleSave}
+                  disabled={isSaving || !hasUnsavedChanges}
+                  className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+                >
+                  {isSaving ? "Saving..." : "Save"}
+                </Button>
+              </div>
+            )}
           </div>
-          <CardDescription className="mb-6">
-            Configure the types of appointments available for booking
-          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-6">
 
-          {/* Appointment Type Toggles */}
-          <div className="space-y-4 mb-6">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="new-patient-enabled" className="text-gray-900">New Patient Appointments</Label>
+          {/* Enhanced Appointment Type Toggles */}
+          <div className="space-y-6 mb-8">
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-[#f48024]/20 rounded-lg flex items-center justify-center">
+                  <Users className="h-4 w-4 text-[#f48024]" />
+                </div>
+                <Label htmlFor="new-patient-enabled" className="text-[#1c275e] font-medium">New Patient Appointments</Label>
+              </div>
               <IOSSwitch
                 id="new-patient-enabled"
                 checked={newPatientEnabled}
-                onCheckedChange={setNewPatientEnabled}
+                onCheckedChange={(checked) => {
+                  setNewPatientEnabled(checked);
+                  handleFieldChange();
+                }}
               />
             </div>
 
-            <div className="flex items-center justify-between">
-              <Label htmlFor="follow-up-enabled" className="text-gray-900">Follow-up Appointments</Label>
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-[#1c275e]/20 rounded-lg flex items-center justify-center">
+                  <Users className="h-4 w-4 text-[#1c275e]" />
+                </div>
+                <Label htmlFor="follow-up-enabled" className="text-[#1c275e] font-medium">Follow-up Appointments</Label>
+              </div>
               <IOSSwitch
                 id="follow-up-enabled"
                 checked={followUpEnabled}
-                onCheckedChange={setFollowUpEnabled}
+                onCheckedChange={(checked) => {
+                  setFollowUpEnabled(checked);
+                  handleFieldChange();
+                }}
               />
             </div>
 
-            <div className="flex items-center justify-between">
-              <Label htmlFor="procedure-enabled" className="text-gray-900">Procedure-Specific Appointments</Label>
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-[#2a3570]/20 rounded-lg flex items-center justify-center">
+                  <Calendar className="h-4 w-4 text-[#2a3570]" />
+                </div>
+                <Label htmlFor="procedure-enabled" className="text-[#1c275e] font-medium">Procedure-Specific Appointments</Label>
+              </div>
               <IOSSwitch
                 id="procedure-enabled"
                 checked={procedureEnabled}
-                onCheckedChange={setProcedureEnabled}
+                onCheckedChange={(checked) => {
+                  setProcedureEnabled(checked);
+                  handleFieldChange();
+                }}
               />
             </div>
           </div>
 
-          <div className="space-y-4">
-            {/* Row 1: New Patient and Follow-up Appointments */}
-            <div className="grid grid-cols-2 gap-3">
+          {/* Enhanced Duration Configuration */}
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h3 className="text-lg font-semibold text-[#1c275e] mb-4">Duration Settings</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Row 1: New Patient and Follow-up Appointments */}
               <div className="space-y-2">
-                <Label htmlFor="new-patient-duration">New Patient Appointments</Label>
-                <Select value={newPatientDuration} onValueChange={setNewPatientDuration}>
-                  <SelectTrigger className="h-11">
+                <Label htmlFor="new-patient-duration" className="text-sm font-semibold text-[#1c275e]">New Patient Appointments</Label>
+                <Select value={newPatientDuration} onValueChange={(value) => {
+                  setNewPatientDuration(value);
+                  handleFieldChange();
+                }}>
+                  <SelectTrigger className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]">
                     <SelectValue placeholder="Select duration" />
                   </SelectTrigger>
                   <SelectContent>
@@ -145,9 +227,12 @@ const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSet
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="follow-up-duration">Follow up Appointments</Label>
-                <Select value={followUpDuration} onValueChange={setFollowUpDuration}>
-                  <SelectTrigger className="h-11">
+                <Label htmlFor="follow-up-duration" className="text-sm font-semibold text-[#1c275e]">Follow-up Appointments</Label>
+                <Select value={followUpDuration} onValueChange={(value) => {
+                  setFollowUpDuration(value);
+                  handleFieldChange();
+                }}>
+                  <SelectTrigger className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]">
                     <SelectValue placeholder="Select duration" />
                   </SelectTrigger>
                   <SelectContent>
@@ -157,24 +242,28 @@ const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSet
                   </SelectContent>
                 </Select>
               </div>
-            </div>
 
-            {/* Row 2: Procedure-Specific and Duration */}
-            <div className="grid grid-cols-2 gap-3">
+              {/* Row 2: Procedure-Specific and Duration */}
               <div className="space-y-2">
-                <Label htmlFor="procedure-specific">Procedure-Specific</Label>
+                <Label htmlFor="procedure-specific" className="text-sm font-semibold text-[#1c275e]">Procedure-Specific</Label>
                 <Input
                   id="procedure-specific"
                   placeholder="Enter procedure type"
                   value={procedureSpecific}
-                  onChange={(e) => setProcedureSpecific(e.target.value)}
-                  className="h-11"
+                  onChange={(e) => {
+                    setProcedureSpecific(e.target.value);
+                    handleFieldChange();
+                  }}
+                  className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="procedure-duration">Duration</Label>
-                <Select value={procedureDuration} onValueChange={setProcedureDuration}>
-                  <SelectTrigger className="h-11">
+                <Label htmlFor="procedure-duration" className="text-sm font-semibold text-[#1c275e]">Duration</Label>
+                <Select value={procedureDuration} onValueChange={(value) => {
+                  setProcedureDuration(value);
+                  handleFieldChange();
+                }}>
+                  <SelectTrigger className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]">
                     <SelectValue placeholder="Select duration" />
                   </SelectTrigger>
                   <SelectContent>
@@ -189,41 +278,52 @@ const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSet
         </CardContent>
       </Card>
 
-      {/* Appointment Capacity Rules Card */}
-      <Card className="border-gray-200">
-        <CardContent className="p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Users className="h-4 w-4" />
-            <h2 className="text-xl font-semibold text-gray-900">Appointment Capacity Rules</h2>
+      {/* Enhanced Appointment Capacity Rules Card */}
+      <Card className="border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-[#2a3570] to-[#1c275e] text-white p-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-[#f48024]/20 rounded-lg flex items-center justify-center">
+              <Users className="h-5 w-5 text-[#f48024]" />
+            </div>
+            <div>
+              <CardTitle className="text-xl font-semibold text-white">Appointment Capacity Rules</CardTitle>
+              <p className="text-gray-200 text-sm mt-1">Set limits on appointment bookings</p>
+            </div>
           </div>
-          <CardDescription className="mb-6">
-            Set limits on appointment bookings
-          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-6">
 
-          <div className="space-y-4">
-            {/* Max New Patients and Max Follow-ups */}
-            <div className="grid grid-cols-2 gap-3">
+          {/* Enhanced Capacity Rules */}
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h3 className="text-lg font-semibold text-[#1c275e] mb-4">Daily Capacity Limits</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="max-new-patients">Max New Patients per day</Label>
+                <Label htmlFor="max-new-patients" className="text-sm font-semibold text-[#1c275e]">Max New Patients per day</Label>
                 <Input
                   id="max-new-patients"
                   type="number"
                   placeholder="10"
                   value={maxNewPatients}
-                  onChange={(e) => setMaxNewPatients(e.target.value)}
-                  className="h-11"
+                  onChange={(e) => {
+                    setMaxNewPatients(e.target.value);
+                    handleFieldChange();
+                  }}
+                  className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
                   min="1"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="max-follow-ups">Max follow ups per day</Label>
+                <Label htmlFor="max-follow-ups" className="text-sm font-semibold text-[#1c275e]">Max Follow-ups per day</Label>
                 <Input
                   id="max-follow-ups"
                   type="number"
                   placeholder="20"
                   value={maxFollowUps}
-                  onChange={(e) => setMaxFollowUps(e.target.value)}
-                  className="h-11"
+                  onChange={(e) => {
+                    setMaxFollowUps(e.target.value);
+                    handleFieldChange();
+                  }}
+                  className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
                   min="1"
                 />
               </div>

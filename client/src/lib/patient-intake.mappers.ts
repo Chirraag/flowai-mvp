@@ -52,6 +52,18 @@ export interface PatientAgentConfigTabData {
   humanTransferCriteria: string;
 }
 
+export interface FormsQuestionnairesTabData {
+  intakeForms: {
+    adaptiveIntakeQuestionnaire: boolean;
+    consentForms: boolean;
+  };
+  modalityForms: {
+    mriSafetyQuestionnaire: boolean;
+    urologySymptomSurvey: boolean;
+    preProcedureInstructions: boolean;
+  };
+}
+
 // Mappers: API to Tab Format
 /**
  * Maps API response data to FieldContentRulesTab format.
@@ -109,6 +121,23 @@ export function mapApiToAgentConfig(apiData: PatientIntakeApiData): PatientAgent
     voice: apiData.voice || "alloy",
     agentInstructions: apiData.agent_instructions || "",
     humanTransferCriteria: apiData.human_transfer_criteria || "",
+  };
+}
+
+/**
+ * Maps API response data to FormsQuestionnairesTab format.
+ */
+export function mapApiToFormsQuestionnaires(apiData: PatientIntakeApiData): FormsQuestionnairesTabData {
+  return {
+    intakeForms: {
+      adaptiveIntakeQuestionnaire: true, // Default to true, can be made configurable later
+      consentForms: true, // Default to true, can be made configurable later
+    },
+    modalityForms: {
+      mriSafetyQuestionnaire: false, // Default to false, can be made configurable later
+      urologySymptomSurvey: false, // Default to false, can be made configurable later
+      preProcedureInstructions: false, // Default to false, can be made configurable later
+    },
   };
 }
 

@@ -9,11 +9,17 @@ import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface SidebarProps {
+  expanded: boolean;
+  onExpandedChange: (expanded: boolean) => void;
+  onHoverChange: (hovered: boolean) => void;
   mobileMenuOpen: boolean;
   setMobileMenuOpen: (open: boolean) => void;
 }
 
 export default function Sidebar({
+  expanded,
+  onExpandedChange,
+  onHoverChange,
   mobileMenuOpen,
   setMobileMenuOpen,
 }: SidebarProps) {
@@ -22,6 +28,7 @@ export default function Sidebar({
   const { user } = useAuth();
   const isMobile = useIsMobile();
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
+  const [collapsedFlyoutFor, setCollapsedFlyoutFor] = useState<string | null>(null);
 
   // Close mobile menu when switching to desktop
   useEffect(() => {
@@ -50,8 +57,46 @@ export default function Sidebar({
 
   // Handle dropdown toggle
   const handleDropdownToggle = (itemName: string) => {
+    const isOpening = dropdownOpen !== itemName;
     setDropdownOpen(dropdownOpen === itemName ? null : itemName);
+    
+    // Track which dropdown was intentionally opened for collapsed state
+    if (isOpening) {
+      setCollapsedFlyoutFor(itemName);
+    } else {
+      // If closing dropdown, clear collapsed flyout
+      setCollapsedFlyoutFor(null);
+    }
   };
+
+  // Hover handlers for sidebar expansion (desktop only)
+  const handleMouseEnter = () => {
+    if (!isMobile) {
+      onHoverChange(true);
+      // Restore dropdown state when expanding if flyout was active
+      if (collapsedFlyoutFor) {
+        setDropdownOpen(collapsedFlyoutFor);
+      }
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (!isMobile) {
+      // Close any open dropdown when collapsing, but keep flyout state
+      setDropdownOpen(null);
+      onHoverChange(false);
+    }
+  };
+
+  // Click handler for manual toggle when collapsed
+  const handleSidebarClick = () => {
+    if (!isMobile && !expanded) {
+      onExpandedChange(true);
+    }
+  };
+
+  // Determine if labels should be shown
+  const showLabels = expanded;
 
   const IconComponent = (iconName: string) => {
     const icons: { [key: string]: any } = {
@@ -405,18 +450,33 @@ export default function Sidebar({
 
       <aside
         className={cn(
-          "bg-white border-r border-gray-200 z-20",
+          "bg-white border-r border-gray-200 z-20 transition-all duration-300 ease-in-out",
           isMobile
             ? cn(
-                "fixed inset-y-0 left-0 w-64 transform transition-transform duration-300 ease-in-out",
+                "fixed inset-y-0 left-0 w-64 transform",
                 mobileMenuOpen ? "translate-x-0" : "-translate-x-full",
               )
-            : "w-64 fixed inset-y-0 flex flex-col",
+            : cn(
+                "fixed inset-y-0 flex flex-col",
+                expanded ? "w-64" : "w-16"
+              ),
         )}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        onClick={handleSidebarClick}
       >
-        <div className="flex items-center justify-between px-4 py-3 sm:py-5 border-b border-gray-200">
+        <div className={cn(
+          "flex items-center border-b border-gray-200 h-14 px-3",
+          showLabels ? "justify-between" : "justify-center"
+        )}>
           <div className="flex items-center">
-            <img src="/logo_flowai.png" alt="Flow AI" className="h-8 w-auto" />
+            <img
+              src={showLabels ? "/logo_flowai.png" : "/mini_logo.png"}
+              alt="Flow AI"
+              className={cn(
+                "h-7 w-auto transition-all duration-200"
+              )}
+            />
           </div>
           {isMobile && (
             <button
@@ -429,19 +489,28 @@ export default function Sidebar({
           )}
         </div>
 
-        {/* Organization Switcher */}
-        <div className="px-4 py-4 border-b border-gray-200">
-          <OrganizationSwitcher />
+        {/* Organization Switcher - always visible; icon-only when collapsed */}
+        <div className={cn(
+          "border-b border-gray-200",
+          showLabels ? "px-3 py-3" : "px-2 py-2"
+        )}>
+          <OrganizationSwitcher isCollapsed={!showLabels} />
         </div>
 
-        <nav className="flex-1 pt-4 pb-4 overflow-y-auto hide-scrollbar">
+        <nav className={cn(
+          "flex-1 pt-2 pb-3 overflow-y-auto hide-scrollbar",
+          showLabels ? "px-0" : "px-2"
+        )}>
           {NAVIGATION_ITEMS.map((section, idx) => (
             <div key={idx}>
-              <div className="px-4 mb-3">
-                <p className="text-xs sm:text-sm font-medium text-gray-400">
-                  {section.title}
-                </p>
-              </div>
+              {/* Section title - only show when expanded */}
+              {showLabels && section.title && (
+                <div className="px-4 mb-3">
+                  <p className="text-xs sm:text-sm font-medium text-gray-400">
+                    {section.title}
+                  </p>
+                </div>
+              )}
               {section.items.map((item) => (
                 <div key={item.path || item.name}>
                   {item.isDropdown ? (
@@ -449,7 +518,10 @@ export default function Sidebar({
                       {/* Dropdown parent */}
                       <button
                         className={cn(
-                          "sidebar-link text-sm sm:text-base px-3 sm:px-4 py-2 mx-2 sm:mx-3 transition-colors duration-200 w-full text-left flex items-center justify-between",
+                          "transition-all duration-200 w-full text-left flex items-center",
+                          showLabels 
+                            ? "px-3 sm:px-3 py-1.5 mx-2 sm:mx-2 justify-between"
+                            : "justify-center px-2 py-2 mx-1 rounded-lg",
                           item.children?.some(
                             (child) => location.pathname === child.path,
                           ) || dropdownOpen === item.name
@@ -457,43 +529,72 @@ export default function Sidebar({
                             : "hover:bg-gray-50 text-gray-700",
                         )}
                         onClick={() => handleDropdownToggle(item.name)}
+                        title={!showLabels ? item.name : undefined}
                       >
                         <div className="flex items-center">
-                          <span className="p-1 mr-2 sm:mr-3 inline-flex">
+                          <span className={cn(
+                            "inline-flex",
+                            showLabels ? "p-1 mr-2" : "p-1"
+                          )}>
                             {IconComponent(item.icon)}
                           </span>
-                          <span className="flex-1 break-words">
-                            {item.name}
-                          </span>
-                        </div>
-                        <ChevronDown
-                          className={cn(
-                            "h-4 w-4 transition-transform duration-200",
-                            dropdownOpen === item.name ? "rotate-180" : "",
+                          {showLabels && (
+                            <span className="flex-1 break-words text-[13px] leading-5">
+                              {item.name}
+                            </span>
                           )}
-                        />
+                        </div>
+                        {showLabels && (
+                          <ChevronDown
+                            className={cn(
+                              "h-4 w-4 transition-transform duration-200",
+                              dropdownOpen === item.name ? "rotate-180" : "",
+                            )}
+                          />
+                        )}
                       </button>
 
-                      {/* Dropdown children */}
-                      {dropdownOpen === item.name && item.children && (
+                      {/* Dropdown children - only show when expanded and dropdown is open */}
+                      {showLabels && dropdownOpen === item.name && item.children && (
                         <div className="ml-6 mt-1 space-y-1">
                           {item.children.map((child) => (
                             <button
                               key={child.path}
                               className={cn(
-                                "sidebar-link text-sm px-3 py-2 transition-colors duration-200 w-full text-left flex items-center",
+                                "transition-colors duration-200 w-full text-left flex items-center px-3 py-1.5",
                                 location.pathname === child.path
                                   ? "bg-blue-50 border-r-4 border-blue-500 text-blue-700"
                                   : "hover:bg-gray-50 text-gray-600",
                               )}
                               onClick={() => handleNavigation(child.path)}
                             >
-                              <span className="p-1 mr-3 inline-flex">
+                              <span className="p-1 mr-2 inline-flex">
                                 {IconComponent(child.icon)}
                               </span>
-                              <span className="flex-1 break-words">
+                              <span className="flex-1 break-words text-[13px] leading-5">
                                 {child.name}
                               </span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Collapsed state: show child icons below parent when flyout is active */}
+                      {!showLabels && collapsedFlyoutFor === item.name && item.children && (
+                        <div className="mt-1 space-y-1">
+                          {item.children.map((child) => (
+                            <button
+                              key={child.path}
+                              className={cn(
+                                "transition-colors duration-200 w-full flex items-center justify-center px-2 py-2 mx-1 rounded-lg",
+                                location.pathname === child.path
+                                  ? "bg-blue-50 text-blue-700"
+                                  : "hover:bg-gray-50 text-gray-600",
+                              )}
+                              onClick={() => handleNavigation(child.path)}
+                              title={child.name}
+                            >
+                              <span className="p-1 inline-flex">{IconComponent(child.icon)}</span>
                             </button>
                           ))}
                         </div>
@@ -503,17 +604,26 @@ export default function Sidebar({
                     /* Regular navigation item */
                     <button
                       className={cn(
-                        "sidebar-link text-sm sm:text-base px-3 sm:px-4 py-2 mx-2 sm:mx-3 transition-colors duration-200 w-full text-left",
+                        "transition-all duration-200 w-full text-left flex items-center",
+                        showLabels 
+                          ? "px-3 sm:px-3 py-1.5 mx-2 sm:mx-2"
+                          : "justify-center px-2 py-2 mx-1 rounded-lg",
                         location.pathname === item.path
                           ? "bg-blue-50 border-r-4 border-blue-500 text-blue-700"
                           : "hover:bg-gray-50 text-gray-700",
                       )}
                       onClick={() => handleNavigation(item.path)}
+                      title={!showLabels ? item.name : undefined}
                     >
-                      <span className="p-1 mr-2 sm:mr-3 inline-flex">
+                      <span className={cn(
+                        "inline-flex",
+                        showLabels ? "p-1 mr-2" : "p-1"
+                      )}>
                         {IconComponent(item.icon)}
                       </span>
-                      <span className="flex-1 break-words">{item.name}</span>
+                      {showLabels && (
+                        <span className="flex-1 break-words text-[13px] leading-5">{item.name}</span>
+                      )}
                     </button>
                   )}
                 </div>
@@ -522,10 +632,17 @@ export default function Sidebar({
           ))}
         </nav>
 
-        <div className="px-4 py-4 border-t border-gray-200">
+
+        <div className={cn(
+          "border-t border-gray-200",
+          showLabels ? "px-4 py-4" : "px-2 py-4"
+        )}>
           {/* User Info */}
           <div>
-            <div className="flex items-center">
+            <div className={cn(
+              "flex items-center",
+              !showLabels && "justify-center"
+            )}>
               <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
                 <AvatarFallback className="bg-blue-100 text-blue-700">
                   {user?.username
@@ -533,14 +650,16 @@ export default function Sidebar({
                     : "U"}
                 </AvatarFallback>
               </Avatar>
-              <div className="ml-3 min-w-0">
-                <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">
-                  {user?.username || "User"}
-                </p>
-                <p className="text-xs text-gray-500 truncate capitalize">
-                  {user?.role || "User"}
-                </p>
-              </div>
+              {showLabels && (
+                <div className="ml-3 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">
+                    {user?.username || "User"}
+                  </p>
+                  <p className="text-xs text-gray-500 truncate capitalize">
+                    {user?.role || "User"}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>

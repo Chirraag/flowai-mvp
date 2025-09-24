@@ -59,6 +59,7 @@ export default function SpecialtiesModule({
   // Active tab state for each specialty card
   const [activeTabs, setActiveTabs] = React.useState<Record<string, string>>({});
 
+
   // Deletion confirmation dialog state
   const [deleteDialog, setDeleteDialog] = React.useState<{
     open: boolean;
@@ -343,14 +344,14 @@ export default function SpecialtiesModule({
                         </div>
                       </div>
 
-                      <div className="flex items-center space-x-2">
+                      {/* <div className="flex items-center space-x-2">
                         <Switch
                           id={`specialty-active-${spec.id}`}
                           checked={spec.is_active}
                           onCheckedChange={(checked) => onUpdate(spec.id, { is_active: checked })}
                         />
                         <Label htmlFor={`specialty-active-${spec.id}`}>Is Active</Label>
-                      </div>
+                      </div> */}
                     </TabsContent>
 
                     <TabsContent value="sources" className="p-4 space-y-4">
@@ -535,6 +536,7 @@ export default function SpecialtiesModule({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
     </Card>
   );
 }

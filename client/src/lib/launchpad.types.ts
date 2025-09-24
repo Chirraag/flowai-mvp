@@ -51,10 +51,6 @@ export interface AccountDetails {
   updated_at: string;
 }
 
-export interface LocationSpecialtyServicesEntry {
-  speciality_name: string;
-  services: string[];
-}
 
 export interface Location {
   id: string; // UUID
@@ -68,7 +64,6 @@ export interface Location {
   weekday_hours: string | null;
   weekend_hours: string | null;
   location_id: string; // business code used by speciality_services[].location_ids
-  specialties_services: LocationSpecialtyServicesEntry[];
   parking_directions: string | null;
   documents: unknown[];
   is_active: boolean;
@@ -223,10 +218,6 @@ export interface AccountDetailsUpdate {
   documents: unknown[];
 }
 
-export interface LocationSpecialtyServicesUpdate {
-  speciality_name: string;
-  services: string[];
-}
 
 export interface LocationUpdate {
   name: string;
@@ -238,7 +229,6 @@ export interface LocationUpdate {
   weekday_hours: string | null;
   weekend_hours: string | null;
   location_id: string;
-  specialties_services: LocationSpecialtyServicesUpdate[];
   parking_directions: string | null;
 }
 
@@ -252,7 +242,7 @@ export interface SpecialtyServiceEntryUpdate {
 
 export interface SpecialityServiceUpdate {
   specialty_name: string;
-  // Exclude location_ids - location assignments should only be managed from Locations tab
+  location_ids: string[]; // Required for API - managed from Specialties tab
   physician_names_source_type?: string | null;
   physician_names_source_name?: string | null;
   new_patients_source_type?: string | null;

@@ -29,7 +29,6 @@ import SpecialtiesModule from "@/components/launchpad/specialties/SpecialtiesMod
 import InsuranceModule from "@/components/launchpad/insurance/InsuranceModule";
 import KnowledgeModule from "@/components/launchpad/knowledge/KnowledgeModule";
 import { OrgInsurance, OrgLocation, OrgSpecialityService, AccountOpportunitySizing, SchedulingNumbersMode } from "@/components/launchpad/types";
-import ServicesModal from "@/components/launchpad/locations/ServicesModal";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -175,7 +174,6 @@ export default function Launchpad() {
 
   // Locations (hydrated from API snapshot)
   const [locations, setLocations] = useState<OrgLocation[]>([]);
-  const [servicesModal, setServicesModal] = useState<{ locationId: string | null; specialityIndex: number | null }>({ locationId: null, specialityIndex: null });
 
   // Basic form error summary (placeholder for future validation)
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -291,7 +289,6 @@ export default function Launchpad() {
       specialties_text: "",
       services_text: "",
       parking_directions: loc.parking_directions ?? "",
-      specialties_services: loc.specialties_services ?? [],
       is_active: !!loc.is_active,
     }));
     setLocations(mappedLocations);
@@ -1202,45 +1199,14 @@ export default function Launchpad() {
               specialties_text: "",
               services_text: "",
               parking_directions: "",
-              specialties_services: [],
               is_active: true,
             }])}
             onUpdate={(id, updates) => setLocations(prev => prev.map(l => l.id === id ? { ...l, ...updates } : l))}
             onRemove={(id) => setLocations(prev => prev.filter(l => l.id !== id))}
-            onEditSpecialtyServices={(locationId, specialityIndex) => {
-              setServicesModal({ locationId, specialityIndex });
-            }}
             onSave={handleSaveLocations}
             isSaving={updateLocations.isPending || updateSpecialties.isPending}
           />
 
-          <ServicesModal
-            open={servicesModal.locationId !== null && servicesModal.specialityIndex !== null}
-            title={(() => {
-              const loc = locations.find(l => l.id === servicesModal.locationId);
-              const name = loc?.specialties_services[servicesModal.specialityIndex ?? -1]?.speciality_name || "Specialty";
-              return `Services for ${name}`;
-            })()}
-            services={(
-              () => {
-                const loc = locations.find(l => l.id === servicesModal.locationId);
-                if (!loc || servicesModal.specialityIndex === null) return [];
-                return loc.specialties_services[servicesModal.specialityIndex]?.services || [];
-              }
-            )()}
-            onUpdate={(services) => {
-              if (servicesModal.locationId === null || servicesModal.specialityIndex === null) return;
-              setLocations(prev => prev.map(loc => {
-                if (loc.id !== servicesModal.locationId) return loc;
-                const nextSpecs = loc.specialties_services.slice();
-                nextSpecs[servicesModal.specialityIndex!] = { ...nextSpecs[servicesModal.specialityIndex!], services };
-                return { ...loc, specialties_services: nextSpecs };
-              }));
-            }}
-            onOpenChange={(open) => {
-              if (!open) setServicesModal({ locationId: null, specialityIndex: null });
-            }}
-          />
 
           {/* Locations Documents */}
           <div id="locations-documents">

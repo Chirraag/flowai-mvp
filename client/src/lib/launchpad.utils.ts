@@ -7,7 +7,6 @@ import type {
   SpecialityServiceUpdate,
   InsuranceUpdate,
   PersonUpdate,
-  LocationSpecialtyServicesUpdate,
   SpecialtyServiceEntryUpdate
 } from './launchpad.types';
 
@@ -131,16 +130,6 @@ export const validateLocationsData = (locations: OrgLocation[]): ValidationResul
       }
       locationCodes.add(location.location_id.trim());
     }
-
-    // Validate specialty services
-    location.specialties_services.forEach((specialty, specIndex) => {
-      if (!specialty.speciality_name.trim()) {
-        errors.push({
-          field: `locations[${index}].specialties_services[${specIndex}].speciality_name`,
-          message: 'Specialty name is required'
-        });
-      }
-    });
   });
 
   return {
@@ -315,15 +304,6 @@ export const mapAccountUIToApi = (state: {
 });
 
 // Locations mapping
-const mapLocationSpecialtyServicesToApi = (services: Array<{ speciality_name: string; services: string[] }>): LocationSpecialtyServicesUpdate[] => {
-  return services
-    .filter(service => trimString(service.speciality_name) !== '')
-    .map(service => ({
-      speciality_name: trimString(service.speciality_name),
-      services: filterEmptyStrings(service.services),
-    }));
-};
-
 export const mapLocationsUIToApi = (locations: OrgLocation[]): LocationUpdate[] => {
   return locations.map(location => ({
     name: trimString(location.name),
@@ -335,7 +315,6 @@ export const mapLocationsUIToApi = (locations: OrgLocation[]): LocationUpdate[] 
     weekday_hours: normalizeString(location.weekday_hours),
     weekend_hours: normalizeString(location.weekend_hours),
     location_id: trimString(location.location_id),
-    specialties_services: mapLocationSpecialtyServicesToApi(location.specialties_services),
     parking_directions: normalizeString(location.parking_directions),
   }));
 };
@@ -358,7 +337,7 @@ const mapSpecialtyServiceEntryToApi = (service: {
 export const mapSpecialtiesUIToApi = (specialties: OrgSpecialityService[]): SpecialityServiceUpdate[] => {
   const result = specialties.map(specialty => ({
     specialty_name: trimString(specialty.specialty_name),
-    // Exclude location_ids - location assignments should only be managed from Locations tab
+    location_ids: specialty.location_ids, // Include location_ids as required by API
     physician_names_source_type: specialty.physician_names_source_type ? normalizeString(specialty.physician_names_source_type) : null,
     physician_names_source_name: specialty.physician_names_source_name ? normalizeString(specialty.physician_names_source_name) : null,
     new_patients_source_type: specialty.new_patients_source_type ? normalizeString(specialty.new_patients_source_type) : null,

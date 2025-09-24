@@ -2,55 +2,170 @@ import React from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { SpecialtyServiceEntry } from "@/components/launchpad/types";
 
 interface ServicesModalProps {
   open: boolean;
   title: string;
-  services: string[];
-  onUpdate: (services: string[]) => void;
+  services: SpecialtyServiceEntry[];
+  onUpdate: (services: SpecialtyServiceEntry[]) => void;
   onOpenChange: (open: boolean) => void;
 }
 
 export default function ServicesModal({ open, title, services, onUpdate, onOpenChange }: ServicesModalProps) {
-  const [draftServices, setDraftServices] = React.useState<string[]>(services);
+  const [draftServices, setDraftServices] = React.useState<SpecialtyServiceEntry[]>(services);
 
   React.useEffect(() => {
     setDraftServices(services);
   }, [services]);
 
-  const addService = () => setDraftServices(prev => [...prev, ""]);
-  const updateService = (index: number, value: string) => setDraftServices(prev => prev.map((s, i) => (i === index ? value : s)));
-  const removeService = (index: number) => setDraftServices(prev => prev.filter((_, i) => i !== index));
+  const addService = () => {
+    setDraftServices(prev => [...prev, {
+      name: "",
+      patient_prep_requirements: "",
+      faq: "",
+      service_information_name: null,
+      service_information_source: null,
+    }]);
+  };
+
+  const updateService = (index: number, field: keyof SpecialtyServiceEntry, value: string) => {
+    setDraftServices(prev => prev.map((service, i) => 
+      i === index ? { ...service, [field]: value || null } : service
+    ));
+  };
+
+  const removeService = (index: number) => {
+    setDraftServices(prev => prev.filter((_, i) => i !== index));
+  };
 
   const handleSave = () => {
-    onUpdate(draftServices.filter(s => s.trim()))
+    const validServices = draftServices.filter(service => service.name.trim() !== "");
+    onUpdate(validServices);
     onOpenChange(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[450px]">
+      <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+          <DialogTitle className="text-xl font-semibold text-[#1C275E]">{title}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-2">
+        
+        <div className="space-y-4">
           {draftServices.map((service, index) => (
-            <div key={index} className="flex items-center gap-2">
-              <Input placeholder="Enter service name" value={service} onChange={(e) => updateService(index, e.target.value)} />
-              <Button variant="default" size="sm" className="bg-white text-black border border-black hover:bg-gray-50" onClick={() => removeService(index)}>Remove</Button>
-            </div>
+            <Card key={index} className="border-2 border-gray-200">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg font-medium text-[#1C275E]">
+                    Service {index + 1}
+                  </CardTitle>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="border-red-500 text-red-500 hover:bg-red-50"
+                    onClick={() => removeService(index)}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Service Name */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#1C275E]">Service Name *</Label>
+                  <Input 
+                    placeholder="Enter service name" 
+                    value={service.name} 
+                    onChange={(e) => updateService(index, 'name', e.target.value)}
+                    className="border-2 border-gray-200 focus:border-[#1C275E]"
+                  />
+                </div>
+
+                <Separator />
+
+                {/* Patient Prep Requirements */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#1C275E]">Patient Preparation Requirements</Label>
+                  <Textarea 
+                    placeholder="Enter patient preparation requirements..."
+                    value={service.patient_prep_requirements || ""}
+                    onChange={(e) => updateService(index, 'patient_prep_requirements', e.target.value)}
+                    className="border-2 border-gray-200 focus:border-[#1C275E] min-h-[80px]"
+                  />
+                </div>
+
+                {/* FAQ */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#1C275E]">Frequently Asked Questions</Label>
+                  <Textarea 
+                    placeholder="Enter frequently asked questions and answers..."
+                    value={service.faq || ""}
+                    onChange={(e) => updateService(index, 'faq', e.target.value)}
+                    className="border-2 border-gray-200 focus:border-[#1C275E] min-h-[80px]"
+                  />
+                </div>
+
+                {/* Service Information */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-[#1C275E]">Service Information Name</Label>
+                    <Input 
+                      placeholder="Enter information source name"
+                      value={service.service_information_name || ""}
+                      onChange={(e) => updateService(index, 'service_information_name', e.target.value)}
+                      className="border-2 border-gray-200 focus:border-[#1C275E]"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-[#1C275E]">Service Information Source</Label>
+                    <Input 
+                      placeholder="Enter information source"
+                      value={service.service_information_source || ""}
+                      onChange={(e) => updateService(index, 'service_information_source', e.target.value)}
+                      className="border-2 border-gray-200 focus:border-[#1C275E]"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           ))}
+          
           {draftServices.length === 0 && (
-            <p className="text-sm text-muted-foreground">No services added yet.</p>
+            <div className="text-center py-8">
+              <p className="text-sm text-muted-foreground mb-4">No services added yet.</p>
+            </div>
           )}
-          <div className="flex gap-2 pt-2">
-            <Button variant="default" onClick={addService} className="bg-[#F48024] hover:bg-[#F48024]/90 text-white">Add Service</Button>
-            <Button variant="default" onClick={handleSave} className="bg-teal-600 hover:bg-teal-700 text-white">Save</Button>
+          
+          <div className="flex gap-3 pt-4 border-t">
+            <Button 
+              variant="default" 
+              onClick={addService} 
+              className="bg-[#F48024] hover:bg-[#F48024]/90 text-white"
+            >
+              Add Service
+            </Button>
+            <Button 
+              variant="default" 
+              onClick={handleSave} 
+              className="bg-teal-600 hover:bg-teal-700 text-white"
+            >
+              Save Services
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => onOpenChange(false)}
+              className="border-gray-300 text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </Button>
           </div>
         </div>
       </DialogContent>
     </Dialog>
   );
 }
-
-

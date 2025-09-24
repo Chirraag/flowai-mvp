@@ -1,11 +1,10 @@
 import React, { Suspense, lazy, useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Save } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import { schedulingAgentApi } from "@/api/schedulingAgent";
-import { apiToUi } from "@/lib/schedulingAgent.mappers";
+import { apiToUi, uiToApi } from "@/lib/schedulingAgent.mappers";
 import type {
   SchedulingAgent,
   AppointmentSetupValues,
@@ -143,9 +142,6 @@ export default function SchedulingAgent() {
         providerPreferences: providerPreferencesRef.current?.getValues?.(),
         agentConfig: agentConfigRef.current?.getValues?.(),
       };
-
-      // Import mappers for UI to API conversion
-      const { uiToApi } = await import("@/lib/schedulingAgent.mappers");
 
       // Build update tasks with metadata
       const updateTasks: Array<{
@@ -286,6 +282,59 @@ export default function SchedulingAgent() {
     }
   };
 
+  // Individual save handlers for each tab
+  const handleSaveAppointmentSetup = async (values: AppointmentSetupValues) => {
+    if (!agentData || !user?.org_id) return;
+    await schedulingAgentApi.updateAppointmentSetup(String(user.org_id), uiToApi.appointmentSetup(values));
+    toast({ title: "Success", description: "Appointment setup saved successfully." });
+    await refetchAgentData();
+  };
+
+  const handleSavePatientEligibility = async (values: PatientEligibilityValues) => {
+    if (!agentData || !user?.org_id) return;
+    await schedulingAgentApi.updatePatientEligibility(String(user.org_id), uiToApi.patientEligibility(values));
+    toast({ title: "Success", description: "Patient eligibility settings saved successfully." });
+    await refetchAgentData();
+  };
+
+  const handleSaveSchedulingPolicies = async (values: SchedulingPoliciesValues) => {
+    if (!agentData || !user?.org_id) return;
+    await schedulingAgentApi.updateSchedulingPolicies(String(user.org_id), uiToApi.schedulingPolicies(values));
+    toast({ title: "Success", description: "Scheduling policies saved successfully." });
+    await refetchAgentData();
+  };
+
+  const handleSaveProviderPreferences = async (values: ProviderPreferencesValues) => {
+    if (!agentData || !user?.org_id) return;
+    await schedulingAgentApi.updateProviderPreferences(String(user.org_id), uiToApi.providerPreferences(values));
+    toast({ title: "Success", description: "Provider preferences saved successfully." });
+    await refetchAgentData();
+  };
+
+  const handleSaveAgentConfig = async (values: AgentConfigValues) => {
+    if (!agentData || !user?.org_id) return;
+    await schedulingAgentApi.updateAgentConfig(String(user.org_id), uiToApi.agentConfig(values));
+    toast({ title: "Success", description: "Agent configuration saved successfully." });
+    await refetchAgentData();
+  };
+
+
+  // Function to refetch agent data after save
+  const refetchAgentData = async () => {
+    if (!user?.org_id) return;
+    try {
+      const data = await schedulingAgentApi.getSchedulingAgent(String(user.org_id));
+      setAgentData(data);
+    } catch (error) {
+      console.error('Failed to refetch agent data:', error);
+      toast({
+        title: "Warning",
+        description: "Settings saved, but failed to refresh data. Please reload the page.",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Prepare initial values for tabs
   const initialValues = agentData ? {
     appointmentSetup: apiToUi.appointmentSetup(agentData),
@@ -323,42 +372,49 @@ export default function SchedulingAgent() {
 
   return (
     <div className="container mx-auto p-4 sm:p-6 space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 truncate flex items-center gap-3">
-            <Calendar className="h-8 w-8 text-blue-600" />
-            Scheduling Agent
-          </h1>
-          <p className="text-gray-600 mt-1 sm:mt-2 text-sm sm:text-base">
-            AI-powered appointment scheduling and calendar management
-          </p>
-        </div>
-
-        {/* Save All Button */}
-        {/* <div className="flex-shrink-0">
-          <Button
-            onClick={handleSaveAll}
-            disabled={isSaving}
-            className="flex items-center gap-2"
-          >
-            <Save className="h-4 w-4" />
-            {isSaving ? "Saving..." : "Save All Changes"}
-          </Button>
-        </div> */}
-      </div>
-
-      {/* Primary tabbed layout: 6 tabs for scheduling configuration */}
+      {/* Tabbed layout */}
       <Tabs defaultValue="appointment-setup" className="w-full">
-        {/* Spread tabs equally across the container to fill the row */}
-        <TabsList className="w-full grid grid-cols-6 gap-0">
-          <TabsTrigger value="appointment-setup" className="w-full">Appointment Setup</TabsTrigger>
-          <TabsTrigger value="patient-eligibility" className="w-full">Patient & Eligibility</TabsTrigger>
-          <TabsTrigger value="scheduling-policies" className="w-full">Scheduling Policies</TabsTrigger>
-          <TabsTrigger value="provider-preferences" className="w-full">Provider Preferences</TabsTrigger>
-          <TabsTrigger value="workflows" className="w-full">Workflows</TabsTrigger>
-          <TabsTrigger value="agent-config" className="w-full">Agent Config</TabsTrigger>
-        </TabsList>
+        {/* Improved tab navigation with brand styling */}
+        <div className="bg-white rounded-none shadow-lg border border-gray-200 overflow-hidden mb-6">
+          <TabsList className="w-full grid grid-cols-6 gap-0 bg-transparent h-12 m-0 p-0">
+            <TabsTrigger
+              value="appointment-setup"
+              className="rounded-none data-[state=active]:bg-[#1c275e] data-[state=active]:text-white transition-all duration-200 font-medium text-center h-full flex items-center justify-center px-1 py-0 text-xs sm:text-sm border-0 leading-none"
+            >
+              Appointment Setup
+            </TabsTrigger>
+            <TabsTrigger
+              value="patient-eligibility"
+              className="rounded-none data-[state=active]:bg-[#1c275e] data-[state=active]:text-white transition-all duration-200 font-medium text-center h-full flex items-center justify-center px-1 py-0 text-xs sm:text-sm border-0 leading-none"
+            >
+              Patient & Eligibility
+            </TabsTrigger>
+            <TabsTrigger
+              value="scheduling-policies"
+              className="rounded-none data-[state=active]:bg-[#1c275e] data-[state=active]:text-white transition-all duration-200 font-medium text-center h-full flex items-center justify-center px-1 py-0 text-xs sm:text-sm border-0 leading-none"
+            >
+              Scheduling Policies
+            </TabsTrigger>
+            <TabsTrigger
+              value="provider-preferences"
+              className="rounded-none data-[state=active]:bg-[#1c275e] data-[state=active]:text-white transition-all duration-200 font-medium text-center h-full flex items-center justify-center px-1 py-0 text-xs sm:text-sm border-0 leading-none"
+            >
+              Provider Preferences
+            </TabsTrigger>
+            <TabsTrigger
+              value="workflows"
+              className="rounded-none data-[state=active]:bg-[#1c275e] data-[state=active]:text-white transition-all duration-200 font-medium text-center h-full flex items-center justify-center px-1 py-0 text-xs sm:text-sm border-0 leading-none"
+            >
+              Workflows
+            </TabsTrigger>
+            <TabsTrigger
+              value="agent-config"
+              className="rounded-none data-[state=active]:bg-[#1c275e] data-[state=active]:text-white transition-all duration-200 font-medium text-center h-full flex items-center justify-center px-1 py-0 text-xs sm:text-sm border-0 leading-none"
+            >
+              Agent Config
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* Appointment Setup tab */}
         <TabsContent value="appointment-setup">
@@ -366,6 +422,8 @@ export default function SchedulingAgent() {
             <AppointmentSetupTab
               ref={appointmentSetupRef}
               initialValues={initialValues?.appointmentSetup}
+              onSave={handleSaveAppointmentSetup}
+              isSaving={isSaving}
             />
           </Suspense>
         </TabsContent>
@@ -376,6 +434,8 @@ export default function SchedulingAgent() {
             <PatientEligibilityTab
               ref={patientEligibilityRef}
               initialValues={initialValues?.patientEligibility}
+              onSave={handleSavePatientEligibility}
+              isSaving={isSaving}
             />
           </Suspense>
         </TabsContent>
@@ -386,6 +446,8 @@ export default function SchedulingAgent() {
             <SchedulingPoliciesTab
               ref={schedulingPoliciesRef}
               initialValues={initialValues?.schedulingPolicies}
+              onSave={handleSaveSchedulingPolicies}
+              isSaving={isSaving}
             />
           </Suspense>
         </TabsContent>
@@ -396,6 +458,8 @@ export default function SchedulingAgent() {
             <ProviderPreferencesTab
               ref={providerPreferencesRef}
               initialValues={initialValues?.providerPreferences}
+              onSave={handleSaveProviderPreferences}
+              isSaving={isSaving}
             />
           </Suspense>
         </TabsContent>
@@ -413,6 +477,8 @@ export default function SchedulingAgent() {
             <AgentConfigTab
               ref={agentConfigRef}
               initialValues={initialValues?.agentConfig}
+              onSave={handleSaveAgentConfig}
+              isSaving={isSaving}
             />
           </Suspense>
         </TabsContent>

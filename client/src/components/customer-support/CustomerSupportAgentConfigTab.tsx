@@ -1,27 +1,22 @@
-import React, { useImperativeHandle, forwardRef, useEffect } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import React, { useImperativeHandle, forwardRef, useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Bot } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Bot, Save, Loader2 } from "lucide-react";
+import type { CustomerSupportAgentConfig } from "@/lib/customer-support.types";
 
 /**
  * CustomerSupportAgentConfigTab
  * - AI agent configuration for customer support
- * - Mirrors the launchpad tab styling and structure
+ * - Mirrors the scheduling agent tab styling and structure
  */
 export type CustomerSupportAgentConfigTabHandle = {
   /**
    * Returns the current values held by the tab.
    */
-  getValues: () => {
-    agentName: string;
-    language: string;
-    voice: string;
-    agentInstructions: string;
-    humanTransferCriteria: string;
-  };
+  getValues: () => CustomerSupportAgentConfig;
   /**
    * Lightweight validation for the tab.
    */
@@ -29,44 +24,65 @@ export type CustomerSupportAgentConfigTabHandle = {
 };
 
 export interface CustomerSupportAgentConfigTabProps {
-  initialData?: {
-    agentName: string;
-    language: string;
-    voice: string;
-    agentInstructions: string;
-    humanTransferCriteria: string;
-  };
+  initialData?: CustomerSupportAgentConfig;
+  onSave?: (values: CustomerSupportAgentConfig) => Promise<void>;
+  isSaving?: boolean;
 }
 
-const CustomerSupportAgentConfigTab = forwardRef<CustomerSupportAgentConfigTabHandle, CustomerSupportAgentConfigTabProps>(({ initialData }, ref) => {
+const CustomerSupportAgentConfigTab = forwardRef<CustomerSupportAgentConfigTabHandle, CustomerSupportAgentConfigTabProps>(({ initialData, onSave, isSaving = false }, ref) => {
   // Local state synced with initialData
-  const [agentName, setAgentName] = React.useState("");
-  const [language, setLanguage] = React.useState("");
-  const [voice, setVoice] = React.useState("");
-  const [agentInstructions, setAgentInstructions] = React.useState("");
-  const [humanTransferCriteria, setHumanTransferCriteria] = React.useState("");
+  const [agentName, setAgentName] = useState("");
+  const [language, setLanguage] = useState("");
+  const [voice, setVoice] = useState("");
+  const [agentInstructions, setAgentInstructions] = useState("");
+  const [humanTransferCriteria, setHumanTransferCriteria] = useState("");
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Sync local state with initialData
-  React.useEffect(() => {
+  useEffect(() => {
     if (initialData) {
-      setAgentName(initialData.agentName || "");
+      setAgentName(initialData.agent_name || "");
       setLanguage(initialData.language || "");
       setVoice(initialData.voice || "");
-      setAgentInstructions(initialData.agentInstructions || "");
-      setHumanTransferCriteria(initialData.humanTransferCriteria || "");
+      setAgentInstructions(initialData.agent_instructions || "");
+      setHumanTransferCriteria(initialData.human_transfer_criteria || "");
+      setHasUnsavedChanges(false);
     }
   }, [initialData]);
 
+  // Track changes
+  const handleFieldChange = () => {
+    setHasUnsavedChanges(true);
+  };
 
+  // Save handler
+  const handleSave = async () => {
+    if (!onSave) return;
+
+    const currentValues = {
+      agent_name: agentName,
+      language,
+      voice,
+      agent_instructions: agentInstructions,
+      human_transfer_criteria: humanTransferCriteria,
+    };
+
+    try {
+      await onSave(currentValues);
+      setHasUnsavedChanges(false);
+    } catch (error) {
+      console.error('Failed to save agent config:', error);
+    }
+  };
 
   // Expose values and validation to parent page
   useImperativeHandle(ref, () => ({
     getValues: () => ({
-      agentName,
+      agent_name: agentName,
       language,
       voice,
-      agentInstructions,
-      humanTransferCriteria,
+      agent_instructions: agentInstructions,
+      human_transfer_criteria: humanTransferCriteria,
     }),
     validate: () => {
       const errors: string[] = [];
@@ -86,72 +102,112 @@ const CustomerSupportAgentConfigTab = forwardRef<CustomerSupportAgentConfigTabHa
 
   return (
     <div className="space-y-6">
-      {/* Agent Configuration Card */}
-      <Card className="border-gray-200">
-        <CardContent className="p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Bot className="h-4 w-4" />
-            <h2 className="text-xl font-semibold text-gray-900">Agent Configuration</h2>
+      {/* Enhanced Agent Configuration Card */}
+      <Card className="border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-[#1c275e] to-[#2a3570] text-white p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-[#f48024]/20 rounded-lg flex items-center justify-center">
+                <Bot className="h-5 w-5 text-[#f48024]" />
+              </div>
+              <div>
+                <CardTitle className="text-xl font-semibold text-white">Agent Configuration</CardTitle>
+                <p className="text-gray-200 text-sm mt-1">Configure the basic settings and instructions for the customer support agent</p>
+              </div>
+            </div>
+            {onSave && (
+              <div className="flex items-center gap-3">
+                {hasUnsavedChanges && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="w-2 h-2 bg-[#f48024] rounded-full animate-pulse"></div>
+                    <span className="text-gray-200">Unsaved changes</span>
+                  </div>
+                )}
+                <Button
+                  onClick={handleSave}
+                  disabled={isSaving || !hasUnsavedChanges}
+                  className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+                >
+                  {isSaving ? "Saving..." : "Save"}
+                </Button>
+              </div>
+            )}
           </div>
-          <p className="text-sm text-gray-600 mb-6">Configure the basic settings and instructions for the customer support agent.</p>
+        </CardHeader>
+        <CardContent className="p-6">
 
-          {/* Horizontal Input Line */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          {/* Enhanced Input Section */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div className="space-y-2">
-              <Label htmlFor="agent-name">Agent Name</Label>
+              <Label htmlFor="agent-name" className="text-sm font-semibold text-[#1c275e]">Agent Name</Label>
               <Input
                 id="agent-name"
                 placeholder="Customer Support Agent"
                 value={agentName}
-                readOnly
-                className="h-11"
+                onChange={(e) => {
+                  setAgentName(e.target.value);
+                  handleFieldChange();
+                }}
+                className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="language">Language</Label>
+              <Label htmlFor="language" className="text-sm font-semibold text-[#1c275e]">Language</Label>
               <Input
                 id="language"
                 placeholder="e.g., English"
                 value={language}
-                readOnly
-                className="h-11"
+                onChange={(e) => {
+                  setLanguage(e.target.value);
+                  handleFieldChange();
+                }}
+                className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="voice">Voice</Label>
+              <Label htmlFor="voice" className="text-sm font-semibold text-[#1c275e]">Voice</Label>
               <Input
                 id="voice"
                 placeholder="e.g., Alex"
                 value={voice}
-                readOnly
-                className="h-11"
+                onChange={(e) => {
+                  setVoice(e.target.value);
+                  handleFieldChange();
+                }}
+                className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
               />
             </div>
           </div>
 
-          {/* Agent Instructions Text Area */}
-          <div className="space-y-2 mb-6">
-            <Label htmlFor="agent-instructions">Agent Instructions</Label>
+          {/* Enhanced Agent Instructions Section */}
+          <div className="space-y-3 mb-8">
+            <Label htmlFor="agent-instructions" className="text-sm font-semibold text-[#1c275e]">Agent Instructions</Label>
             <Textarea
               id="agent-instructions"
               placeholder="Enter detailed instructions for the customer support agent..."
               value={agentInstructions}
-              readOnly
-              className="min-h-[400px] resize-none"
+              onChange={(e) => {
+                setAgentInstructions(e.target.value);
+                handleFieldChange();
+              }}
+              className="min-h-[400px] resize-none border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
             />
           </div>
 
-          {/* Human Transfer Criteria Text Area */}
-          <div className="space-y-2">
-            <Label htmlFor="human-transfer-criteria">Human Transfer Criteria</Label>
+          {/* Enhanced Human Transfer Criteria Section */}
+          <div className="space-y-3">
+            <Label htmlFor="human-transfer-criteria" className="text-sm font-semibold text-[#1c275e]">Human Transfer Criteria</Label>
             <Textarea
               id="human-transfer-criteria"
               placeholder="Define criteria for when calls should be transferred to human agents..."
               value={humanTransferCriteria}
-              readOnly
-              className="min-h-[100px] resize-none"
+              onChange={(e) => {
+                setHumanTransferCriteria(e.target.value);
+                handleFieldChange();
+              }}
+              className="min-h-[100px] resize-none border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
             />
           </div>
 
