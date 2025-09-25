@@ -5,6 +5,7 @@ import LocationCard from "@/components/launchpad/locations/LocationCard";
 import { OrgLocation } from "@/components/launchpad/types";
 import { Input } from "@/components/ui/input";
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { X } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,6 +39,9 @@ export default function LocationsModule({
 
   // Minimize state for cards
   const [minimizedCards, setMinimizedCards] = React.useState<Record<string, boolean>>({});
+
+  // Scroll-aware header state
+  const [isScrolled, setIsScrolled] = React.useState(false);
 
   // Deletion confirmation dialog state
   const [deleteDialog, setDeleteDialog] = React.useState<{
@@ -89,26 +93,54 @@ export default function LocationsModule({
       setDeleteDialog({ open: false });
     }
   };
+
+  // Scroll detection effect for header styling
+  React.useEffect(() => {
+    const handleScroll = () => {
+      const scrollTop = window.scrollY;
+      setIsScrolled(scrollTop > 20);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
-    <Card className="border-0 shadow-lg bg-white rounded-xl">
-      <CardHeader className="sticky top-0 z-50 bg-[#1C275E] text-white p-3 border-b border-[#1C275E]/20 shadow-sm rounded-t-xl">
+    <Card className="border border-slate-200/80 bg-white shadow-sm rounded-2xl transition-shadow duration-200 hover:shadow-md">
+      <CardHeader className={`sticky top-0 z-50 bg-[#1C275E] text-white border-b border-[#1C275E]/20 shadow-sm rounded-t-2xl transition-all duration-300 ${
+        isScrolled
+          ? 'p-2 shadow-lg shadow-black/10'
+          : 'p-3 shadow-sm'
+      }`}>
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#F48024]/20 rounded-lg flex items-center justify-center">
-              <svg className="w-4 h-4 text-[#F48024]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-9 h-9 bg-[#F48024]/20 rounded-xl flex items-center justify-center">
+              <svg className="w-4.5 h-4.5 text-[#F48024]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
               </svg>
             </div>
-            <CardTitle className="text-lg font-semibold">Practice Locations</CardTitle>
+            <CardTitle className="text-lg font-semibold tracking-tight">Practice Locations</CardTitle>
           </div>
           <div className="flex items-center gap-3">
-            <Input
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search locations..."
-              aria-label="Search locations"
-              className="h-8 w-[160px] sm:w-[220px] md:w-[280px] bg-white text-[#1C275E] placeholder:text-[#1C275E]/60 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]"
-            />
+            <div className="relative flex items-center">
+              <Input
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search locations..."
+                aria-label="Search locations"
+                className="h-10 w-[160px] sm:w-[220px] md:w-[280px] bg-white text-[#1C275E] placeholder:text-[#1C275E]/60 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 pr-10 transition"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0d9488]/40"
+                  aria-label="Clear locations search"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
             <Button
               variant="outline"
               onClick={() => {
@@ -117,7 +149,7 @@ export default function LocationsModule({
                   documentsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
               }}
-              className="bg-transparent text-[#e6eff7] border-[#95a3b8] hover:bg-[#233072] hover:text-white"
+              className="bg-transparent text-[#e6eff7] border-[#95a3b8] hover:bg-[#233072] hover:text-white focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
             >
               View Documents
             </Button>
@@ -125,16 +157,16 @@ export default function LocationsModule({
               <Button
                 onClick={onSave}
                 disabled={isSaving}
-                className="min-w-[100px] bg-[#2f7a5d] hover:bg-[#276651] active:bg-[#1f5040] text-white focus:ring-2 focus:ring-[#22b07d] focus:ring-offset-2"
+                className="min-w-[100px] bg-[#0d9488] hover:bg-[#0f766e] active:bg-[#115e59] text-white focus:ring-2 focus:ring-[#0d9488] focus:ring-offset-2"
               >
                 {isSaving ? "Saving..." : "Save"}
               </Button>
             )}
-            <Button variant="default" onClick={handleAddLocation} className="bg-[#f49024] hover:bg-[#d87f1f] text-white">Add Location</Button>
+            <Button variant="default" onClick={handleAddLocation} className="bg-[#f49024] hover:bg-[#d87f1f] text-white focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2">Add Location</Button>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="p-4 space-y-4">
+      <CardContent className="p-6 space-y-6">
         {locations.length === 0 && (
           <p className="text-sm text-muted-foreground">No locations added yet. Click "Add Location" to get started.</p>
         )}
@@ -173,7 +205,7 @@ export default function LocationsModule({
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmDelete}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-[#c0352b] hover:bg-[#a02c24] text-white"
             >
               Delete
             </AlertDialogAction>

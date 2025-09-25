@@ -60,7 +60,7 @@ export default function DecisionMakersCard({
             <TableRow key={dm.id} className="hover:bg-[#1C275E]/5">
               <TableCell className="p-2">
                 <Input
-                  className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+                  className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
                   placeholder="Enter title"
                   value={dm.title}
                   onChange={(e) => onUpdate(dm.id, 'title', e.target.value)}
@@ -70,7 +70,7 @@ export default function DecisionMakersCard({
               <TableCell className="p-2">
                 <div className="space-y-1">
                   <Input
-                    className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+                    className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
                     placeholder="Full name"
                     value={dm.name}
                     onChange={(e) => onUpdate(dm.id, 'name', e.target.value)}
@@ -82,7 +82,7 @@ export default function DecisionMakersCard({
               <TableCell className="p-2">
                 <div className="space-y-1">
                   <Input
-                    className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+                    className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
                     placeholder="email@practice.com"
                     value={dm.email}
                     onChange={(e) => onUpdate(dm.id, 'email', e.target.value)}
@@ -93,7 +93,7 @@ export default function DecisionMakersCard({
               </TableCell>
               <TableCell className="p-2">
                 <Input
-                  className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+                  className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
                   placeholder="(555) 123-4567"
                   value={dm.phone}
                   onChange={(e) => onUpdate(dm.id, 'phone', e.target.value)}
@@ -102,10 +102,10 @@ export default function DecisionMakersCard({
               </TableCell>
               <TableCell className="p-2">
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   onClick={() => onRemove && onRemove(dm.id, dm.name || 'this person')}
-                  className="bg-white text-black border border-black hover:bg-gray-50 h-8 w-8 p-0"
+                  className="border-[#c0352b]/40 text-[#c0352b] hover:bg-[#c0352b] hover:text-white focus-visible:ring-2 focus-visible:ring-[#c0352b]/40 focus-visible:outline-none h-8 w-8 p-0"
                   aria-label="Delete person"
                 >
                   <Trash2 className="h-4 w-4" />

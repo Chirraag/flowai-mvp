@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useCreateCuratedKB, useDeleteCuratedKB } from "@/lib/launchpad.api";
-import { Download, Trash2, FileText, Loader2, Eye, AlertCircle } from "lucide-react";
+import { Download, Trash2, FileText, Loader2, Eye, AlertCircle, X } from "lucide-react";
 import { CuratedKBEntry } from "@/lib/launchpad.types";
 import DocumentTextViewer from "@/components/launchpad/shared/DocumentTextViewer";
 
@@ -19,6 +19,9 @@ export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount }: Kn
   const { toast } = useToast();
   const [viewingDocument, setViewingDocument] = useState<CuratedKBEntry | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Scroll-aware header state
+  const [isScrolled, setIsScrolled] = useState(false);
   
   const createCuratedKB = useCreateCuratedKB(orgId);
   const deleteCuratedKB = useDeleteCuratedKB(orgId);
@@ -136,8 +139,8 @@ export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount }: Kn
           )}
           {imageError ? (
             <div className="text-center p-8">
-              <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <AlertCircle className="h-6 w-6 text-red-500" />
+              <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                <AlertCircle className="h-5 w-5 text-red-500" />
               </div>
               <p className="text-red-600 mb-4">Failed to load image</p>
               <Button
@@ -172,8 +175,8 @@ export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount }: Kn
         <div className="space-y-4">
           {pdfError ? (
             <div className="text-center p-8">
-              <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <AlertCircle className="h-6 w-6 text-red-500" />
+              <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                <AlertCircle className="h-5 w-5 text-red-500" />
               </div>
               <p className="text-red-600 mb-4">Failed to load PDF</p>
               <Button
@@ -185,13 +188,13 @@ export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount }: Kn
             </div>
           ) : (
             <>
-              <div className="flex items-center justify-between border-b border-gray-200 pb-2">
+              <div className="flex items-center justify-between border-b border-slate-200 pb-2">
                 <span className="text-sm text-[#1C275E] font-medium">PDF Document</span>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => window.open(document.url, '_blank')}
-                  className="bg-transparent text-[#1C275E] border-[#1C275E] hover:bg-[#233072] hover:text-white focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+                  className="bg-transparent text-[#1C275E] border-[#BEC4DB] hover:bg-[#1C275E]/10 focus-visible:ring-2 focus-visible:ring-[#0d9488]/20 focus-visible:outline-none"
                 >
                   Open in New Tab
                 </Button>
@@ -214,7 +217,7 @@ export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount }: Kn
       
       return (
         <div className="space-y-4">
-          <div className="flex items-center justify-between border-b border-gray-200 pb-2">
+          <div className="flex items-center justify-between border-b border-slate-200 pb-2">
             <span className="text-sm text-[#1C275E] font-medium">
               {getFileExtension(filename).toUpperCase()} Document
             </span>
@@ -223,7 +226,7 @@ export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount }: Kn
                 variant="outline"
                 size="sm"
                 onClick={() => window.open(officeViewerUrl, '_blank')}
-                className="bg-transparent text-[#1C275E] border-[#1C275E] hover:bg-[#233072] hover:text-white focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+                className="bg-transparent text-[#1C275E] border-[#BEC4DB] hover:bg-[#1C275E]/10 focus-visible:ring-2 focus-visible:ring-[#0d9488]/20 focus-visible:outline-none"
               >
                 View in Office Online
               </Button>
@@ -252,8 +255,8 @@ export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount }: Kn
     // Fallback for other files
     return (
       <div className="text-center p-8">
-        <div className="w-12 h-12 bg-[#F48024]/20 rounded-lg flex items-center justify-center mx-auto mb-4">
-          <FileText className="h-6 w-6 text-[#F48024]" />
+        <div className="w-10 h-10 bg-[#F48024]/20 rounded-xl flex items-center justify-center mx-auto mb-4">
+          <FileText className="h-5 w-5 text-[#F48024]" />
         </div>
         <p className="text-[#1C275E] mb-2 font-medium">{filename}</p>
         <p className="text-sm text-muted-foreground mb-4">
@@ -282,14 +285,29 @@ export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount }: Kn
   const isGenerating = createCuratedKB.isPending;
   const isDeleting = deleteCuratedKB.isPending;
 
+  // Scroll detection effect for header styling
+  React.useEffect(() => {
+    const handleScroll = () => {
+      const scrollTop = window.scrollY;
+      setIsScrolled(scrollTop > 20);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
-    <Card className="border-0 shadow-lg bg-white rounded-xl">
-      <CardHeader className="sticky top-0 z-50 bg-[#1C275E] text-white p-3 border-b border-[#1C275E]/20 shadow-sm rounded-t-xl">
+    <Card className="border border-slate-200/80 bg-white shadow-sm rounded-2xl transition-shadow duration-200 hover:shadow-md">
+      <CardHeader className={`sticky top-0 z-50 bg-[#1C275E] text-white border-b border-[#1C275E]/20 shadow-sm rounded-t-2xl transition-all duration-300 ${
+        isScrolled
+          ? 'p-2 shadow-lg shadow-black/10'
+          : 'p-3 shadow-sm'
+      }`}>
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#F48024]/20 rounded-lg flex items-center justify-center">
+            <div className="w-9 h-9 bg-[#F48024]/20 rounded-xl flex items-center justify-center">
               <svg
-                className="w-5 h-5 text-[#F48024]"
+                className="w-4.5 h-4.5 text-[#F48024]"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -305,18 +323,30 @@ export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount }: Kn
                 <polyline points="10,9 9,9 8,9"></polyline>
               </svg>
             </div>
-            <CardTitle className="text-lg font-semibold">
+            <CardTitle className="text-lg font-semibold tracking-tight">
               Curated Knowledge Base {curatedKbCount ? `(${curatedKbCount})` : ''}
             </CardTitle>
           </div>
           <div className="flex items-center gap-3">
-            <Input
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search documents..."
-              aria-label="Search documents"
-              className="h-8 w-[160px] sm:w-[220px] md:w-[280px] bg-white text-[#1C275E] placeholder:text-[#1C275E]/60 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]"
-            />
+            <div className="relative flex items-center">
+              <Input
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search documents..."
+                aria-label="Search documents"
+                className="h-10 w-[160px] sm:w-[220px] md:w-[280px] bg-white text-[#1C275E] placeholder:text-[#1C275E]/60 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 pr-10 transition"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0d9488]/40"
+                  aria-label="Clear documents search"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
             <Button
               variant="default"
               onClick={handleGenerate}
@@ -335,15 +365,15 @@ export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount }: Kn
           </div>
         </div>
       </CardHeader>
-      <CardContent className="p-4 space-y-4">
+      <CardContent className="p-6 space-y-6">
         {curatedKb && curatedKb.length > 0 && filteredDocuments.length > 0 ? (
           filteredDocuments.map((document) => (
-            <Card key={document.s3_key} className="border-0 shadow-lg bg-white rounded-xl overflow-hidden">
+            <Card key={document.s3_key} className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-[#F48024]/20 rounded-lg flex items-center justify-center">
-                      <FileText className="h-5 w-5 text-[#F48024]" />
+                    <div className="w-9 h-9 bg-[#F48024]/20 rounded-xl flex items-center justify-center">
+                      <FileText className="h-4.5 w-4.5 text-[#F48024]" />
                     </div>
                     <div>
                       <p className="font-medium text-sm text-[#1C275E]">{document.name}</p>
@@ -357,7 +387,7 @@ export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount }: Kn
                       variant="outline"
                       size="sm"
                       onClick={() => setViewingDocument(document)}
-                      className="bg-white text-[#1C275E] border-[#1C275E] hover:bg-[#233072] hover:text-white focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+                      className="bg-white text-[#1C275E] border-[#BEC4DB] hover:bg-[#1C275E]/10 focus-visible:ring-2 focus-visible:ring-[#0d9488]/20 focus-visible:outline-none"
                     >
                       <Eye className="h-4 w-4 mr-1" />
                       View
@@ -366,7 +396,7 @@ export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount }: Kn
                       variant="outline"
                       size="sm"
                       onClick={() => handleDownload(document.url)}
-                      className="bg-transparent text-[#1C275E] border-[#1C275E] hover:bg-[#233072] hover:text-white focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+                      className="bg-transparent text-[#1C275E] border-[#BEC4DB] hover:bg-[#1C275E]/10 focus-visible:ring-2 focus-visible:ring-[#0d9488]/20 focus-visible:outline-none"
                     >
                       <Download className="h-4 w-4 mr-1" />
                       Download
@@ -376,7 +406,7 @@ export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount }: Kn
                       size="sm"
                       onClick={() => handleDelete(document.url)}
                       disabled={isDeleting}
-                      className="bg-transparent text-[#c0352b] border-[#c0352b] hover:bg-[#c0352b] hover:text-white focus:ring-2 focus:ring-[#c0352b] focus:ring-offset-2"
+                      className="bg-transparent text-[#c0352b] border-[#c0352b]/40 hover:bg-[#c0352b] hover:text-white focus-visible:ring-2 focus-visible:ring-[#c0352b]/40 focus-visible:outline-none"
                     >
                       {isDeleting ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -391,8 +421,8 @@ export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount }: Kn
           ))
         ) : curatedKb && curatedKb.length > 0 && filteredDocuments.length === 0 ? (
           <div className="text-center py-8">
-            <div className="w-12 h-12 bg-[#F48024]/20 rounded-lg flex items-center justify-center mx-auto mb-4">
-              <FileText className="h-6 w-6 text-[#F48024]" />
+            <div className="w-10 h-10 bg-[#F48024]/20 rounded-xl flex items-center justify-center mx-auto mb-4">
+              <FileText className="h-5 w-5 text-[#F48024]" />
             </div>
             <p className="text-sm text-muted-foreground mb-4">
               No documents match your search "{searchTerm}". Try adjusting your search terms.
@@ -400,8 +430,8 @@ export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount }: Kn
           </div>
         ) : (
           <div className="text-center py-8">
-            <div className="w-12 h-12 bg-[#F48024]/20 rounded-lg flex items-center justify-center mx-auto mb-4">
-              <FileText className="h-6 w-6 text-[#F48024]" />
+            <div className="w-10 h-10 bg-[#F48024]/20 rounded-xl flex items-center justify-center mx-auto mb-4">
+              <FileText className="h-5 w-5 text-[#F48024]" />
             </div>
             <p className="text-sm text-muted-foreground mb-4">
               No knowledge base generated yet. Click "Generate Knowledge Base" to create a curated document based on your organization's data.

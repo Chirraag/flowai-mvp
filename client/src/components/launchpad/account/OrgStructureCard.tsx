@@ -24,13 +24,13 @@ export default function OrgStructureCard({
     <div className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label className="text-xs font-semibold text-[#1C275E]">Scheduling Structure</Label>
+            <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Scheduling Structure</Label>
             <div className="relative">
               <Select
                 value={schedulingStructure}
                 onValueChange={(value) => onChange("schedulingStructure", value)}
               >
-                <SelectTrigger className="pl-4 pr-4 py-3 border-2 border-gray-200 focus:border-[#1C275E] focus:ring-[#1C275E]/20 rounded-lg transition-all duration-300">
+                <SelectTrigger className="h-10 pl-4 pr-4 py-3 border border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 rounded-lg transition">
                   <SelectValue placeholder="Select scheduling structure" />
                 </SelectTrigger>
                 <SelectContent>
@@ -42,13 +42,13 @@ export default function OrgStructureCard({
           </div>
 
           <div className="space-y-2">
-            <Label className="text-xs font-semibold text-[#1C275E]">RCM Structure</Label>
+            <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">RCM Structure</Label>
             <div className="relative">
               <Select
                 value={rcmStructure}
                 onValueChange={(value) => onChange("rcmStructure", value)}
               >
-                <SelectTrigger className="pl-4 pr-4 py-3 border-2 border-gray-200 focus:border-[#1C275E] focus:ring-[#1C275E]/20 rounded-lg transition-all duration-300">
+                <SelectTrigger className="h-10 pl-4 pr-4 py-3 border border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 rounded-lg transition">
                   <SelectValue placeholder="Select RCM structure" />
                 </SelectTrigger>
                 <SelectContent>

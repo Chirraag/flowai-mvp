@@ -50,7 +50,7 @@ export default function TeamReportingSection({
             variant="default"
             size="sm"
             onClick={onAdd}
-            className="bg-[#F48024] hover:bg-[#F48024]/90 text-white px-4 py-2 rounded-lg shadow-sm"
+            className="bg-[#f49024] hover:bg-[#d87f1f] text-white px-4 py-2 rounded-lg shadow-sm focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
           >
             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
@@ -79,7 +79,7 @@ export default function TeamReportingSection({
                   <TableRow key={member.id} className="hover:bg-[#1C275E]/5">
                     <TableCell className="p-2">
                       <Input
-                        className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+                        className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
                         placeholder="Enter title"
                         value={member.title}
                         onChange={(e) => onUpdate(member.id, 'title', e.target.value)}
@@ -88,7 +88,7 @@ export default function TeamReportingSection({
                     </TableCell>
                     <TableCell className="p-2">
                       <Input
-                        className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+                        className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
                         placeholder="Full name"
                         value={member.name}
                         onChange={(e) => onUpdate(member.id, 'name', e.target.value)}
@@ -97,7 +97,7 @@ export default function TeamReportingSection({
                     </TableCell>
                     <TableCell className="p-2">
                       <Input
-                        className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+                        className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
                         placeholder="email@practice.com"
                         value={member.email}
                         onChange={(e) => onUpdate(member.id, 'email', e.target.value)}
@@ -106,7 +106,7 @@ export default function TeamReportingSection({
                     </TableCell>
                     <TableCell className="p-2">
                       <Input
-                        className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+                        className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
                         placeholder="(555) 123-4567"
                         value={member.phone}
                         onChange={(e) => onUpdate(member.id, 'phone', e.target.value)}
@@ -115,10 +115,10 @@ export default function TeamReportingSection({
                     </TableCell>
                     <TableCell className="p-2">
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
                         onClick={() => onRemove(member.id, member.name || 'this person')}
-                        className="bg-white text-black border border-black hover:bg-gray-50 h-8 w-8 p-0"
+                        className="border-[#c0352b]/40 text-[#c0352b] hover:bg-[#c0352b] hover:text-white focus-visible:ring-2 focus-visible:ring-[#c0352b]/40 focus-visible:outline-none h-8 w-8 p-0"
                         aria-label="Delete person"
                       >
                         <Trash2 className="h-4 w-4" />

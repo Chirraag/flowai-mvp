@@ -188,6 +188,9 @@ export default function Launchpad() {
   // Minimize state for cards
   const [minimizedCards, setMinimizedCards] = useState<Record<string, boolean>>({});
 
+  // Scroll-aware header state
+  const [isScrolled, setIsScrolled] = useState(false);
+
   // Deletion confirmation dialog state
   const [deleteDialog, setDeleteDialog] = useState<{
     open: boolean;
@@ -249,6 +252,17 @@ export default function Launchpad() {
       previousOrgIdRef.current = orgId;
     }
   }, [orgId, queryClient]);
+
+  // Scroll detection effect for header styling
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollTop = window.scrollY;
+      setIsScrolled(scrollTop > 20);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const toggleCardMinimize = (cardId: string) => {
     setMinimizedCards(prev => ({
@@ -751,16 +765,20 @@ export default function Launchpad() {
 
         <TabsContent value="account" className="space-y-4">
           {/* Account Details Sticky Header */}
-          <Card className="border-0 shadow-lg bg-white rounded-xl">
-            <CardHeader className="sticky top-0 z-50 bg-[#1C275E] text-white p-3 border-b border-[#1C275E]/20 shadow-sm rounded-t-xl">
-              <div className="flex items-center justify-between">
+          <Card className="border border-slate-200/80 bg-white shadow-sm rounded-2xl transition-shadow duration-200 hover:shadow-md">
+            <CardHeader
+              className={`sticky top-0 z-50 bg-[#1C275E] text-white border-b border-[#1C275E]/20 rounded-t-2xl transition-all duration-300 ${
+                isScrolled ? 'p-2 shadow-lg shadow-black/10' : 'p-3 shadow-sm'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-[#F48024]/20 rounded-lg flex items-center justify-center">
-                    <svg className="w-5 h-5 text-[#F48024]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-9 h-9 bg-[#F48024]/20 rounded-xl flex items-center justify-center">
+                    <svg className="w-4.5 h-4.5 text-[#F48024]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
                   </div>
-                  <CardTitle className="text-lg font-semibold">Account Details</CardTitle>
+                  <CardTitle className="text-lg font-semibold tracking-tight">Account Details</CardTitle>
                 </div>
                 <div className="flex items-center gap-3">
                   <Button
@@ -771,466 +789,529 @@ export default function Launchpad() {
                         documentsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
                       }
                     }}
-                    className="bg-transparent text-[#e6eff7] border-[#95a3b8] hover:bg-[#233072] hover:text-white"
+                    className="bg-transparent text-[#e6eff7] border-[#95a3b8] hover:bg-[#233072] hover:text-white focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
                   >
                     View Documents
                   </Button>
                   <Button
                     onClick={handleSaveAccount}
                     disabled={updateAccountDetails.isPending}
-                    className="min-w-[100px] bg-[#2f7a5d] hover:bg-[#276651] active:bg-[#1f5040] text-white focus:ring-2 focus:ring-[#22b07d] focus:ring-offset-2"
+                    className="min-w-[100px] bg-[#0d9488] hover:bg-[#0f766e] active:bg-[#115e59] text-white focus:ring-2 focus:ring-[#0d9488] focus:ring-offset-2"
                   >
                     {updateAccountDetails.isPending ? "Saving..." : "Save"}
                   </Button>
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="p-4 space-y-4">
 
-          <Card className="border-0 shadow-lg bg-white rounded-xl overflow-hidden">
-            <CardHeader className="bg-[#e2e8f0] text-[#1C275E] p-3 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-[#F48024]/20 rounded-lg flex items-center justify-center">
-                    <svg className="w-5 h-5 text-[#F48024]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-                    </svg>
+            <CardContent className="p-6 space-y-6">
+              {/* Overview */}
+              <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
+                <CardHeader
+                  onClick={() => toggleCardMinimize('account-overview')}
+                  className="cursor-pointer bg-[#eef2ff] text-[#1C275E] px-5 py-4 border-b border-slate-200 transition-colors hover:bg-[#e0e7ff]"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 bg-[#F48024]/20 rounded-xl flex items-center justify-center">
+                        <svg className="w-4.5 h-4.5 text-[#F48024]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                        </svg>
+                      </div>
+                      <CardTitle className="text-lg font-semibold tracking-tight">Overview</CardTitle>
+                    </div>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleCardMinimize('account-overview');
+                            }}
+                            className="bg-[#F48024] text-white hover:bg-[#C96A1E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={minimizedCards['account-overview'] ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"}></path>
+                            </svg>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{minimizedCards['account-overview'] ? 'Expand' : 'Minimize'}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
-                  <CardTitle className="text-lg font-semibold">Overview</CardTitle>
-                </div>
-                <div className="flex items-center gap-2">
+                </CardHeader>
+                {!minimizedCards['account-overview'] && (
+                  <CardContent className="px-5 py-4">
+                    <AccountOverviewCard
+                      accountName={accountName}
+                      websiteAddress={websiteAddress}
+                      headquartersAddress={headquartersAddress}
+                      onChange={(field, value) => {
+                        if (field === "accountName") setAccountName(value);
+                        if (field === "websiteAddress") setWebsiteAddress(value);
+                        if (field === "headquartersAddress") setHeadquartersAddress(value);
+                      }}
+                    />
+                  </CardContent>
+                )}
+              </Card>
 
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toggleCardMinimize('account-overview')}
-                          className="bg-[#F48024] text-white hover:bg-[#C96A1E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={minimizedCards['account-overview'] ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"}></path>
-                          </svg>
-                        </Button>
-                      </TooltipTrigger> 
-                      <TooltipContent>
-                        <p>{minimizedCards['account-overview'] ? 'Expand' : 'Minimize'}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-              </div>
-            </CardHeader>
-            {!minimizedCards['account-overview'] && (
-              <CardContent className="p-4">
-              <AccountOverviewCard
-                accountName={accountName}
-                websiteAddress={websiteAddress}
-                headquartersAddress={headquartersAddress}
-                onChange={(field, value) => {
-                  if (field === "accountName") setAccountName(value);
-                  if (field === "websiteAddress") setWebsiteAddress(value);
-                  if (field === "headquartersAddress") setHeadquartersAddress(value);
-                }}
-              />
-              </CardContent>
-            )}
-          </Card>
-
-          <Card className="border-0 shadow-lg bg-white rounded-xl overflow-hidden">
-            <CardHeader className="bg-[#e2e8f0] text-[#1C275E] p-3 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-[#F48024]/20 rounded-lg flex items-center justify-center">
-                    <svg className="w-5 h-5 text-[#F48024]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
-                    </svg>
+              {/* Decision Makers */}
+              <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
+                <CardHeader
+                  onClick={() => toggleCardMinimize('decision-makers')}
+                  className="cursor-pointer bg-[#eef2ff] text-[#1C275E] px-5 py-4 border-b border-slate-200 transition-colors hover:bg-[#e0e7ff]"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 bg-[#F48024]/20 rounded-xl flex items-center justify-center">
+                        <svg className="w-4.5 h-4.5 text-[#F48024]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+                        </svg>
+                      </div>
+                      <CardTitle className="text-lg font-semibold tracking-tight">Decision Makers</CardTitle>
+                      <span className="bg-[#F48024]/20 px-2 py-1 rounded-full text-xs">
+                        {decisionMakers.length} added
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          addPerson(setDecisionMakers);
+                        }}
+                        className="min-h-[36px] bg-[#f49024] hover:bg-[#d87f1f] text-white focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+                      >
+                        + Add Person
+                      </Button>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleCardMinimize('decision-makers');
+                              }}
+                              className="bg-[#F48024] text-white hover:bg-[#C96A1E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={minimizedCards['decision-makers'] ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"}></path>
+                              </svg>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{minimizedCards['decision-makers'] ? 'Expand' : 'Minimize'}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                   </div>
-                  <CardTitle className="text-lg font-semibold">Decision Makers</CardTitle>
-                  <span className="bg-[#F48024]/20 px-2 py-1 rounded-full text-xs">
-                    {decisionMakers.length} added
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={() => addPerson(setDecisionMakers)}
-                    className="min-h-[36px] bg-[#f49024] hover:bg-[#d87f1f] text-white"
-                  >
-                    + Add Person
-                  </Button>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toggleCardMinimize('decision-makers')}
-                          className="bg-[#F48024] text-white hover:bg-[#C96A1E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={minimizedCards['decision-makers'] ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"}></path>
-                          </svg>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{minimizedCards['decision-makers'] ? 'Expand' : 'Minimize'}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-              </div>
-            </CardHeader>
-            {!minimizedCards['decision-makers'] && (
-              <CardContent className="p-4">
-              <DecisionMakersCard
-                decisionMakers={decisionMakers}
-                onUpdate={(id, field, value) => updatePerson(setDecisionMakers, id, field, value)}
-                onRemove={(id, personName) => handleDeletePerson(setDecisionMakers, id, personName)}
-              />
-              </CardContent>
-            )}
-          </Card>
+                </CardHeader>
+                {!minimizedCards['decision-makers'] && (
+                  <CardContent className="px-5 py-4">
+                    <DecisionMakersCard
+                      decisionMakers={decisionMakers}
+                      onUpdate={(id, field, value) => updatePerson(setDecisionMakers, id, field, value)}
+                      onRemove={(id, personName) => handleDeletePerson(setDecisionMakers, id, personName)}
+                    />
+                  </CardContent>
+                )}
+              </Card>
 
-          <Card className="border-0 shadow-lg bg-white rounded-xl overflow-hidden">
-            <CardHeader className="bg-[#e2e8f0] text-[#1C275E] p-3 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-[#F48024]/20 rounded-lg flex items-center justify-center">
-                    <svg className="w-5 h-5 text-[#F48024]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                    </svg>
+              {/* Influencers */}
+              <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
+                <CardHeader
+                  onClick={() => toggleCardMinimize('influencers')}
+                  className="cursor-pointer bg-[#eef2ff] text-[#1C275E] px-5 py-4 border-b border-slate-200 transition-colors hover:bg-[#e0e7ff]"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 bg-[#F48024]/20 rounded-xl flex items-center justify-center">
+                        <svg className="w-4.5 h-4.5 text-[#F48024]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                        </svg>
+                      </div>
+                      <CardTitle className="text-lg font-semibold tracking-tight">Influencers</CardTitle>
+                      <span className="bg-[#F48024]/20 px-2 py-1 rounded-full text-xs">
+                        {influencers.length} added
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          addPerson(setInfluencers);
+                        }}
+                        className="min-h-[36px] bg-[#f49024] hover:bg-[#d87f1f] text-white focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+                      >
+                        + Add Person
+                      </Button>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleCardMinimize('influencers');
+                              }}
+                              className="bg-[#F48024] text-white hover:bg-[#C96A1E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={minimizedCards['influencers'] ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"}></path>
+                              </svg>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{minimizedCards['influencers'] ? 'Expand' : 'Minimize'}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                   </div>
-                  <CardTitle className="text-lg font-semibold">Influencers</CardTitle>
-                  <span className="bg-[#F48024]/20 px-2 py-1 rounded-full text-xs">
-                    {influencers.length} added
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={() => addPerson(setInfluencers)}
-                    className="min-h-[36px] bg-[#f49024] hover:bg-[#d87f1f] text-white"
-                  >
-                    + Add Person
-                  </Button>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toggleCardMinimize('influencers')}
-                          className="bg-[#F48024] text-white hover:bg-[#C96A1E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={minimizedCards['influencers'] ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"}></path>
-                          </svg>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{minimizedCards['influencers'] ? 'Expand' : 'Minimize'}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-              </div>
-            </CardHeader>
-            {!minimizedCards['influencers'] && (
-              <CardContent className="p-4">
-              <InfluencersCard
-                influencers={influencers}
-                onUpdate={(id, field, value) => updatePerson(setInfluencers, id, field, value)}
-                onRemove={(id, personName) => handleDeletePerson(setInfluencers, id, personName)}
-              />
-              </CardContent>
-            )}
-          </Card>
+                </CardHeader>
+                {!minimizedCards['influencers'] && (
+                  <CardContent className="px-5 py-4">
+                    <InfluencersCard
+                      influencers={influencers}
+                      onUpdate={(id, field, value) => updatePerson(setInfluencers, id, field, value)}
+                      onRemove={(id, personName) => handleDeletePerson(setInfluencers, id, personName)}
+                    />
+                  </CardContent>
+                )}
+              </Card>
 
-          <Card className="border-0 shadow-lg bg-white rounded-xl overflow-hidden">
-            <CardHeader className="flex flex-row items-center justify-between bg-[#e2e8f0] text-[#1C275E] p-3 border-b border-gray-200">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-[#F48024]/20 rounded-lg flex items-center justify-center">
-                  <svg className="w-5 h-5 text-[#F48024]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-                  </svg>
-                </div>
-                <CardTitle className="text-lg font-semibold">Organization Structure</CardTitle>
-              </div>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                        onClick={() => toggleCardMinimize('org-structure')}
-                        className="bg-[#F48024] text-white hover:bg-[#C96A1E]"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={minimizedCards['org-structure'] ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"}></path>
-                      </svg>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{minimizedCards['org-structure'] ? 'Expand' : 'Minimize'}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </CardHeader>
-            {!minimizedCards['org-structure'] && (
-              <CardContent className="p-4">
-                <OrgStructureCard
-                  schedulingStructure={schedulingStructure}
-                  rcmStructure={rcmStructure}
-                  onChange={(field, value) => {
-                    if (field === "schedulingStructure") setSchedulingStructure(value);
-                    if (field === "rcmStructure") setRcmStructure(value);
-                  }}
+              {/* Organization Structure */}
+              <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
+                <CardHeader
+                  onClick={() => toggleCardMinimize('org-structure')}
+                  className="cursor-pointer bg-[#eef2ff] text-[#1C275E] px-5 py-4 border-b border-slate-200 transition-colors hover:bg-[#e0e7ff]"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 bg-[#F48024]/20 rounded-xl flex items-center justify-center">
+                        <svg className="w-4.5 h-4.5 text-[#F48024]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                        </svg>
+                      </div>
+                      <CardTitle className="text-lg font-semibold tracking-tight">Organization Structure</CardTitle>
+                    </div>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleCardMinimize('org-structure');
+                            }}
+                            className="bg-[#F48024] text-white hover:bg-[#C96A1E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={minimizedCards['org-structure'] ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"}></path>
+                            </svg>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{minimizedCards['org-structure'] ? 'Expand' : 'Minimize'}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                </CardHeader>
+                {!minimizedCards['org-structure'] && (
+                  <CardContent className="px-5 py-4">
+                    <OrgStructureCard
+                      schedulingStructure={schedulingStructure}
+                      rcmStructure={rcmStructure}
+                      onChange={(field, value) => {
+                        if (field === "schedulingStructure") setSchedulingStructure(value);
+                        if (field === "rcmStructure") setRcmStructure(value);
+                      }}
+                    />
+                  </CardContent>
+                )}
+              </Card>
+
+              {/* Team Reporting */}
+              <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
+                <CardHeader
+                  onClick={() => toggleCardMinimize('team-reporting')}
+                  className="cursor-pointer bg-[#eef2ff] text-[#1C275E] px-5 py-4 border-b border-slate-200 transition-colors hover:bg-[#e0e7ff]"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 bg-[#F48024]/20 rounded-xl flex items-center justify-center">
+                        <svg className="w-4.5 h-4.5 text-[#F48024]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                        </svg>
+                      </div>
+                      <CardTitle className="text-lg font-semibold tracking-tight">Team Reporting Structure</CardTitle>
+                    </div>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleCardMinimize('team-reporting');
+                            }}
+                            className="bg-[#F48024] text-white hover:bg-[#C96A1E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={minimizedCards['team-reporting'] ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"}></path>
+                            </svg>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{minimizedCards['team-reporting'] ? 'Expand' : 'Minimize'}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                </CardHeader>
+                {!minimizedCards['team-reporting'] && (
+                  <CardContent className="px-5 py-4 space-y-4">
+                  <TeamReportingSection
+                    title="Order Entry Team Reporting"
+                    team={orderEntryTeam}
+                    onAdd={() => addPerson(setOrderEntryTeam)}
+                    onUpdate={(id, field, value) => updatePerson(setOrderEntryTeam, id, field, value)}
+                    onRemove={(id, personName) => handleDeletePerson(setOrderEntryTeam, id, personName)}
+                  />
+                  <TeamReportingSection
+                    title="Scheduling Team Reporting"
+                    team={schedulingTeam}
+                    onAdd={() => addPerson(setSchedulingTeam)}
+                    onUpdate={(id, field, value) => updatePerson(setSchedulingTeam, id, field, value)}
+                    onRemove={(id, personName) => handleDeletePerson(setSchedulingTeam, id, personName)}
+                  />
+                  <TeamReportingSection
+                    title="Patient Intake Team Reporting"
+                    team={patientIntakeTeam}
+                    onAdd={() => addPerson(setPatientIntakeTeam)}
+                    onUpdate={(id, field, value) => updatePerson(setPatientIntakeTeam, id, field, value)}
+                    onRemove={(id, personName) => handleDeletePerson(setPatientIntakeTeam, id, personName)}
+                  />
+                  <TeamReportingSection
+                    title="RCM Team Reporting"
+                    team={rcmTeam}
+                    onAdd={() => addPerson(setRcmTeam)}
+                    onUpdate={(id, field, value) => updatePerson(setRcmTeam, id, field, value)}
+                    onRemove={(id, personName) => handleDeletePerson(setRcmTeam, id, personName)}
+                  />
+                  </CardContent>
+                )}
+              </Card>
+
+              {/* Team Sizes */}
+              <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
+                <CardHeader
+                  onClick={() => toggleCardMinimize('team-sizes')}
+                  className="cursor-pointer bg-[#eef2ff] text-[#1C275E] px-5 py-4 border-b border-slate-200 transition-colors hover:bg-[#e0e7ff]"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 bg-[#F48024]/20 rounded-xl flex items-center justify-center">
+                        <svg className="w-4.5 h-4.5 text-[#F48024]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                        </svg>
+                      </div>
+                      <CardTitle className="text-lg font-semibold tracking-tight">Team Sizes</CardTitle>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleCardMinimize('team-sizes');
+                              }}
+                              className="bg-[#F48024] text-white hover:bg-[#C96A1E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={minimizedCards['team-sizes'] ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"}></path>
+                              </svg>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{minimizedCards['team-sizes'] ? 'Expand' : 'Minimize'}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  </div>
+                </CardHeader>
+                {!minimizedCards['team-sizes'] && (
+                  <CardContent className="px-5 py-4">
+                  <TeamSizesCard
+                    orderEntryTeamSize={orderEntryTeamSize}
+                    schedulingTeamSize={schedulingTeamSize}
+                    patientIntakeTeamSize={patientIntakeTeamSize}
+                    rcmTeamSize={rcmTeamSize}
+                    onChange={(field, value) => {
+                      if (field === "orderEntryTeamSize") setOrderEntryTeamSize(value);
+                      if (field === "schedulingTeamSize") setSchedulingTeamSize(value);
+                      if (field === "patientIntakeTeamSize") setPatientIntakeTeamSize(value);
+                      if (field === "rcmTeamSize") setRcmTeamSize(value);
+                    }}
+                  />
+                  </CardContent>
+                )}
+              </Card>
+
+              {/* Opportunity Sizing */}
+              <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
+                <CardHeader
+                  onClick={() => toggleCardMinimize('opportunity-sizing')}
+                  className="cursor-pointer bg-[#eef2ff] text-[#1C275E] px-5 py-4 border-b border-slate-200 transition-colors hover:bg-[#e0e7ff]"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 bg-[#F48024]/20 rounded-xl flex items-center justify-center">
+                        <svg className="w-4.5 h-4.5 text-[#F48024]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                      </div>
+                      <CardTitle className="text-lg font-semibold tracking-tight">Opportunity Sizing</CardTitle>
+                    </div>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleCardMinimize('opportunity-sizing');
+                            }}
+                            className="bg-[#F48024] text-white hover:bg-[#C96A1E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={minimizedCards['opportunity-sizing'] ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"}></path>
+                            </svg>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{minimizedCards['opportunity-sizing'] ? 'Expand' : 'Minimize'}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                </CardHeader>
+                {!minimizedCards['opportunity-sizing'] && (
+                  <CardContent className="px-5 py-4">
+                  <OpportunitySizingCard
+                    opportunitySizing={opportunitySizing}
+                    onChange={(updates) => setOpportunitySizing(prev => ({ ...prev, ...updates }))}
+                  />
+                  </CardContent>
+                )}
+              </Card>
+
+              {/* Systems Integration */}
+              <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
+                <CardHeader
+                  onClick={() => toggleCardMinimize('systems-integration')}
+                  className="cursor-pointer bg-[#eef2ff] text-[#1C275E] px-5 py-4 border-b border-slate-200 transition-colors hover:bg-[#e0e7ff]"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 bg-[#F48024]/20 rounded-xl flex items-center justify-center">
+                        <svg className="w-4.5 h-4.5 text-[#F48024]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                      </div>
+                      <CardTitle className="text-lg font-semibold tracking-tight">Systems Integration</CardTitle>
+                    </div>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleCardMinimize('systems-integration');
+                            }}
+                            className="bg-[#F48024] text-white hover:bg-[#C96A1E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={minimizedCards['systems-integration'] ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"}></path>
+                            </svg>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{minimizedCards['systems-integration'] ? 'Expand' : 'Minimize'}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                </CardHeader>
+                {!minimizedCards['systems-integration'] && (
+                  <CardContent className="px-5 py-4">
+                  <SystemsIntegrationCard
+                    emrSystems={emrSystems}
+                    telephonySystems={telephonySystems}
+                    schedulingNumbersMode={schedulingNumbersMode}
+                    schedulingPhoneNumbers={schedulingPhoneNumbers}
+                    insuranceVerificationSystem={insuranceVerificationSystem}
+                    insuranceVerificationDetails={insuranceVerificationDetails}
+                    additionalInfo={additionalInfo}
+                    clinicalNotes={clinicalNotes}
+                    onAddEmrSystem={() => setEmrSystems(prev => [...prev, ""])}
+                    onUpdateEmrSystem={(index, value) => setEmrSystems(prev => prev.map((s, i) => (i === index ? value : s)))}
+                    onRemoveEmrSystem={(index) => setEmrSystems(prev => prev.filter((_, i) => i !== index))}
+                    onAddTelephonySystem={() => setTelephonySystems(prev => [...prev, ""])}
+                    onUpdateTelephonySystem={(index, value) => setTelephonySystems(prev => prev.map((s, i) => (i === index ? value : s)))}
+                    onRemoveTelephonySystem={(index) => setTelephonySystems(prev => prev.filter((_, i) => i !== index))}
+                    onChangeSchedulingMode={setSchedulingNumbersMode}
+                    onAddSchedulingPhone={() => setSchedulingPhoneNumbers(prev => [...prev, ""])}
+                    onUpdateSchedulingPhone={(index, value) => setSchedulingPhoneNumbers(prev => prev.map((s, i) => (i === index ? value : s)))}
+                    onRemoveSchedulingPhone={(index) => setSchedulingPhoneNumbers(prev => prev.filter((_, i) => i !== index))}
+                    onChangeField={(field, value) => {
+                      if (field === "insuranceVerificationSystem") setInsuranceVerificationSystem(value);
+                      if (field === "insuranceVerificationDetails") setInsuranceVerificationDetails(value);
+                      if (field === "additionalInfo") setAdditionalInfo(value);
+                      if (field === "clinicalNotes") setClinicalNotes(value);
+                    }}
+                  />
+                  </CardContent>
+                )}
+              </Card>
+
+              {/* Account Documents */}
+              <div id="account-documents">
+                <DocumentUpload
+                  title={getDocumentTitle('account')}
+                  documents={getDocumentsForTab(typedData, 'account')}
+                  onUpload={uploadAccountDocument.mutateAsync}
+                  onDelete={deleteAccountDocument.mutateAsync}
+                  isUploading={uploadAccountDocument.isPending}
+                  isDeleting={deleteAccountDocument.isPending}
                 />
-              </CardContent>
-            )}
-          </Card>
-
-          <Card className="border-0 shadow-lg bg-white rounded-xl overflow-hidden">
-            <CardHeader className="bg-[#e2e8f0] text-[#1C275E] p-3 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-[#F48024]/20 rounded-lg flex items-center justify-center">
-                    <svg className="w-5 h-5 text-[#F48024]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                    </svg>
-                  </div>
-                  <CardTitle className="text-lg font-semibold">Team Reporting Structure</CardTitle>
-                </div>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleCardMinimize('team-reporting')}
-                        className="bg-[#F48024] text-white hover:bg-[#C96A1E]"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={minimizedCards['team-reporting'] ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"}></path>
-                        </svg>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{minimizedCards['team-reporting'] ? 'Expand' : 'Minimize'}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
               </div>
-            </CardHeader>
-            {!minimizedCards['team-reporting'] && (
-              <CardContent className="p-4 space-y-4">
-              <TeamReportingSection
-                title="Order Entry Team Reporting"
-                team={orderEntryTeam}
-                onAdd={() => addPerson(setOrderEntryTeam)}
-                onUpdate={(id, field, value) => updatePerson(setOrderEntryTeam, id, field, value)}
-                onRemove={(id, personName) => handleDeletePerson(setOrderEntryTeam, id, personName)}
-              />
-              <TeamReportingSection
-                title="Scheduling Team Reporting"
-                team={schedulingTeam}
-                onAdd={() => addPerson(setSchedulingTeam)}
-                onUpdate={(id, field, value) => updatePerson(setSchedulingTeam, id, field, value)}
-                onRemove={(id, personName) => handleDeletePerson(setSchedulingTeam, id, personName)}
-              />
-              <TeamReportingSection
-                title="Patient Intake Team Reporting"
-                team={patientIntakeTeam}
-                onAdd={() => addPerson(setPatientIntakeTeam)}
-                onUpdate={(id, field, value) => updatePerson(setPatientIntakeTeam, id, field, value)}
-                onRemove={(id, personName) => handleDeletePerson(setPatientIntakeTeam, id, personName)}
-              />
-              <TeamReportingSection
-                title="RCM Team Reporting"
-                team={rcmTeam}
-                onAdd={() => addPerson(setRcmTeam)}
-                onUpdate={(id, field, value) => updatePerson(setRcmTeam, id, field, value)}
-                onRemove={(id, personName) => handleDeletePerson(setRcmTeam, id, personName)}
-              />
-              </CardContent>
-            )}
-          </Card>
 
-          <Card className="border-0 shadow-lg bg-white rounded-xl overflow-hidden">
-            <CardHeader className="bg-[#e2e8f0] text-[#1C275E] p-3 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-[#F48024]/20 rounded-lg flex items-center justify-center">
-                    <svg className="w-5 h-5 text-[#F48024]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
-                    </svg>
-                  </div>
-                  <CardTitle className="text-lg font-semibold">Team Sizes</CardTitle>
-                </div>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleCardMinimize('team-sizes')}
-                        className="bg-[#F48024] text-white hover:bg-[#C96A1E]"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={minimizedCards['team-sizes'] ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"}></path>
-                        </svg>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{minimizedCards['team-sizes'] ? 'Expand' : 'Minimize'}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-            </CardHeader>
-            {!minimizedCards['team-sizes'] && (
-              <CardContent className="p-4">
-              <TeamSizesCard
-                orderEntryTeamSize={orderEntryTeamSize}
-                schedulingTeamSize={schedulingTeamSize}
-                patientIntakeTeamSize={patientIntakeTeamSize}
-                rcmTeamSize={rcmTeamSize}
-                onChange={(field, value) => {
-                  if (field === "orderEntryTeamSize") setOrderEntryTeamSize(value);
-                  if (field === "schedulingTeamSize") setSchedulingTeamSize(value);
-                  if (field === "patientIntakeTeamSize") setPatientIntakeTeamSize(value);
-                  if (field === "rcmTeamSize") setRcmTeamSize(value);
-                }}
-              />
-              </CardContent>
-            )}
-          </Card>
-
-          <Card className="border-0 shadow-lg bg-white rounded-xl overflow-hidden">
-            <CardHeader className="bg-[#e2e8f0] text-[#1C275E] p-3 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-[#F48024]/20 rounded-lg flex items-center justify-center">
-                    <svg className="w-5 h-5 text-[#F48024]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                    </svg>
-                  </div>
-                  <CardTitle className="text-lg font-semibold">Opportunity Sizing</CardTitle>
-                </div>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleCardMinimize('opportunity-sizing')}
-                        className="bg-[#F48024] text-white hover:bg-[#C96A1E]"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={minimizedCards['opportunity-sizing'] ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"}></path>
-                        </svg>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{minimizedCards['opportunity-sizing'] ? 'Expand' : 'Minimize'}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-            </CardHeader>
-            {!minimizedCards['opportunity-sizing'] && (
-              <CardContent className="p-4">
-              <OpportunitySizingCard
-                opportunitySizing={opportunitySizing}
-                onChange={(updates) => setOpportunitySizing(prev => ({ ...prev, ...updates }))}
-              />
-              </CardContent>
-            )}
-          </Card>
-
-          <Card className="border-0 shadow-lg bg-white rounded-xl overflow-hidden">
-            <CardHeader className="bg-[#e2e8f0] text-[#1C275E] p-3 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-[#F48024]/20 rounded-lg flex items-center justify-center">
-                    <svg className="w-5 h-5 text-[#F48024]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                    </svg>
-                  </div>
-                  <CardTitle className="text-lg font-semibold">Systems Integration</CardTitle>
-                </div>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleCardMinimize('systems-integration')}
-                        className="bg-[#F48024] text-white hover:bg-[#C96A1E]"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={minimizedCards['systems-integration'] ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"}></path>
-                        </svg>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{minimizedCards['systems-integration'] ? 'Expand' : 'Minimize'}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-            </CardHeader>
-            {!minimizedCards['systems-integration'] && (
-              <CardContent className="p-4">
-              <SystemsIntegrationCard
-                emrSystems={emrSystems}
-                telephonySystems={telephonySystems}
-                schedulingNumbersMode={schedulingNumbersMode}
-                schedulingPhoneNumbers={schedulingPhoneNumbers}
-                insuranceVerificationSystem={insuranceVerificationSystem}
-                insuranceVerificationDetails={insuranceVerificationDetails}
-                additionalInfo={additionalInfo}
-                clinicalNotes={clinicalNotes}
-                onAddEmrSystem={() => setEmrSystems(prev => [...prev, ""])}
-                onUpdateEmrSystem={(index, value) => setEmrSystems(prev => prev.map((s, i) => (i === index ? value : s)))}
-                onRemoveEmrSystem={(index) => setEmrSystems(prev => prev.filter((_, i) => i !== index))}
-                onAddTelephonySystem={() => setTelephonySystems(prev => [...prev, ""])}
-                onUpdateTelephonySystem={(index, value) => setTelephonySystems(prev => prev.map((s, i) => (i === index ? value : s)))}
-                onRemoveTelephonySystem={(index) => setTelephonySystems(prev => prev.filter((_, i) => i !== index))}
-                onChangeSchedulingMode={setSchedulingNumbersMode}
-                onAddSchedulingPhone={() => setSchedulingPhoneNumbers(prev => [...prev, ""])}
-                onUpdateSchedulingPhone={(index, value) => setSchedulingPhoneNumbers(prev => prev.map((s, i) => (i === index ? value : s)))}
-                onRemoveSchedulingPhone={(index) => setSchedulingPhoneNumbers(prev => prev.filter((_, i) => i !== index))}
-                onChangeField={(field, value) => {
-                  if (field === "insuranceVerificationSystem") setInsuranceVerificationSystem(value);
-                  if (field === "insuranceVerificationDetails") setInsuranceVerificationDetails(value);
-                  if (field === "additionalInfo") setAdditionalInfo(value);
-                  if (field === "clinicalNotes") setClinicalNotes(value);
-                }}
-              />
-              </CardContent>
-            )}
-          </Card>
-
-          {/* Account Documents */}
-          <div id="account-documents">
-            <DocumentUpload
-              title={getDocumentTitle('account')}
-              documents={getDocumentsForTab(typedData, 'account')}
-              onUpload={uploadAccountDocument.mutateAsync}
-              onDelete={deleteAccountDocument.mutateAsync}
-              isUploading={uploadAccountDocument.isPending}
-              isDeleting={deleteAccountDocument.isPending}
-            />
-          </div>
-
-          {/* Scroll to Top Button */}
-          <ScrollToTopButton />
+              {/* Scroll to Top Button */}
+              <ScrollToTopButton />
             </CardContent>
           </Card>
         </TabsContent>
@@ -1339,16 +1420,20 @@ export default function Launchpad() {
 
         <TabsContent value="insurance">
           {/* Insurance Sticky Header */}
-          <Card className="border-0 shadow-lg bg-white rounded-xl">
-            <CardHeader className="sticky top-0 z-50 bg-[#1C275E] text-white p-3 border-b border-[#1C275E]/20 shadow-sm rounded-t-xl">
-              <div className="flex items-center justify-between">
+          <Card className="border border-slate-200/80 bg-white shadow-sm rounded-2xl transition-shadow duration-200 hover:shadow-md">
+            <CardHeader className={`sticky top-0 z-50 bg-[#1C275E] text-white border-b border-[#1C275E]/20 rounded-t-2xl transition-all duration-300 ${
+              isScrolled
+                ? 'p-2 shadow-lg shadow-black/10'
+                : 'p-3 shadow-sm'
+            }`}>
+              <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-[#F48024]/20 rounded-lg flex items-center justify-center">
-                    <svg className="w-5 h-5 text-[#F48024]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-9 h-9 bg-[#F48024]/20 rounded-xl flex items-center justify-center">
+                    <svg className="w-4.5 h-4.5 text-[#F48024]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
                     </svg>
                   </div>
-                  <CardTitle className="text-lg font-semibold">Insurance</CardTitle>
+                  <CardTitle className="text-lg font-semibold tracking-tight">Insurance</CardTitle>
                 </div>
                 <div className="flex items-center gap-3">
                   <Button
@@ -1359,14 +1444,14 @@ export default function Launchpad() {
                         documentsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
                       }
                     }}
-                    className="bg-transparent text-[#e6eff7] border-[#95a3b8] hover:bg-[#233072] hover:text-white"
+                    className="bg-transparent text-[#e6eff7] border-[#95a3b8] hover:bg-[#233072] hover:text-white focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
                   >
                     View Documents
                   </Button>
                   <Button
                     onClick={handleSaveInsurance}
                     disabled={updateInsurance.isPending}
-                    className="min-w-[100px] bg-[#2f7a5d] hover:bg-[#276651] active:bg-[#1f5040] text-white focus:ring-2 focus:ring-[#22b07d] focus:ring-offset-2"
+                    className="min-w-[100px] bg-[#0d9488] hover:bg-[#0f766e] active:bg-[#115e59] text-white focus:ring-2 focus:ring-[#0d9488] focus:ring-offset-2"
                   >
                     {updateInsurance.isPending ? "Saving..." : "Save"}
                   </Button>
