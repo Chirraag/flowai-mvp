@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Check } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OrgSpecialityService, SpecialtyServiceEntry, OrgLocation } from "@/components/launchpad/types";
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -60,6 +60,9 @@ export default function SpecialtiesModule({
   const [activeTabs, setActiveTabs] = React.useState<Record<string, string>>({});
   const [serviceSelections, setServiceSelections] = React.useState<Record<string, number | null>>({});
 
+  // Scroll-aware header state
+  const [isScrolled, setIsScrolled] = React.useState(false);
+
   const [removeServiceDialog, setRemoveServiceDialog] = React.useState<{
     open: boolean;
     specialtyId?: string;
@@ -74,6 +77,17 @@ export default function SpecialtiesModule({
     specialtyId?: string;
     specialtyName?: string;
   }>({ open: false });
+
+  // Scroll detection effect for header styling
+  React.useEffect(() => {
+    const handleScroll = () => {
+      const scrollTop = window.scrollY;
+      setIsScrolled(scrollTop > 20);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const toggleCardMinimize = (cardId: string) => {
     setMinimizedCards(prev => ({
@@ -147,11 +161,15 @@ export default function SpecialtiesModule({
     setServiceSelections(prev => ({ ...prev, [specialtyId]: index }));
   };
   return (
-    <Card className="border-0 shadow-lg bg-white rounded-xl">
-      <CardHeader className="sticky top-0 z-50 bg-[#1C275E] text-white p-3 border-b border-[#1C275E]/20 shadow-sm rounded-t-xl">
+    <Card className="border border-slate-200/80 bg-white shadow-sm rounded-2xl transition-shadow duration-200">
+      <CardHeader className={`sticky top-0 z-50 bg-[#1C275E] text-white border-b border-[#1C275E]/20 rounded-t-2xl transition-all duration-300 ${
+        isScrolled
+          ? 'p-2 shadow-lg shadow-black/10'
+          : 'p-3 shadow-sm'
+      }`}>
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#F48024]/20 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-[#F48024]/20 rounded-xl flex items-center justify-center">
                     <svg
                       className="w-5 h-5 text-[#F48024]"
                       viewBox="0 0 24 24"
@@ -169,13 +187,25 @@ export default function SpecialtiesModule({
             <CardTitle className="text-lg font-semibold">Specialties</CardTitle>
           </div>
           <div className="flex items-center gap-3">
-            <Input
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search specialties..."
-              aria-label="Search specialties"
-              className="h-8 w-[160px] sm:w-[220px] md:w-[280px] bg-white text-[#1C275E] placeholder:text-[#1C275E]/60 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]"
-            />
+            <div className="relative flex items-center">
+              <Input
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search specialties..."
+                aria-label="Search specialties"
+                className="h-10 w-[160px] sm:w-[220px] md:w-[280px] bg-white text-[#1C275E] placeholder:text-[#1C275E]/60 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 pr-10 transition"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0d9488]/40"
+                  aria-label="Clear specialties search"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
             <Button
               variant="outline"
               onClick={() => {
@@ -192,7 +222,7 @@ export default function SpecialtiesModule({
               <Button
                 onClick={onSave}
                 disabled={isSaving}
-                className="min-w-[100px] bg-[#2f7a5d] hover:bg-[#276651] active:bg-[#1f5040] text-white focus:ring-2 focus:ring-[#22b07d] focus:ring-offset-2"
+                className="min-w-[100px] bg-[#0d9488] hover:bg-[#0f766e] active:bg-[#115e59] text-white focus:ring-2 focus:ring-[#0d9488] focus:ring-offset-2"
               >
                 {isSaving ? "Saving..." : "Save"}
               </Button>
@@ -201,9 +231,9 @@ export default function SpecialtiesModule({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="p-4 space-y-4">
+      <CardContent className="p-6 space-y-6">
         {hasUnresolved && (
-          <div className="text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-3 text-sm flex items-center justify-between">
+          <div className="text-amber-700 bg-amber-50/90 border border-amber-200 rounded-xl px-4 py-3 text-sm flex items-center justify-between gap-3">
             <div>Some specialties reference unknown location codes: {Array.from(new Set(unresolvedAll)).join(', ')}. Add the missing locations in the Locations tab or update selections.</div>
                                   <a href="#" className="text-[#1c275e] hover:underline ml-2" onClick={(e) => {
               e.preventDefault();
@@ -217,13 +247,20 @@ export default function SpecialtiesModule({
         {filteredSpecialties.map((spec) => {
           const cardId = `specialty-${spec.id}`;
           return (
-            <Card key={spec.id} className="border-0 shadow-lg bg-white rounded-xl overflow-hidden" data-specialty-card>
-              <CardHeader className="bg-[#e2e8f0] text-[#1C275E] p-3 border-b border-gray-200">
+            <Card
+              key={spec.id}
+              className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]"
+              data-specialty-card
+            >
+              <CardHeader
+                onClick={() => toggleCardMinimize(cardId)}
+                className="cursor-pointer bg-[#eef2ff] text-[#1C275E] px-5 py-4 border-b border-slate-200 transition-colors hover:bg-[#e0e7ff]"
+              >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-[#F48024]/20 rounded-lg flex items-center justify-center">
+                    <div className="w-9 h-9 bg-[#F48024]/20 rounded-xl flex items-center justify-center">
                     <svg
-                      className="w-5 h-5 text-[#F48024]"
+                      className="w-4.5 h-4.5 text-[#F48024]"
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
@@ -236,18 +273,31 @@ export default function SpecialtiesModule({
                       <path d="M12 8v8M8 12h8" strokeWidth="5" />
                     </svg>
                     </div>
-                    <CardTitle className="text-lg font-semibold">{spec.specialty_name || "Specialty"}</CardTitle>
+                    <CardTitle className="text-lg font-semibold tracking-tight">{spec.specialty_name || "Specialty"}</CardTitle>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="sm" className="bg-white text-[#1C275E] border border-[#1C275E] hover:bg-[#233072] hover:text-white focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2" onClick={() => handleDeleteSpecialty(spec.id, spec.specialty_name || 'this specialty')}>Delete</Button>
+                    <Button
+                       variant="outline"
+                       size="sm"
+                       className="border-[#c0352b]/40 text-[#c0352b] hover:bg-[#c0352b] hover:text-white focus-visible:ring-2 focus-visible:ring-[#c0352b]/40 focus-visible:outline-none"
+                       onClick={(event) => {
+                         event.stopPropagation();
+                         handleDeleteSpecialty(spec.id, spec.specialty_name || 'this specialty');
+                       }}
+                     >
+                      Delete
+                    </Button>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => toggleCardMinimize(cardId)}
-                            className="bg-[#F48024] text-white hover:bg-[#C96A1E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              toggleCardMinimize(cardId);
+                            }}
+                            className="bg-[#F48024] text-white hover:bg-[#C96A1E] focus-visible:ring-2 focus-visible:ring-[#fef08a] focus-visible:ring-offset-2 focus-visible:outline-none"
                           >
                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={minimizedCards[cardId] ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"}></path>
@@ -263,50 +313,61 @@ export default function SpecialtiesModule({
                 </div>
               </CardHeader>
               {!minimizedCards[cardId] && (
-                <CardContent className="p-0">
+                <CardContent className="px-5 py-4">
                   <Tabs
                     value={activeTabs[cardId] || "basic"}
                     onValueChange={(value) => handleTabChange(cardId, value)}
                     className="w-full"
                   >
-                    <TabsList className="grid w-full grid-cols-3 rounded-none border-b bg-transparent">
+                    <TabsList className="flex w-full rounded-full border border-slate-200 bg-slate-50/70 p-0.5 h-14 items-center justify-center">
                       <TabsTrigger
                         value="basic"
-                        className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#1C275E] data-[state=active]:bg-transparent"
+                        className="flex-1 rounded-full border-transparent data-[state=active]:bg-[#eef2ff] data-[state=active]:text-[#1C275E] data-[state=active]:shadow-sm flex items-center justify-center text-center"
                       >
                         Basic Info
                       </TabsTrigger>
                       <TabsTrigger
                         value="sources"
-                        className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#1C275E] data-[state=active]:bg-transparent"
+                        className="flex-1 rounded-full border-transparent data-[state=active]:bg-[#eef2ff] data-[state=active]:text-[#1C275E] data-[state=active]:shadow-sm flex items-center justify-center text-center"
                       >
                         Sources
                       </TabsTrigger>
                       <TabsTrigger
                         value="services"
-                        className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#1C275E] data-[state=active]:bg-transparent"
+                        className="flex-1 rounded-full border-transparent data-[state=active]:bg-[#eef2ff] data-[state=active]:text-[#1C275E] data-[state=active]:shadow-sm flex items-center justify-center text-center"
                       >
                         Services
                       </TabsTrigger>
                     </TabsList>
 
-                    <TabsContent value="basic" className="p-4 space-y-4">
-                      <div className="flex-1">
-                        <Label className="text-sm font-medium">Specialty Name</Label>
-                        <Input className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]" placeholder="e.g., Cardiology" value={spec.specialty_name} onChange={(e) => onUpdate(spec.id, { specialty_name: e.target.value })} />
-                      </div>
+                    <TabsContent value="basic" className="pt-4 space-y-5">
+                      <div className="flex-1 space-y-5">
+                        <div className="flex-1">
+                          <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Specialty Name</Label>
+                          <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="e.g., Cardiology" value={spec.specialty_name} onChange={(e) => onUpdate(spec.id, { specialty_name: e.target.value })} />
+                        </div>
 
-                      <div>
-                        <Label className="text-sm font-medium">Associated Locations</Label>
-                        <div className="mt-2">
-                          <div className="border rounded-md p-3">
-                            <div className="mb-2">
+                        <div className="space-y-3">
+                          <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Associated Locations</Label>
+                          <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/70 space-y-3">
+                            <div className="flex items-center justify-between gap-2">
                               <Input
                                 placeholder="Search locations..."
                                 value={locationSearchTerm}
                                 onChange={(e) => setLocationSearchTerm(e.target.value)}
-                                className="text-sm border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]"
+                                className="h-10 text-sm border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
                               />
+                              {locationSearchTerm && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-xs text-slate-500 hover:text-slate-700"
+                                  onClick={() => setLocationSearchTerm('')}
+                                >
+                                  Clear
+                                </Button>
+                              )}
                             </div>
                             <div className="flex flex-wrap gap-2 max-h-64 overflow-y-auto">
                               {(() => {
@@ -320,12 +381,12 @@ export default function SpecialtiesModule({
                                   filteredLocations.map((location) => (
                                     <Button
                                       key={location.id}
-                                      variant="outline"
+                                      variant={spec.location_ids.includes(location.location_id) ? 'default' : 'outline'}
                                       size="sm"
-                                      className={`relative px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                                      className={`relative px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                                         spec.location_ids.includes(location.location_id)
                                           ? 'bg-[#1C275E] text-white border-[#1C275E] hover:bg-[#233072] hover:text-white'
-                                          : 'bg-white text-[#1C275E] border-[#1C275E] hover:bg-[#1C275E] hover:text-white'
+                                          : 'bg-white text-[#1C275E] border-[#BEC4DB] hover:bg-[#1C275E]/10'
                                       }`}
                                       onClick={() => {
                                         const next = new Set(spec.location_ids);
@@ -350,7 +411,7 @@ export default function SpecialtiesModule({
                               if (unresolved.length === 0) return null;
                               unresolvedNotice?.(spec.id, unresolved);
                               return (
-                                <div className="flex items-center justify-between text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-2 text-sm mt-2">
+                                <div className="flex items-center justify-between text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-sm">
                                   <div>Unresolved codes: {unresolved.join(', ')}</div>
                                   <a href="#" className="underline" onClick={(e) => {
                                     e.preventDefault();
@@ -373,88 +434,88 @@ export default function SpecialtiesModule({
                       </div> */}
                     </TabsContent>
 
-                    <TabsContent value="sources" className="p-4 space-y-4">
+                    <TabsContent value="sources" className="pt-4 space-y-5">
                       <div className="space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
-                            <Label className="text-sm font-medium">Physician Names Source</Label>
-                            <Input className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]" placeholder="Source type (e.g., EMR)" value={spec.physician_names_source_type || ""} onChange={(e) => onUpdate(spec.id, { physician_names_source_type: e.target.value })} />
+                            <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Physician Names Source</Label>
+                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="Source type (e.g., EMR)" value={spec.physician_names_source_type || ""} onChange={(e) => onUpdate(spec.id, { physician_names_source_type: e.target.value })} />
                           </div>
                           <div>
-                            <Label className="text-sm font-medium">Source Link</Label>
-                            <Input className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]" placeholder="URL" value={spec.physician_names_source_link || ""} onChange={(e) => onUpdate(spec.id, { physician_names_source_link: e.target.value })} />
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          <div>
-                            <Label className="text-sm font-medium">New Patients Source</Label>
-                            <Input className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]" placeholder="Source type" value={spec.new_patients_source_type || ""} onChange={(e) => onUpdate(spec.id, { new_patients_source_type: e.target.value })} />
-                          </div>
-                          <div>
-                            <Label className="text-sm font-medium">Source Link</Label>
-                            <Input className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]" placeholder="URL" value={spec.new_patients_source_link || ""} onChange={(e) => onUpdate(spec.id, { new_patients_source_link: e.target.value })} />
+                            <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Source Link</Label>
+                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="URL" value={spec.physician_names_source_link || ""} onChange={(e) => onUpdate(spec.id, { physician_names_source_link: e.target.value })} />
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
-                            <Label className="text-sm font-medium">Physician Locations Source</Label>
-                            <Input className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]" placeholder="Source type" value={spec.physician_locations_source_type || ""} onChange={(e) => onUpdate(spec.id, { physician_locations_source_type: e.target.value })} />
+                            <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">New Patients Source</Label>
+                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="Source type" value={spec.new_patients_source_type || ""} onChange={(e) => onUpdate(spec.id, { new_patients_source_type: e.target.value })} />
                           </div>
                           <div>
-                            <Label className="text-sm font-medium">Source Link</Label>
-                            <Input className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]" placeholder="URL" value={spec.physician_locations_source_link || ""} onChange={(e) => onUpdate(spec.id, { physician_locations_source_link: e.target.value })} />
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          <div>
-                            <Label className="text-sm font-medium">Physician Credentials Source</Label>
-                            <Input className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]" placeholder="Source type" value={spec.physician_credentials_source_type || ""} onChange={(e) => onUpdate(spec.id, { physician_credentials_source_type: e.target.value })} />
-                          </div>
-                          <div>
-                            <Label className="text-sm font-medium">Source Link</Label>
-                            <Input className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]" placeholder="URL" value={spec.physician_credentials_source_link || ""} onChange={(e) => onUpdate(spec.id, { physician_credentials_source_link: e.target.value })} />
+                            <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Source Link</Label>
+                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="URL" value={spec.new_patients_source_link || ""} onChange={(e) => onUpdate(spec.id, { new_patients_source_link: e.target.value })} />
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
-                            <Label className="text-sm font-medium">Services Offered Source</Label>
-                            <Input className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]" placeholder="Source type" value={spec.services_offered_source_type || ""} onChange={(e) => onUpdate(spec.id, { services_offered_source_type: e.target.value })} />
+                            <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Physician Locations Source</Label>
+                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="Source type" value={spec.physician_locations_source_type || ""} onChange={(e) => onUpdate(spec.id, { physician_locations_source_type: e.target.value })} />
                           </div>
                           <div>
-                            <Label className="text-sm font-medium">Source Link</Label>
-                            <Input className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]" placeholder="URL" value={spec.services_offered_source_link || ""} onChange={(e) => onUpdate(spec.id, { services_offered_source_link: e.target.value })} />
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          <div>
-                            <Label className="text-sm font-medium">Patient Prep Source</Label>
-                            <Input className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]" placeholder="Source type" value={spec.patient_prep_source_type || ""} onChange={(e) => onUpdate(spec.id, { patient_prep_source_type: e.target.value })} />
-                          </div>
-                          <div>
-                            <Label className="text-sm font-medium">Source Link</Label>
-                            <Input className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]" placeholder="URL" value={spec.patient_prep_source_link || ""} onChange={(e) => onUpdate(spec.id, { patient_prep_source_link: e.target.value })} />
+                            <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Source Link</Label>
+                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="URL" value={spec.physician_locations_source_link || ""} onChange={(e) => onUpdate(spec.id, { physician_locations_source_link: e.target.value })} />
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
-                            <Label className="text-sm font-medium">Patient FAQs Source</Label>
-                            <Input className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]" placeholder="Source type" value={spec.patient_faqs_source_type || ""} onChange={(e) => onUpdate(spec.id, { patient_faqs_source_type: e.target.value })} />
+                            <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Physician Credentials Source</Label>
+                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="Source type" value={spec.physician_credentials_source_type || ""} onChange={(e) => onUpdate(spec.id, { physician_credentials_source_type: e.target.value })} />
                           </div>
                           <div>
-                            <Label className="text-sm font-medium">Source Link</Label>
-                            <Input className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]" placeholder="URL" value={spec.patient_faqs_source_link || ""} onChange={(e) => onUpdate(spec.id, { patient_faqs_source_link: e.target.value })} />
+                            <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Source Link</Label>
+                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="URL" value={spec.physician_credentials_source_link || ""} onChange={(e) => onUpdate(spec.id, { physician_credentials_source_link: e.target.value })} />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Services Offered Source</Label>
+                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="Source type" value={spec.services_offered_source_type || ""} onChange={(e) => onUpdate(spec.id, { services_offered_source_type: e.target.value })} />
+                          </div>
+                          <div>
+                            <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Source Link</Label>
+                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="URL" value={spec.services_offered_source_link || ""} onChange={(e) => onUpdate(spec.id, { services_offered_source_link: e.target.value })} />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Patient Prep Source</Label>
+                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="Source type" value={spec.patient_prep_source_type || ""} onChange={(e) => onUpdate(spec.id, { patient_prep_source_type: e.target.value })} />
+                          </div>
+                          <div>
+                            <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Source Link</Label>
+                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="URL" value={spec.patient_prep_source_link || ""} onChange={(e) => onUpdate(spec.id, { patient_prep_source_link: e.target.value })} />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Patient FAQs Source</Label>
+                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="Source type" value={spec.patient_faqs_source_type || ""} onChange={(e) => onUpdate(spec.id, { patient_faqs_source_type: e.target.value })} />
+                          </div>
+                          <div>
+                            <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Source Link</Label>
+                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="URL" value={spec.patient_faqs_source_link || ""} onChange={(e) => onUpdate(spec.id, { patient_faqs_source_link: e.target.value })} />
                           </div>
                         </div>
                       </div>
                     </TabsContent>
 
-                    <TabsContent value="services" className="p-4">
+                    <TabsContent value="services" className="pt-4">
                       {(() => {
                         const services = spec.services;
                         const selectedIndex = serviceSelections[spec.id] ?? null;
@@ -492,8 +553,8 @@ export default function SpecialtiesModule({
                         };
 
                         return (
-                          <div className="flex gap-4">
-                            <div className="w-64 shrink-0 border border-[#cbd5e1] rounded-lg bg-[#f1f5f9] p-3 space-y-3">
+                          <div className="flex flex-col lg:flex-row lg:gap-5 gap-4">
+                            <div className="lg:w-64 shrink-0 border border-slate-200 rounded-2xl bg-slate-50/80 p-4 space-y-3 shadow-inner">
                               <Button
                                 size="sm"
                                 className="w-full bg-[#f49024] hover:bg-[#d87f1f] text-white"
@@ -501,7 +562,7 @@ export default function SpecialtiesModule({
                               >
                                 Add Service
                               </Button>
-                              <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
+                              <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
                                 {services.length === 0 ? (
                                   <p className="text-xs text-muted-foreground text-center py-6">No services yet</p>
                                 ) : (
@@ -513,10 +574,10 @@ export default function SpecialtiesModule({
                                         key={index}
                                         variant={isSelected ? 'default' : 'ghost'}
                                         size="sm"
-                                        className={`w-full justify-start text-left text-xs font-medium transition-colors ${
+                                        className={`w-full justify-start text-left text-xs font-medium transition-all rounded-lg ${
                                           isSelected
-                                            ? 'bg-[#1C275E] text-white hover:bg-[#233072]'
-                                            : 'text-[#1C275E] hover:bg-[#e2e8f0]'
+                                            ? 'bg-[#1C275E] text-white hover:bg-[#233072] shadow-sm'
+                                            : 'text-[#1C275E] hover:bg-white/80'
                                         }`}
                                         onClick={() => handleSelectService(spec.id, index)}
                                       >
@@ -527,14 +588,14 @@ export default function SpecialtiesModule({
                                 )}
                               </div>
                             </div>
-                            <div className="flex-1 border border-gray-200 rounded-lg bg-white shadow-sm p-4">
+                            <div className="flex-1 border border-slate-200 rounded-2xl bg-white shadow-sm p-6 transition-shadow focus-within:shadow-md focus-within:border-[#0d9488]/50">
                               {selectedService ? (
-                                <div className="space-y-3 text-sm">
-                                  <div className="flex items-start justify-between">
-                                    <div className="flex-1 mr-4">
+                                <div className="space-y-5 text-sm">
+                                  <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                                    <div className="flex-1 md:mr-4">
                                       <Label className="text-xs font-semibold text-[#1C275E] uppercase tracking-wide">Service Name</Label>
                                       <Input
-                                        className="mt-1 h-8 text-sm border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]"
+                                        className="mt-2 h-10 text-sm border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20"
                                         placeholder="e.g., MRI Scan, Blood Test"
                                         value={selectedService.name}
                                         onChange={(e) => handleServiceFieldChange('name', e.target.value)}
@@ -543,7 +604,7 @@ export default function SpecialtiesModule({
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      className="bg-transparent text-[#c0352b] border-[#c0352b] hover:bg-[#c0352b] hover:text-white"
+                                      className="self-start mt-1 border-[#c0352b]/40 text-[#c0352b] hover:bg-[#c0352b] hover:text-white"
                                       onClick={() =>
                                         setRemoveServiceDialog({
                                           open: true,
@@ -560,7 +621,7 @@ export default function SpecialtiesModule({
                                   <div className="space-y-2">
                                     <Label className="text-xs font-semibold text-[#1C275E] uppercase tracking-wide">Patient Preparation Requirements</Label>
                                     <Textarea
-                                      className="min-h-[120px] text-sm border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]"
+                                      className="min-h-[120px] text-sm border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
                                       placeholder="Describe what patients need to do before this service"
                                       value={selectedService.patient_prep_requirements || ''}
                                       onChange={(e) => handleServiceFieldChange('patient_prep_requirements', e.target.value)}
@@ -570,18 +631,18 @@ export default function SpecialtiesModule({
                                   <div className="space-y-2">
                                     <Label className="text-xs font-semibold text-[#1C275E] uppercase tracking-wide">Frequently Asked Questions</Label>
                                     <Textarea
-                                      className="min-h-[120px] text-sm border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]"
+                                      className="min-h-[120px] text-sm border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
                                       placeholder="Common questions and answers about this service"
                                       value={selectedService.faq || ''}
                                       onChange={(e) => handleServiceFieldChange('faq', e.target.value)}
                                     />
                                   </div>
 
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                       <Label className="text-xs font-semibold text-[#1C275E] uppercase tracking-wide">Service Information Name</Label>
                                       <Input
-                                        className="h-8 text-sm border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]"
+                                        className="h-10 text-sm border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20"
                                         placeholder="e.g., Procedure Details, Cost Information"
                                         value={selectedService.service_information_name || ''}
                                         onChange={(e) => handleServiceFieldChange('service_information_name', e.target.value)}
@@ -590,7 +651,7 @@ export default function SpecialtiesModule({
                                     <div className="space-y-2">
                                       <Label className="text-xs font-semibold text-[#1C275E] uppercase tracking-wide">Information Source</Label>
                                       <Input
-                                        className="h-8 text-sm border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]"
+                                        className="h-10 text-sm border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20"
                                         placeholder="Source of this information"
                                         value={selectedService.service_information_source || ''}
                                         onChange={(e) => handleServiceFieldChange('service_information_source', e.target.value)}

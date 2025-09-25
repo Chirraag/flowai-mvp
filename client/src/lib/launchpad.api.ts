@@ -282,6 +282,8 @@ export const useLaunchpadData = (orgId?: number, enabled?: boolean) =>
     enabled: enabled ?? !!orgId,
     staleTime: 5 * 60 * 1000,
     retry: 2,
+    // Ensure fresh data on organization switch
+    refetchOnMount: true,
   });
 
 // Update mutations with optimized caching
@@ -515,32 +517,5 @@ export const useDeleteCuratedKB = (orgId?: number) => {
         queryKey: ['launchpad', String(orgId ?? '')]
       });
     },
-  });
-};
-
-// =============================================================================
-// HELPER FUNCTIONS (from original launchpad.queries.ts)
-// =============================================================================
-
-// Debounced cache invalidation helper
-let invalidationTimeout: NodeJS.Timeout | null = null;
-
-const debouncedInvalidation = (queryClient: any, orgId?: number) => {
-  if (invalidationTimeout) {
-    clearTimeout(invalidationTimeout);
-  }
-
-  invalidationTimeout = setTimeout(() => {
-    queryClient.invalidateQueries({
-      queryKey: ['launchpad', String(orgId ?? '')]
-    });
-    invalidationTimeout = null;
-  }, 500); // 500ms debounce
-};
-
-// Helper function for manual cache invalidation in chained operations
-export const invalidateLaunchpadCache = (queryClient: any, orgId?: number) => {
-  queryClient.invalidateQueries({
-    queryKey: ['launchpad', String(orgId ?? '')]
   });
 };
