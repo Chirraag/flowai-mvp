@@ -8,6 +8,7 @@ import {
 } from "react";
 import { queryClient } from "@/lib/queryClient";
 import { api } from "@/lib/api";
+import type { QueryFilters } from "@tanstack/react-query";
 
 interface User {
   id: number;
@@ -318,12 +319,39 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
+  const clearOrgScopedQueries = async () => {
+    const orgQueryFilters: QueryFilters = {
+      predicate: (query) => {
+        const key = query.queryKey?.[0];
+        return (
+          key === "launchpad" ||
+          key === "schedulingAgent" ||
+          key === "documents" ||
+          key === "knowledge"
+        );
+      },
+    };
+
+    try {
+      await queryClient.cancelQueries(orgQueryFilters);
+    } catch (error) {
+      console.warn("Failed to cancel queries during org switch", error);
+    }
+
+    try {
+      queryClient.removeQueries(orgQueryFilters);
+    } catch (error) {
+      console.warn("Failed to remove queries during org switch", error);
+    }
+  };
+
   const switchOrganization = async (orgId: number) => {
     try {
+      await clearOrgScopedQueries();
+
       const response = await api.post("/auth/select-org", { orgId });
 
       if (response.success && response.token && response.user) {
-        // Update tokens
         setToken(response.token);
         localStorage.setItem("auth_token", response.token);
 
@@ -331,7 +359,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           localStorage.setItem("refresh_token", response.refreshToken);
         }
 
-        // Update user data with new organization
         const mappedUser: User = {
           id: response.user.id,
           username: response.user.username,
@@ -345,6 +372,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           last_login: new Date().toISOString(),
         };
         setUser(mappedUser);
+
+        await clearOrgScopedQueries();
       } else {
         throw new Error("Invalid response from server");
       }

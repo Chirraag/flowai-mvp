@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -38,6 +39,7 @@ export default function OrganizationSwitcher({
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
   const [isExpanded, setIsExpanded] = useState(false);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(false);
@@ -84,18 +86,14 @@ export default function OrganizationSwitcher({
 
     setSwitching(orgId);
     try {
-      // Find the organization name before switching (for toast message)
       const targetOrg = organizations.find((org) => org.id === orgId);
-      
+
       await switchOrganization(orgId);
 
-      // Extract the current page path (everything after the orgId)
       const currentPath = location.pathname;
       const pathParts = currentPath.split('/');
-      // Remove empty string and current orgId, keep the rest
       const pageRoute = pathParts.slice(2).join('/') || 'launchpad';
-      
-      // Navigate to the same page but with the new organization
+
       navigate(`/${orgId}/${pageRoute}`);
 
       toast({

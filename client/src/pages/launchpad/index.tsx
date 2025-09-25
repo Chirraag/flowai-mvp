@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState, useRef } from "react";
+import React, { useEffect, useMemo, useState, useRef, useCallback } from "react";
+import { useParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,7 +38,6 @@ import {
   useUpdateLocations,
   useUpdateSpecialties,
   useUpdateInsurance,
-  invalidateLaunchpadCache,
   useUploadAccountDocument,
   useDeleteAccountDocument,
   useUploadLocationsDocument,
@@ -49,6 +49,7 @@ import {
   useCreateCuratedKB,
   useDeleteCuratedKB
 } from "@/lib/launchpad.api";
+import type { LaunchpadFetchData } from "@/lib/launchpad.types";
 import { useQueryClient } from "@tanstack/react-query";
 import { makeLocationCodeMap, makeLocationOptions } from "@/lib/launchpad.utils";
 import {
@@ -82,23 +83,15 @@ export default function Launchpad() {
   const { user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { orgId: urlOrgId } = useParams<{ orgId: string }>();
   
-  // Temporary fallback: extract orgId from JWT token if user data is missing
-  let orgId = user?.org_id ?? user?.workspaceId;
-  if (!orgId) {
-    try {
-      const token = localStorage.getItem('auth_token');
-      if (token) {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        orgId = payload.orgId;
-        console.log('Launchpad: Extracted orgId from JWT token:', orgId);
-      }
-    } catch (error) {
-      console.warn('Launchpad: Failed to extract orgId from token:', error);
-    }
-  }
+  // Derive orgId from URL params (most reliable source) and convert to number
+  const orgId = urlOrgId ? parseInt(urlOrgId, 10) : undefined;
   
   const { data, isLoading, isError, refetch } = useLaunchpadData(orgId, !!orgId && !authLoading);
+  
+  // Type assertion to help TypeScript understand the data structure
+  const typedData = data as LaunchpadFetchData | undefined;
 
   // Update mutations
   const updateAccountDetails = useUpdateAccountDetails(orgId);
@@ -126,6 +119,11 @@ export default function Launchpad() {
     isError,
     queryEnabled: !!orgId && !authLoading
   });
+
+  // Debug log when orgId changes
+  useEffect(() => {
+    console.log('Launchpad: orgId changed to:', orgId);
+  }, [orgId]);
   // Account Overview
   const [accountName, setAccountName] = useState("");
   const [websiteAddress, setWebsiteAddress] = useState("");
@@ -197,6 +195,60 @@ export default function Launchpad() {
     personName?: string;
     setter?: React.Dispatch<React.SetStateAction<Person[]>>;
   }>({ open: false });
+  const previousOrgIdRef = useRef<number | undefined>(undefined);
+
+  const resetLaunchpadState = () => {
+    setAccountName("");
+    setWebsiteAddress("");
+    setHeadquartersAddress("");
+    setDecisionMakers([]);
+    setInfluencers([]);
+    setOrderEntryTeam([]);
+    setSchedulingTeam([]);
+    setPatientIntakeTeam([]);
+    setRcmTeam([]);
+    setOrderEntryTeamSize(undefined);
+    setSchedulingTeamSize(undefined);
+    setPatientIntakeTeamSize(undefined);
+    setRcmTeamSize(undefined);
+    setEmrSystems([]);
+    setTelephonySystems([]);
+    setSchedulingPhoneNumbers([]);
+    setInsuranceVerificationSystem("");
+    setInsuranceVerificationDetails("");
+    setAdditionalInfo("");
+    setClinicalNotes("");
+    setSchedulingStructure("");
+    setRcmStructure("");
+    setOpportunitySizing({});
+    setOrderEntryTeamReporting(undefined);
+    setSchedulingTeamReporting(undefined);
+    setPatientIntakeTeamReporting(undefined);
+    setRcmTeamReporting(undefined);
+    setSchedulingNumbersMode("Single");
+    setLocations([]);
+    setFormErrors({});
+    setSpecialties([]);
+    setInsurance({ is_active: true });
+    originalLocationsRef.current = [];
+    originalSpecialtiesRef.current = [];
+  };
+
+  useEffect(() => {
+    if (!orgId) return;
+
+    const previousOrgId = previousOrgIdRef.current;
+    if (previousOrgId && previousOrgId !== orgId) {
+      queryClient.removeQueries({ queryKey: ['launchpad', String(previousOrgId)] });
+    }
+
+    queryClient.removeQueries({ queryKey: ['launchpad', String(orgId)] });
+
+    if (previousOrgId !== orgId) {
+      resetLaunchpadState();
+      previousOrgIdRef.current = orgId;
+    }
+  }, [orgId, queryClient]);
 
   const toggleCardMinimize = (cardId: string) => {
     setMinimizedCards(prev => ({
@@ -215,22 +267,15 @@ export default function Launchpad() {
 
   // Hydrate UI state from API snapshot on load
   useEffect(() => {
-    if (!data) {
+    if (!typedData) {
       console.log('useEffect: No data available yet');
       return;
     }
-    
-    
-    // Org guard: ensure tenant match
-    if (user?.org_id && data.organization.org_id !== user.org_id) {
-      console.error('Organization mismatch between auth and launchpad data', {
-        userOrgId: user.org_id,
-        dataOrgId: data.organization.org_id
-      });
-      return;
-    }
+
+    // Note: Using URL-based orgId now, so no need for org guard
+    console.log('Hydrating UI state for orgId:', orgId, 'with data for org:', typedData.organization?.org_id);
     // Account details
-    const ad = data.account_details;
+    const ad = typedData.account_details;
     if (ad) {
       setAccountName(ad.account_name ?? "");
       setWebsiteAddress(ad.website_address ?? "");
@@ -275,7 +320,7 @@ export default function Launchpad() {
       setClinicalNotes(ad.clinical_notes || "");
     }
     // Locations
-    const mappedLocations: OrgLocation[] = (data.locations || []).map((loc) => ({
+    const mappedLocations: OrgLocation[] = (typedData.locations || []).map((loc) => ({
       id: loc.id,
       location_id: loc.location_id,
       name: loc.name,
@@ -294,13 +339,13 @@ export default function Launchpad() {
     setLocations(mappedLocations);
 
     // Capture original locations snapshot for diffing (step 4)
-    originalLocationsRef.current = (data.locations || []).map((loc) => ({
+    originalLocationsRef.current = (typedData.locations || []).map((loc) => ({
       id: loc.id,
       location_id: loc.location_id,
     }));
 
     // Specialties
-    const mappedSpecs: OrgSpecialityService[] = (data.speciality_services || []).map((sp) => ({
+    const mappedSpecs: OrgSpecialityService[] = (typedData.speciality_services || []).map((sp) => ({
       id: sp.id,
       specialty_name: sp.specialty_name ?? "",
       location_names_text: "",
@@ -338,27 +383,27 @@ export default function Launchpad() {
     setSpecialties(mappedSpecs);
 
     // Capture original specialties snapshot for diffing (step 4)
-    originalSpecialtiesRef.current = (data.speciality_services || []).map((sp) => ({
+    originalSpecialtiesRef.current = (typedData.speciality_services || []).map((sp) => ({
       id: sp.id,
       location_ids: Array.from(new Set(sp.location_ids ?? [])),
     }));
 
     // Insurance
-    if (data.insurance) {
+    if (typedData.insurance) {
       setInsurance({
-        accepted_payers_source: data.insurance.accepted_payers_source ?? "",
-        accepted_payers_source_details: data.insurance.accepted_payers_source_details ?? "",
+        accepted_payers_source: typedData.insurance.accepted_payers_source ?? "",
+        accepted_payers_source_details: typedData.insurance.accepted_payers_source_details ?? "",
         accepted_payers_source_link: undefined,
-        insurance_verification_source: data.insurance.insurance_verification_source ?? "",
-        insurance_verification_source_details: data.insurance.insurance_verification_source_details ?? "",
+        insurance_verification_source: typedData.insurance.insurance_verification_source ?? "",
+        insurance_verification_source_details: typedData.insurance.insurance_verification_source_details ?? "",
         insurance_verification_source_link: undefined,
-        patient_copay_source: data.insurance.patient_copay_source ?? "",
-        patient_copay_source_details: data.insurance.patient_copay_source_details ?? "",
+        patient_copay_source: typedData.insurance.patient_copay_source ?? "",
+        patient_copay_source_details: typedData.insurance.patient_copay_source_details ?? "",
         patient_copay_source_link: undefined,
-        is_active: !!data.insurance.is_active,
+        is_active: !!typedData.insurance.is_active,
       });
     }
-  }, [data, user?.org_id]);
+  }, [typedData]);
 
   const addPerson = (setter: React.Dispatch<React.SetStateAction<Person[]>>) => {
     setter(prev => [
@@ -524,7 +569,9 @@ export default function Launchpad() {
       }
       
       // Step 9: Manual cache invalidation after chained operations complete
-      invalidateLaunchpadCache(queryClient, orgId);
+      if (orgId) {
+        queryClient.invalidateQueries({ queryKey: ['launchpad', String(orgId)] });
+      }
       
       toast({
         title: "Success",
@@ -635,7 +682,7 @@ export default function Launchpad() {
   };
 
   return (
-    <div className="container mx-auto p-4 sm:p-4 space-y-4">
+    <div key={orgId} className="container mx-auto p-4 sm:p-4 space-y-4">
       {isLoading && (
         <div className="space-y-3">
           <div className="h-6 w-40 bg-muted animate-pulse rounded" />
@@ -649,14 +696,23 @@ export default function Launchpad() {
       {isError && (
         <div className="text-sm text-red-600 flex items-center gap-2">
           Failed to load data.
-          <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              refetch().catch((error) => {
+                console.error('Launchpad refetch failed:', error);
+                if (orgId) {
+                  queryClient.invalidateQueries({ queryKey: ['launchpad', String(orgId)] });
+                }
+              });
+            }}
+          >
+            Retry
+          </Button>
         </div>
       )}
-      {user?.org_id && data && data.organization.org_id !== user.org_id && (
-        <div className="border border-red-200 bg-red-50 text-red-700 text-sm p-3 rounded">
-          Organization mismatch. For your security, data is hidden. Please reload or contact support.
-        </div>
-      )}
+      {/* Organization data loaded successfully */}
 
       {Object.keys(formErrors).length > 0 && (
         <FormSummary errors={formErrors} />
@@ -1165,7 +1221,7 @@ export default function Launchpad() {
           <div id="account-documents">
             <DocumentUpload
               title={getDocumentTitle('account')}
-              documents={getDocumentsForTab(data, 'account')}
+              documents={getDocumentsForTab(typedData, 'account')}
               onUpload={uploadAccountDocument.mutateAsync}
               onDelete={deleteAccountDocument.mutateAsync}
               isUploading={uploadAccountDocument.isPending}
@@ -1209,7 +1265,7 @@ export default function Launchpad() {
           <div id="locations-documents">
             <DocumentUpload
               title={getDocumentTitle('locations')}
-              documents={getDocumentsForTab(data, 'locations')}
+              documents={getDocumentsForTab(typedData, 'locations')}
               onUpload={uploadLocationsDocument.mutateAsync}
               onDelete={deleteLocationsDocument.mutateAsync}
               isUploading={uploadLocationsDocument.isPending}
@@ -1269,7 +1325,7 @@ export default function Launchpad() {
           <div id="specialties-documents">
             <DocumentUpload
               title={getDocumentTitle('specialties')}
-              documents={getDocumentsForTab(data, 'specialties')}
+              documents={getDocumentsForTab(typedData, 'specialties')}
               onUpload={uploadSpecialtiesDocument.mutateAsync}
               onDelete={deleteSpecialtiesDocument.mutateAsync}
               isUploading={uploadSpecialtiesDocument.isPending}
@@ -1329,7 +1385,7 @@ export default function Launchpad() {
           <div id="insurance-documents">
             <DocumentUpload
               title={getDocumentTitle('insurance')}
-              documents={getDocumentsForTab(data, 'insurance')}
+              documents={getDocumentsForTab(typedData, 'insurance')}
               onUpload={uploadInsuranceDocument.mutateAsync}
               onDelete={deleteInsuranceDocument.mutateAsync}
               isUploading={uploadInsuranceDocument.isPending}
@@ -1344,8 +1400,8 @@ export default function Launchpad() {
         <TabsContent value="knowledge">
           <KnowledgeModule
             orgId={orgId}
-            curatedKb={data?.curated_kb}
-            curatedKbCount={data?.metadata?.curated_kb_count}
+            curatedKb={typedData?.curated_kb}
+            curatedKbCount={typedData?.metadata?.curated_kb_count}
           />
 
           {/* Scroll to Top Button */}
