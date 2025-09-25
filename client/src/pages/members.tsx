@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, Shield, Plus, Loader2 } from "lucide-react";
+import { Users, Shield, Plus, Loader as Loader2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useMembers, useAddMember } from "@/lib/members.queries";
 import { Skeleton } from "@/components/ui/skeleton";
