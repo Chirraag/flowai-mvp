@@ -1,0 +1,34 @@
+export interface Member {
+  id: number;
+  username: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  role: string;
+  accessType: string;
+  isActive: boolean;
+  lastLogin: string;
+  createdAt: string;
+  isPrimaryOrg: boolean;
+  hasMultipleOrgs: boolean | null;
+  hasGlobalAccess: boolean;
+}
+
+export interface MembersResponse {
+  success: boolean;
+  data: {
+    orgId: number;
+    totalMembers: number;
+    visibilityRule: string;
+    members: Member[];
+    membersByRole: Record<string, Member[]>;
+    summary: {
+      totalActive: number;
+      byRole: Record<string, number>;
+      primaryOrgMembers: number;
+      assignedMembers: number;
+      globalAccessMembers: number;
+    };
+  };
+}

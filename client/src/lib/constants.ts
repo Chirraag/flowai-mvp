@@ -69,6 +69,11 @@ export const NAVIGATION_ITEMS = [
         path: "ai-agents/analytics",
         icon: "bar-chart-2",
       },
+      {
+        name: "Members",
+        path: "members",
+        icon: "users",
+      },
     ],
   },
 ];

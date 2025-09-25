@@ -12,6 +12,7 @@ const CustomerSupportAgent = lazy(
     () => import("@/pages/ai-agents/customer-support"),
 );
 const AnalyticsAgent = lazy(() => import("@/pages/analytics/analytics"));
+const MembersPage = lazy(() => import("@/pages/members"));
 const LoginPage = lazy(() => import("@/pages/login"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
@@ -59,6 +60,11 @@ export const routes: RouteObject[] = [
             {
                 path: "ai-agents/analytics",
                 element: React.createElement(AnalyticsAgent),
+            },
+            // MEMBERS
+            {
+                path: "members",
+                element: React.createElement(MembersPage),
             },
             // 404 handler
             {
