@@ -89,6 +89,15 @@ export default function MembersPage() {
       return;
     }
 
+    if (!formData.username.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Username is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!formData.role) {
       toast({
         title: "Validation Error",
@@ -305,7 +314,7 @@ export default function MembersPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="username">Username</Label>
+                  <Label htmlFor="username">Username *</Label>
                   <Input
                     id="username"
                     placeholder="john.doe"
@@ -350,6 +359,7 @@ export default function MembersPage() {
                     addMemberMutation.isPending ||
                     !formData.email.trim() ||
                     !formData.firstName.trim() ||
+                    !formData.username.trim() ||
                     !formData.role
                   }
                   className="bg-blue-600 hover:bg-blue-700"

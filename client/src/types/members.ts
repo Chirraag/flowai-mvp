@@ -18,8 +18,8 @@ export interface Member {
 export interface AddMemberRequest {
   email: string;
   firstName: string;
+  username: string;
   role: string;
-  username?: string;
   lastName?: string;
 }
 
