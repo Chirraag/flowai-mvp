@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -35,6 +36,8 @@ export default function OrganizationSwitcher({
 }: OrganizationSwitcherProps) {
   const { user, switchOrganization } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [isExpanded, setIsExpanded] = useState(false);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(false);
@@ -81,11 +84,23 @@ export default function OrganizationSwitcher({
 
     setSwitching(orgId);
     try {
+      // Find the organization name before switching (for toast message)
+      const targetOrg = organizations.find((org) => org.id === orgId);
+      
       await switchOrganization(orgId);
+
+      // Extract the current page path (everything after the orgId)
+      const currentPath = location.pathname;
+      const pathParts = currentPath.split('/');
+      // Remove empty string and current orgId, keep the rest
+      const pageRoute = pathParts.slice(2).join('/') || 'launchpad';
+      
+      // Navigate to the same page but with the new organization
+      navigate(`/${orgId}/${pageRoute}`);
 
       toast({
         title: "Organization Switched",
-        description: `Switched to ${organizations.find((org) => org.id === orgId)?.name}`,
+        description: `Switched to ${targetOrg?.name || 'selected organization'}`,
       });
     } catch (error) {
       console.error("Failed to switch organization:", error);
@@ -148,57 +163,47 @@ export default function OrganizationSwitcher({
         api_key: formData.api_key.trim(),
       });
 
-      if (response.success) {
-        toast({
-          title: "Success",
-          description: `Organization "${formData.name}" created successfully`,
-        });
-
-        // Close dialog first
+      if (response.success && response.organisation?.id) {
+        // Close dialog and reset form first
         setShowAddDialog(false);
         setFormData({ name: "", retell_workspace_id: "", api_key: "" });
 
-        // Refresh the organizations list to include the new org
-        await fetchOrganizations();
+        try {
+          // Refresh the organizations list to include the new org
+          await fetchOrganizations();
 
-        // Now switch to the new organization
-        if (response.organisation?.id) {
-          console.log(
-            "Switching to new organization:",
-            response.organisation.id,
-          );
+          // Switch to the new organization (no setTimeout needed)
+          await switchOrganization(response.organisation.id);
 
-          // Small delay to ensure the list is updated in state
-          setTimeout(async () => {
-            try {
-              await switchOrganization(response.organisation.id);
+          // Navigate to the new organization's launchpad
+          navigate(`/${response.organisation.id}/launchpad`);
 
-              // Additional toast to confirm the switch
-              toast({
-                title: "Switched Successfully",
-                description: `Now using ${response.organisation.name}`,
-              });
-            } catch (switchError) {
-              console.error(
-                "Failed to switch to new organization:",
-                switchError,
-              );
-              toast({
-                title: "Organization Created",
-                description:
-                  "Organization created successfully, but failed to switch. Please select it manually.",
-                variant: "destructive",
-              });
-            }
-          }, 100);
-        } else {
-          console.warn("No organization ID in response, cannot auto-switch");
+          // Success toast with organization name from response
           toast({
-            title: "Note",
-            description:
-              "Organization created. Please select it from the list.",
+            title: "Success",
+            description: `Organization "${response.organisation.name}" created and selected`,
+          });
+        } catch (switchError) {
+          console.error(
+            "Failed to switch to new organization:",
+            switchError,
+          );
+          toast({
+            title: "Organization Created",
+            description: `Organization "${response.organisation.name}" created successfully, but failed to switch. Please refresh the page and select it manually.`,
+            variant: "destructive",
           });
         }
+      } else if (response.success) {
+        // Organization created but no ID returned
+        setShowAddDialog(false);
+        setFormData({ name: "", retell_workspace_id: "", api_key: "" });
+        await fetchOrganizations();
+        
+        toast({
+          title: "Success",
+          description: `Organization "${formData.name}" created. Please select it from the list.`,
+        });
       } else {
         throw new Error(response.message || "Failed to create organization");
       }

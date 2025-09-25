@@ -7,6 +7,7 @@ import {
   useRef,
 } from "react";
 import { queryClient } from "@/lib/queryClient";
+import { api } from "@/lib/api";
 
 interface User {
   id: number;

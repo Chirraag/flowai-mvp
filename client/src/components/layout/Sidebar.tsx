@@ -55,6 +55,18 @@ export default function Sidebar({
     handleMobileMenuItemClick();
   };
 
+  // Helper function to check if a path is active
+  const isPathActive = (itemPath: string) => {
+    const orgId = user?.org_id;
+    const fullPath = orgId ? `/${orgId}/${itemPath}` : itemPath;
+    return location.pathname === fullPath;
+  };
+
+  // Helper function to check if any child path is active
+  const isAnyChildActive = (children: any[]) => {
+    return children?.some((child) => isPathActive(child.path)) || false;
+  };
+
   // Handle dropdown toggle
   const handleDropdownToggle = (itemName: string) => {
     const isOpening = dropdownOpen !== itemName;
@@ -522,9 +534,7 @@ export default function Sidebar({
                           showLabels 
                             ? "px-3 sm:px-3 py-1.5 mx-2 sm:mx-2 justify-between"
                             : "justify-center px-2 py-2 mx-1 rounded-lg",
-                          item.children?.some(
-                            (child) => location.pathname === child.path,
-                          ) || dropdownOpen === item.name
+                          isAnyChildActive(item.children) || dropdownOpen === item.name
                             ? "bg-blue-50 border-r-4 border-blue-500 text-blue-700"
                             : "hover:bg-gray-50 text-gray-700",
                         )}
@@ -562,7 +572,7 @@ export default function Sidebar({
                               key={child.path}
                               className={cn(
                                 "transition-colors duration-200 w-full text-left flex items-center px-3 py-1.5",
-                                location.pathname === child.path
+                                isPathActive(child.path)
                                   ? "bg-blue-50 border-r-4 border-blue-500 text-blue-700"
                                   : "hover:bg-gray-50 text-gray-600",
                               )}
@@ -587,7 +597,7 @@ export default function Sidebar({
                               key={child.path}
                               className={cn(
                                 "transition-colors duration-200 w-full flex items-center justify-center px-2 py-2 mx-1 rounded-lg",
-                                location.pathname === child.path
+                                isPathActive(child.path)
                                   ? "bg-blue-50 text-blue-700"
                                   : "hover:bg-gray-50 text-gray-600",
                               )}
@@ -608,7 +618,7 @@ export default function Sidebar({
                         showLabels 
                           ? "px-3 sm:px-3 py-1.5 mx-2 sm:mx-2"
                           : "justify-center px-2 py-2 mx-1 rounded-lg",
-                        location.pathname === item.path
+                        isPathActive(item.path)
                           ? "bg-blue-50 border-r-4 border-blue-500 text-blue-700"
                           : "hover:bg-gray-50 text-gray-700",
                       )}
