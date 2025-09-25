@@ -15,6 +15,28 @@ export interface Member {
   hasGlobalAccess: boolean;
 }
 
+export interface AddMemberRequest {
+  email: string;
+  firstName: string;
+  role: string;
+  username?: string;
+  lastName?: string;
+}
+
+export interface AddMemberResponse {
+  success: boolean;
+  message: string;
+  data: {
+    id: number;
+    username: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    role: string;
+    orgId: number;
+  };
+}
+
 export interface MembersResponse {
   success: boolean;
   data: {

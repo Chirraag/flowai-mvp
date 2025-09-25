@@ -1,30 +1,143 @@
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Shield } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Users, Shield, Plus, Loader2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { useMembers } from "@/lib/members.queries";
+import { useMembers, useAddMember } from "@/lib/members.queries";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CircleAlert as AlertCircle } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import type { Member } from "@/types/members";
+import { useToast } from "@/hooks/use-toast";
+import type { Member, AddMemberRequest } from "@/types/members";
+
+const ROLE_OPTIONS = [
+  "super-admin",
+  "observer", 
+  "member",
+  "customer-admin",
+  "core-team-member",
+  "analytics-user"
+];
+
+const CUSTOMER_ADMIN_ALLOWED_ROLES = [
+  "customer-admin",
+  "core-team-member", 
+  "analytics-user"
+];
 
 export default function MembersPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const orgId = user?.org_id;
 
   const { data: membersData, isLoading, error } = useMembers(orgId);
+  const addMemberMutation = useAddMember(orgId);
+
+  // Dialog state
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [formData, setFormData] = useState<AddMemberRequest>({
+    email: "",
+    firstName: "",
+    role: "",
+    username: "",
+    lastName: "",
+  });
+
+  // Check if user can add members
+  const canAddMembers = user?.role === 'super-admin' || user?.role === 'customer-admin';
+
+  // Get available roles based on user's role
+  const getAvailableRoles = () => {
+    if (user?.role === 'super-admin') {
+      return ROLE_OPTIONS;
+    } else if (user?.role === 'customer-admin') {
+      return CUSTOMER_ADMIN_ALLOWED_ROLES;
+    }
+    return [];
+  };
+
+  const handleInputChange = (field: keyof AddMemberRequest, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleAddMember = async () => {
+    // Validate required fields
+    if (!formData.email.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Email is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.firstName.trim()) {
+      toast({
+        title: "Validation Error", 
+        description: "First name is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.role) {
+      toast({
+        title: "Validation Error",
+        description: "Role is required", 
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await addMemberMutation.mutateAsync(formData);
+      
+      toast({
+        title: "Success",
+        description: "Member added successfully. Welcome email has been sent with login credentials.",
+      });
+
+      // Reset form and close dialog
+      setFormData({
+        email: "",
+        firstName: "",
+        role: "",
+        username: "",
+        lastName: "",
+      });
+      setIsDialogOpen(false);
+    } catch (error: any) {
+      console.error('Failed to add member:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add member",
+        variant: "destructive",
+      });
+    }
+  };
 
   const getRoleBadgeColor = (role: string) => {
     switch (role.toLowerCase()) {
       case 'super-admin':
         return 'bg-red-100 text-red-800';
-      case 'admin':
+      case 'customer-admin':
         return 'bg-orange-100 text-orange-800';
-      case 'manager':
+      case 'core-team-member':
         return 'bg-blue-100 text-blue-800';
-      case 'user':
+      case 'analytics-user':
+        return 'bg-purple-100 text-purple-800';
+      case 'member':
+        return 'bg-green-100 text-green-800';
+      case 'observer':
         return 'bg-gray-100 text-gray-800';
       default:
         return 'bg-gray-100 text-gray-800';
@@ -141,6 +254,119 @@ export default function MembersPage() {
             Manage workspace members
           </p>
         </div>
+        
+        {/* Add Member Button - only for super-admin and customer-admin */}
+        {canAddMembers && (
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-blue-600 hover:bg-blue-700">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Member
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>Add New Member</DialogTitle>
+              </DialogHeader>
+
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email *</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="member@example.com"
+                    value={formData.email}
+                    onChange={(e) => handleInputChange("email", e.target.value)}
+                    disabled={addMemberMutation.isPending}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">First Name *</Label>
+                  <Input
+                    id="firstName"
+                    placeholder="John"
+                    value={formData.firstName}
+                    onChange={(e) => handleInputChange("firstName", e.target.value)}
+                    disabled={addMemberMutation.isPending}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last Name</Label>
+                  <Input
+                    id="lastName"
+                    placeholder="Doe"
+                    value={formData.lastName}
+                    onChange={(e) => handleInputChange("lastName", e.target.value)}
+                    disabled={addMemberMutation.isPending}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="username">Username</Label>
+                  <Input
+                    id="username"
+                    placeholder="john.doe"
+                    value={formData.username}
+                    onChange={(e) => handleInputChange("username", e.target.value)}
+                    disabled={addMemberMutation.isPending}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="role">Role *</Label>
+                  <Select
+                    value={formData.role}
+                    onValueChange={(value) => handleInputChange("role", value)}
+                    disabled={addMemberMutation.isPending}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {getAvailableRoles().map((role) => (
+                        <SelectItem key={role} value={role}>
+                          {role}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsDialogOpen(false)}
+                  disabled={addMemberMutation.isPending}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleAddMember}
+                  disabled={
+                    addMemberMutation.isPending ||
+                    !formData.email.trim() ||
+                    !formData.firstName.trim() ||
+                    !formData.role
+                  }
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  {addMemberMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Adding...
+                    </>
+                  ) : (
+                    "Add Member"
+                  )}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       {/* Summary Cards */}
