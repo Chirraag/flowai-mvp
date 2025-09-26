@@ -44,7 +44,7 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
       return "Customer Support Agent";
     }
 
-    if (location.includes("ai-agents/analytics")) {
+    if (location.includes("/analytics")) {
       return "Analytics";
     }
 

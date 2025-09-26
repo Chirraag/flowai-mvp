@@ -57,7 +57,7 @@ export const routes: RouteObject[] = [
                 element: React.createElement(CustomerSupportAgent),
             },
             {
-                path: "ai-agents/analytics",
+                path: "analytics",
                 element: React.createElement(AnalyticsAgent),
             },
             // 404 handler
