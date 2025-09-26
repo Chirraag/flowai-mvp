@@ -77,7 +77,7 @@ export default function ServicesModal({ open, title, services, onUpdate, onOpenC
               <CardContent className="space-y-4">
                 {/* Service Name */}
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-[#1C275E]">Service Name *</Label>
+                  <Label className="text-base font-medium text-black">Service Name *</Label>
                   <Input 
                     placeholder="Enter service name" 
                     value={service.name} 
@@ -90,7 +90,7 @@ export default function ServicesModal({ open, title, services, onUpdate, onOpenC
 
                 {/* Patient Prep Requirements */}
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-[#1C275E]">Patient Preparation Requirements</Label>
+                  <Label className="text-base font-medium text-black">Patient Preparation Requirements</Label>
                   <Textarea 
                     placeholder="Enter patient preparation requirements..."
                     value={service.patient_prep_requirements || ""}
@@ -101,7 +101,7 @@ export default function ServicesModal({ open, title, services, onUpdate, onOpenC
 
                 {/* FAQ */}
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-[#1C275E]">Frequently Asked Questions</Label>
+                  <Label className="text-base font-medium text-black">Frequently Asked Questions</Label>
                   <Textarea 
                     placeholder="Enter frequently asked questions and answers..."
                     value={service.faq || ""}
@@ -113,7 +113,7 @@ export default function ServicesModal({ open, title, services, onUpdate, onOpenC
                 {/* Service Information */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium text-[#1C275E]">Service Information Name</Label>
+                    <Label className="text-base font-medium text-black">Service Information Name</Label>
                     <Input 
                       placeholder="Enter information source name"
                       value={service.service_information_name || ""}
@@ -122,7 +122,7 @@ export default function ServicesModal({ open, title, services, onUpdate, onOpenC
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium text-[#1C275E]">Service Information Source</Label>
+                    <Label className="text-base font-medium text-black">Service Information Source</Label>
                     <Input 
                       placeholder="Enter information source"
                       value={service.service_information_source || ""}

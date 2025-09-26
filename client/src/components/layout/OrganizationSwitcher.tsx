@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
-import { ChevronDown, ChevronUp, Plus, Check } from 'lucide-react';
+import { ChevronDown, ChevronUp, Plus, Check, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -46,6 +46,7 @@ export default function OrganizationSwitcher({
   const [switching, setSwitching] = useState<number | null>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     retell_workspace_id: "",
@@ -249,6 +250,14 @@ export default function OrganizationSwitcher({
     return colors[index];
   };
 
+  // Filter organizations based on search term
+  const filteredOrganizations = useMemo(() => {
+    if (!searchTerm.trim()) return organizations;
+    return organizations.filter(org =>
+      org.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [organizations, searchTerm]);
+
   const currentOrg = organizations.find((org) => org.id === user?.org_id) || {
     id: user?.org_id || 0,
     name: user?.org_name || "Unknown",
@@ -309,6 +318,39 @@ export default function OrganizationSwitcher({
             )}
           >
             <CardContent className="p-0">
+              {/* Sticky Header */}
+              <div className="sticky top-0 bg-white border-b border-gray-100 z-10">
+                {/* Search Input */}
+                <div className="p-3">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Search organizations..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10 pr-4 py-2 w-full border-gray-200"
+                    />
+                  </div>
+                </div>
+
+                {/* Add Organization Button */}
+                <div className="px-3 pb-3">
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start p-3 h-auto hover:bg-blue-50 rounded-lg border-0 text-blue-600 hover:text-blue-700"
+                    onClick={handleAddOrganization}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Plus className="h-4 w-4 text-gray-500" />
+                      <span className="text-sm font-semibold">
+                        Add organisation
+                      </span>
+                    </div>
+                  </Button>
+                </div>
+              </div>
+
+              {/* Scrollable Organizations List */}
               <div className="max-h-72 overflow-y-auto">
                 {loading ? (
                   <div className="flex items-center justify-center py-6">
@@ -317,9 +359,15 @@ export default function OrganizationSwitcher({
                       Loading organizations...
                     </span>
                   </div>
+                ) : filteredOrganizations.length === 0 ? (
+                  <div className="flex items-center justify-center py-6">
+                    <span className="text-sm text-gray-500">
+                      {searchTerm.trim() ? "No organizations found" : "No organizations available"}
+                    </span>
+                  </div>
                 ) : (
                   <div className="py-2">
-                    {organizations.map((org) => (
+                    {filteredOrganizations.map((org) => (
                       <Button
                         key={org.id}
                         variant="ghost"
@@ -349,23 +397,6 @@ export default function OrganizationSwitcher({
                         </div>
                       </Button>
                     ))}
-
-                    {/* Separator with subtle styling */}
-                    <div className="border-t border-gray-100 my-1"></div>
-
-                    {/* Add Organization Button */}
-                    <Button
-                      variant="ghost"
-                      className="w-full justify-start p-3 h-auto hover:bg-blue-50 rounded-none border-0 text-blue-600 hover:text-blue-700"
-                      onClick={handleAddOrganization}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Plus className="h-4 w-4 text-gray-500 mr-2" />
-                        <span className="text-sm font-semibold">
-                          Add organisation
-                        </span>
-                      </div>
-                    </Button>
                   </div>
                 )}
               </div>

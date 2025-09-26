@@ -19,9 +19,21 @@ export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount }: Kn
   const { toast } = useToast();
   const [viewingDocument, setViewingDocument] = useState<CuratedKBEntry | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  
+  const [isScrolled, setIsScrolled] = useState(false);
+
   const createCuratedKB = useCreateCuratedKB(orgId);
   const deleteCuratedKB = useDeleteCuratedKB(orgId);
+
+  // Scroll detection effect for header styling
+  React.useEffect(() => {
+    const handleScroll = () => {
+      const scrollTop = window.scrollY;
+      setIsScrolled(scrollTop > 10); // Reduced trigger threshold for smoother animation
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const handleGenerate = async () => {
     if (!orgId) {
@@ -284,12 +296,16 @@ export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount }: Kn
 
   return (
     <Card className="border-0 shadow-lg bg-white rounded-xl">
-      <CardHeader className="sticky top-0 z-50 bg-[#1C275E] text-white p-3 border-b border-[#1C275E]/20 shadow-sm rounded-t-xl">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#F48024]/20 rounded-lg flex items-center justify-center">
+      <CardHeader className={`sticky top-0 z-50 bg-[#1C275E] text-white border-b border-[#1C275E]/20 shadow-sm rounded-t-xl transition-all duration-300 ${
+        isScrolled
+          ? 'p-1.5 shadow-lg shadow-black/10'
+          : 'p-2 shadow-sm'
+      }`}>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-[#F48024]/20 rounded-lg flex items-center justify-center">
               <svg
-                className="w-5 h-5 text-[#F48024]"
+                className="w-4 h-4 text-[#F48024]"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -305,31 +321,45 @@ export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount }: Kn
                 <polyline points="10,9 9,9 8,9"></polyline>
               </svg>
             </div>
-            <CardTitle className="text-lg font-semibold">
+            <CardTitle className="text-xl font-semibold">
               Curated Knowledge Base {curatedKbCount ? `(${curatedKbCount})` : ''}
             </CardTitle>
           </div>
-          <div className="flex items-center gap-3">
-            <Input
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search documents..."
-              aria-label="Search documents"
-              className="h-8 w-[160px] sm:w-[220px] md:w-[280px] bg-white text-[#1C275E] placeholder:text-[#1C275E]/60 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]"
-            />
+          <div className="flex items-center gap-2">
+            <div className="relative flex items-center">
+              <Input
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search documents..."
+                aria-label="Search documents"
+                className="h-8 w-[140px] sm:w-[180px] md:w-[220px] bg-white text-[#1C275E] placeholder:text-[#1C275E]/60 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] pr-8 text-sm"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1C275E]/40"
+                  aria-label="Clear documents search"
+                >
+                  <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </button>
+              )}
+            </div>
             <Button
               variant="default"
               onClick={handleGenerate}
               disabled={isGenerating || isDeleting || !orgId}
-              className="bg-[#f49024] hover:bg-[#d87f1f] text-white focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+              className="bg-[#f49024] hover:bg-[#d87f1f] text-white focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2 h-8 px-3 text-sm"
             >
               {isGenerating ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="mr-2 h-3 w-3 animate-spin" />
                   Generating...
                 </>
               ) : (
-                "Generate Knowledge Base"
+                "Generate"
               )}
             </Button>
           </div>

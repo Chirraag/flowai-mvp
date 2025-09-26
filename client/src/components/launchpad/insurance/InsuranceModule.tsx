@@ -21,9 +21,6 @@ const getSelectedValue = (source: string | null | undefined): string => {
 export default function InsuranceModule({ insurance, onChange }: InsuranceModuleProps) {
   return (
     <Card className="border-0 shadow-lg bg-white rounded-xl overflow-hidden">
-      <CardHeader className="bg-[#e2e8f0] text-[#1C275E] p-3 border-b border-gray-200">
-        <CardTitle className="text-lg font-semibold">Insurance & Billing</CardTitle>
-      </CardHeader>
       <CardContent className="p-4 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>

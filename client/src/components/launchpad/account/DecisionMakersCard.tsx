@@ -48,11 +48,11 @@ export default function DecisionMakersCard({
       <Table className="min-w-[700px]">
         <TableHeader>
           <TableRow>
-            <TableHead className="text-[#1C275E] font-semibold">Title</TableHead>
-            <TableHead className="text-[#1C275E] font-semibold">Name</TableHead>
-            <TableHead className="text-[#1C275E] font-semibold">Email</TableHead>
-            <TableHead className="text-[#1C275E] font-semibold">Phone</TableHead>
-            <TableHead className="text-[#1C275E] font-semibold w-16">Action</TableHead>
+            <TableHead className="text-black font-semibold text-sm">Title</TableHead>
+            <TableHead className="text-black font-semibold text-sm">Name</TableHead>
+            <TableHead className="text-black font-semibold text-sm">Email</TableHead>
+            <TableHead className="text-black font-semibold text-sm">Phone</TableHead>
+            <TableHead className="text-black font-semibold text-sm w-16">Action</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -60,7 +60,7 @@ export default function DecisionMakersCard({
             <TableRow key={dm.id} className="hover:bg-[#1C275E]/5">
               <TableCell className="p-2">
                 <Input
-                  className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+                  className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
                   placeholder="Enter title"
                   value={dm.title}
                   onChange={(e) => onUpdate(dm.id, 'title', e.target.value)}
@@ -70,7 +70,7 @@ export default function DecisionMakersCard({
               <TableCell className="p-2">
                 <div className="space-y-1">
                   <Input
-                    className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+                    className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
                     placeholder="Full name"
                     value={dm.name}
                     onChange={(e) => onUpdate(dm.id, 'name', e.target.value)}
@@ -82,7 +82,7 @@ export default function DecisionMakersCard({
               <TableCell className="p-2">
                 <div className="space-y-1">
                   <Input
-                    className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+                    className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
                     placeholder="email@practice.com"
                     value={dm.email}
                     onChange={(e) => onUpdate(dm.id, 'email', e.target.value)}
@@ -93,7 +93,7 @@ export default function DecisionMakersCard({
               </TableCell>
               <TableCell className="p-2">
                 <Input
-                  className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+                  className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
                   placeholder="(555) 123-4567"
                   value={dm.phone}
                   onChange={(e) => onUpdate(dm.id, 'phone', e.target.value)}

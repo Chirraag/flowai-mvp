@@ -60,7 +60,7 @@ export default function SystemsIntegrationCard({
       <CardContent className="p-4 space-y-4">
         <div>
           <div className="flex items-center justify-between mb-4">
-            <Label className="text-sm">EMR/RIS Systems</Label>
+            <Label className="text-md">EMR/RIS Systems</Label>
             <Button variant="default" size="sm" onClick={onAddEmrSystem} className="bg-[#f48024] hover:bg-[#f48024]/90 text-white">Add System</Button>
           </div>
           <div className="space-y-2">
@@ -80,7 +80,7 @@ export default function SystemsIntegrationCard({
 
         <div>
           <div className="flex items-center justify-between mb-4">
-            <Label className="text-sm">Telephony/CCAS Systems</Label>
+            <Label className="text-md">Telephony/CCAS Systems</Label>
             <Button variant="default" size="sm" onClick={onAddTelephonySystem} className="bg-[#f48024] hover:bg-[#f48024]/90 text-white">Add System</Button>
           </div>
           <div className="space-y-2">
@@ -99,7 +99,7 @@ export default function SystemsIntegrationCard({
         </div>
 
         <div>
-          <Label className="text-sm font-medium">Scheduling Phone Numbers</Label>
+          <Label className="text-md font-medium">Scheduling Phone Numbers</Label>
           <div className="mt-2 space-y-2">
             <div>
               <Label className="text-sm">Mode</Label>
@@ -162,9 +162,9 @@ export default function SystemsIntegrationCard({
         </div>
 
         <div>
-          <Label className="text-sm">Insurance Verification System</Label>
+          <Label className="text-sm font-semibold text-black uppercase tracking-wide">Insurance Verification System</Label>
           <Input
-            className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+            className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
             placeholder="System name or process"
             value={insuranceVerificationSystem}
             onChange={(e) => onChangeField("insuranceVerificationSystem", e.target.value)}
@@ -172,9 +172,9 @@ export default function SystemsIntegrationCard({
         </div>
 
         <div>
-          <Label className="text-sm">Insurance Verification Details</Label>
+          <Label className="text-sm font-semibold text-black uppercase tracking-wide">Insurance Verification Details</Label>
           <Textarea
-            className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+            className="mt-2 min-h-32 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
             placeholder="Describe the verification process or system details"
             value={insuranceVerificationDetails}
             onChange={(e) => onChangeField("insuranceVerificationDetails", e.target.value)}
@@ -182,9 +182,9 @@ export default function SystemsIntegrationCard({
         </div>
 
         <div>
-          <Label className="text-sm">Additional Information</Label>
+          <Label className="text-sm font-semibold text-black uppercase tracking-wide">Additional Information</Label>
           <Textarea
-            className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+            className="mt-2 min-h-32 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
             placeholder="Any additional integration details..."
             value={additionalInfo}
             onChange={(e) => onChangeField("additionalInfo", e.target.value)}
@@ -192,9 +192,9 @@ export default function SystemsIntegrationCard({
         </div>
 
         <div>
-          <Label className="text-sm">Clinical Notes</Label>
+          <Label className="text-sm font-semibold text-black uppercase tracking-wide">Clinical Notes</Label>
           <Textarea
-            className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+            className="mt-2 min-h-32 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
             placeholder="Clinical notes relevant to systems"
             value={clinicalNotes}
             onChange={(e) => onChangeField("clinicalNotes", e.target.value)}

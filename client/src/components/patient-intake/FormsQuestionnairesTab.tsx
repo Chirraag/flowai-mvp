@@ -102,7 +102,7 @@ const FormsQuestionnairesTab = forwardRef<FormsQuestionnairesTabHandle, FormsQue
     <div className="space-y-6">
       {/* Enhanced Intake Forms Card */}
       <Card className="border border-gray-200 rounded-xl shadow-lg overflow-hidden">
-        <CardHeader className="bg-gradient-to-r from-[#1c275e] to-[#2a3570] text-white p-6">
+        <CardHeader className="bg-gradient-to-r from-[#1c275e] to-[#2a3570] text-white p-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-[#f48024]/20 rounded-lg flex items-center justify-center">
@@ -202,7 +202,7 @@ const FormsQuestionnairesTab = forwardRef<FormsQuestionnairesTabHandle, FormsQue
 
       {/* Enhanced Modality-Specific Forms Card */}
       <Card className="border border-gray-200 rounded-xl shadow-lg overflow-hidden">
-        <CardHeader className="bg-gradient-to-r from-[#2a3570] to-[#1c275e] text-white p-6">
+        <CardHeader className="bg-gradient-to-r from-[#2a3570] to-[#1c275e] text-white p-2">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-[#f48024]/20 rounded-lg flex items-center justify-center">
               <Shield className="h-5 w-5 text-[#f48024]" />

@@ -119,7 +119,7 @@ const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSet
     <div className="space-y-6">
       {/* Enhanced Appointment Types Offered Card */}
       <Card className="border border-gray-200 rounded-xl shadow-lg overflow-hidden">
-        <CardHeader className="bg-gradient-to-r from-[#1c275e] to-[#2a3570] text-white p-6">
+        <CardHeader className="bg-gradient-to-r from-[#1c275e] to-[#2a3570] text-white p-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-[#f48024]/20 rounded-lg flex items-center justify-center">
@@ -141,7 +141,7 @@ const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSet
                 <Button
                   onClick={handleSave}
                   disabled={isSaving || !hasUnsavedChanges}
-                  className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+                  className="bg-white hover:bg-slate-400 active:bg-slate-500 text-[#1c275e] border-[#1c275e] px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
                 >
                   {isSaving ? "Saving..." : "Save"}
                 </Button>
@@ -280,7 +280,7 @@ const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSet
 
       {/* Enhanced Appointment Capacity Rules Card */}
       <Card className="border border-gray-200 rounded-xl shadow-lg overflow-hidden">
-        <CardHeader className="bg-gradient-to-r from-[#2a3570] to-[#1c275e] text-white p-6">
+        <CardHeader className="bg-gradient-to-r from-[#2a3570] to-[#1c275e] text-white p-2">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-[#f48024]/20 rounded-lg flex items-center justify-center">
               <Users className="h-5 w-5 text-[#f48024]" />

@@ -17,48 +17,42 @@ export default function OpportunitySizingCard({
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="space-y-2">
-          <Label className="text-xs font-medium text-[#1C275E]">Monthly Orders Entered</Label>
-          <div className="relative">
-            <Input
-              type="number"
-              className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
-              placeholder="Total monthly orders"
-              value={opportunitySizing.monthly_orders_count ?? ""}
-              onChange={(e) => onChange({
-                monthly_orders_count: e.target.value === "" ? undefined : Number(e.target.value)
-              })}
-            />
-          </div>
+          <Label className="text-sm font-semibold text-black uppercase tracking-wide">Monthly Orders Entered</Label>
+          <Input
+            className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
+            type="number"
+            placeholder="Total monthly orders"
+            value={opportunitySizing.monthly_orders_count ?? ""}
+            onChange={(e) => onChange({
+              monthly_orders_count: e.target.value === "" ? undefined : Number(e.target.value)
+            })}
+          />
         </div>
 
         <div className="space-y-2">
-          <Label className="text-xs font-medium text-[#1C275E]">Monthly Patients Scheduled</Label>
-          <div className="relative">
-            <Input
-              type="number"
-              className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
-              placeholder="Total monthly scheduled patients"
-              value={opportunitySizing.monthly_patients_scheduled ?? ""}
-              onChange={(e) => onChange({
-                monthly_patients_scheduled: e.target.value === "" ? undefined : Number(e.target.value)
-              })}
-            />
-          </div>
+          <Label className="text-sm font-semibold text-black uppercase tracking-wide">Monthly Patients Scheduled</Label>
+          <Input
+            className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
+            type="number"
+            placeholder="Total monthly scheduled patients"
+            value={opportunitySizing.monthly_patients_scheduled ?? ""}
+            onChange={(e) => onChange({
+              monthly_patients_scheduled: e.target.value === "" ? undefined : Number(e.target.value)
+            })}
+          />
         </div>
 
         <div className="space-y-2">
-          <Label className="text-xs font-medium text-[#1C275E]">Monthly Patients Checked In</Label>
-          <div className="relative">
-            <Input
-              type="number"
-              className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
-              placeholder="Total monthly check-ins"
-              value={opportunitySizing.monthly_patients_checked_in ?? ""}
-              onChange={(e) => onChange({
-                monthly_patients_checked_in: e.target.value === "" ? undefined : Number(e.target.value)
-              })}
-            />
-          </div>
+          <Label className="text-sm font-semibold text-black uppercase tracking-wide">Monthly Patients Checked In</Label>
+          <Input
+            className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
+            type="number"
+            placeholder="Total monthly check-ins"
+            value={opportunitySizing.monthly_patients_checked_in ?? ""}
+            onChange={(e) => onChange({
+              monthly_patients_checked_in: e.target.value === "" ? undefined : Number(e.target.value)
+            })}
+          />
         </div>
       </div>
     </div>

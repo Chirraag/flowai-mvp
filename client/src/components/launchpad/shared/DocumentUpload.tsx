@@ -254,16 +254,16 @@ export default function DocumentUpload({
             <>
               <div className="flex items-center justify-between border-b pb-2">
                 <span className="text-sm text-muted-foreground">PDF Document</span>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
                   onClick={() => window.open(document.url, '_blank')}
                 >
                   Open in New Tab
                 </Button>
               </div>
-              <iframe 
-                src={document.url} 
+              <iframe
+                src={document.url}
                 className="w-full h-[60vh] border-0"
                 title={filename}
                 onError={() => setPdfError(true)}

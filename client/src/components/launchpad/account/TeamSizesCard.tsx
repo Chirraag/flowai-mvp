@@ -29,55 +29,47 @@ export default function TeamSizesCard({
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label className="text-xs font-medium text-[#1C275E]">Order Entry Team Size</Label>
-          <div className="relative">
-            <Input
-              type="number"
-              className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
-              placeholder="Number of employees"
-              value={orderEntryTeamSize ?? ""}
-              onChange={(e) => onChange("orderEntryTeamSize", e.target.value === "" ? undefined : Number(e.target.value))}
-            />
-          </div>
+          <Label className="text-sm font-semibold text-black uppercase tracking-wide">Order Entry Team Size</Label>
+          <Input
+            className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
+            type="number"
+            placeholder="Number of employees"
+            value={orderEntryTeamSize ?? ""}
+            onChange={(e) => onChange("orderEntryTeamSize", e.target.value === "" ? undefined : Number(e.target.value))}
+          />
         </div>
 
         <div className="space-y-2">
-          <Label className="text-xs font-medium text-[#1C275E]">Scheduling Team Size</Label>
-          <div className="relative">
-            <Input
-              type="number"
-              className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
-              placeholder="Number of employees"
-              value={schedulingTeamSize ?? ""}
-              onChange={(e) => onChange("schedulingTeamSize", e.target.value === "" ? undefined : Number(e.target.value))}
-            />
-          </div>
+          <Label className="text-sm font-semibold text-black uppercase tracking-wide">Scheduling Team Size</Label>
+          <Input
+            className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
+            type="number"
+            placeholder="Number of employees"
+            value={schedulingTeamSize ?? ""}
+            onChange={(e) => onChange("schedulingTeamSize", e.target.value === "" ? undefined : Number(e.target.value))}
+          />
         </div>
 
         <div className="space-y-2">
-          <Label className="text-xs font-medium text-[#1C275E]">Patient Intake Team Size</Label>
-          <div className="relative">
-            <Input
-              type="number"
-              className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
-              placeholder="Number of employees"
-              value={patientIntakeTeamSize ?? ""}
-              onChange={(e) => onChange("patientIntakeTeamSize", e.target.value === "" ? undefined : Number(e.target.value))}
-            />
-          </div>
+          <Label className="text-sm font-semibold text-black uppercase tracking-wide">Patient Intake Team Size</Label>
+          <Input
+            className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
+            type="number"
+            placeholder="Number of employees"
+            value={patientIntakeTeamSize ?? ""}
+            onChange={(e) => onChange("patientIntakeTeamSize", e.target.value === "" ? undefined : Number(e.target.value))}
+          />
         </div>
 
         <div className="space-y-2">
-          <Label className="text-xs font-medium text-[#1C275E]">RCM Team Size</Label>
-          <div className="relative">
-            <Input
-              type="number"
-              className="border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
-              placeholder="Number of employees"
-              value={rcmTeamSize ?? ""}
-              onChange={(e) => onChange("rcmTeamSize", e.target.value === "" ? undefined : Number(e.target.value))}
-            />
-          </div>
+          <Label className="text-sm font-semibold text-black uppercase tracking-wide">RCM Team Size</Label>
+          <Input
+            className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
+            type="number"
+            placeholder="Number of employees"
+            value={rcmTeamSize ?? ""}
+            onChange={(e) => onChange("rcmTeamSize", e.target.value === "" ? undefined : Number(e.target.value))}
+          />
         </div>
       </div>
     </div>
