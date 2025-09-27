@@ -29,7 +29,7 @@ import LocationsModule from "@/components/launchpad/locations/LocationsModule";
 import SpecialtiesModule from "@/components/launchpad/specialties/SpecialtiesModule";
 import InsuranceModule from "@/components/launchpad/insurance/InsuranceModule";
 import KnowledgeModule from "@/components/launchpad/knowledge/KnowledgeModule";
-import { OrgInsurance, OrgLocation, OrgSpecialityService, AccountOpportunitySizing, SchedulingNumbersMode } from "@/components/launchpad/types";
+import { OrgInsurance, OrgLocation, OrgSpecialityService, AccountOpportunitySizing } from "@/components/launchpad/types";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -173,7 +173,6 @@ export default function Launchpad() {
   const [rcmTeamReporting, setRcmTeamReporting] = useState<Person | undefined>(undefined);
 
   // Systems Integration updates
-  const [schedulingNumbersMode, setSchedulingNumbersMode] = useState<SchedulingNumbersMode>("Single");
 
   // Locations (hydrated from API snapshot)
   const [locations, setLocations] = useState<OrgLocation[]>([]);
@@ -233,7 +232,6 @@ export default function Launchpad() {
     setSchedulingTeamReporting(undefined);
     setPatientIntakeTeamReporting(undefined);
     setRcmTeamReporting(undefined);
-    setSchedulingNumbersMode("Single");
     setLocations([]);
     setFormErrors({});
     setSpecialties([]);
@@ -332,7 +330,6 @@ export default function Launchpad() {
       setEmrSystems(ad.emr_ris_systems || []);
       setTelephonySystems(ad.telephony_ccas_systems || []);
       setSchedulingPhoneNumbers(ad.scheduling_phone_numbers || []);
-      setSchedulingNumbersMode((ad.scheduling_phone_numbers || []).length > 1 ? "Multiple" : "Single");
       setInsuranceVerificationSystem(ad.insurance_verification_system || "");
       setInsuranceVerificationDetails(ad.insurance_verification_details || "");
       setAdditionalInfo(ad.additional_info || "");
@@ -1282,7 +1279,6 @@ export default function Launchpad() {
                   <SystemsIntegrationCard
                     emrSystems={emrSystems}
                     telephonySystems={telephonySystems}
-                    schedulingNumbersMode={schedulingNumbersMode}
                     schedulingPhoneNumbers={schedulingPhoneNumbers}
                     insuranceVerificationSystem={insuranceVerificationSystem}
                     insuranceVerificationDetails={insuranceVerificationDetails}
@@ -1294,7 +1290,6 @@ export default function Launchpad() {
                     onAddTelephonySystem={() => setTelephonySystems(prev => [...prev, ""])}
                     onUpdateTelephonySystem={(index, value) => setTelephonySystems(prev => prev.map((s, i) => (i === index ? value : s)))}
                     onRemoveTelephonySystem={(index) => setTelephonySystems(prev => prev.filter((_, i) => i !== index))}
-                    onChangeSchedulingMode={setSchedulingNumbersMode}
                     onAddSchedulingPhone={() => setSchedulingPhoneNumbers(prev => [...prev, ""])}
                     onUpdateSchedulingPhone={(index, value) => setSchedulingPhoneNumbers(prev => prev.map((s, i) => (i === index ? value : s)))}
                     onRemoveSchedulingPhone={(index) => setSchedulingPhoneNumbers(prev => prev.filter((_, i) => i !== index))}

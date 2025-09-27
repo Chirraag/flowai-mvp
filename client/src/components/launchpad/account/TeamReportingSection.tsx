@@ -30,6 +30,69 @@ export default function TeamReportingSection({
   onRemove,
   readOnly = false,
 }: TeamReportingSectionProps) {
+  // Phone number formatting for display
+  const formatPhoneNumber = (value: string): string => {
+    // Remove all non-digits
+    const digits = value.replace(/\D/g, '');
+
+    // Limit to 10 digits maximum
+    const limitedDigits = digits.slice(0, 10);
+
+    // Apply US phone format: XXX-XXX-XXXX
+    if (limitedDigits.length <= 3) {
+      return limitedDigits;
+    } else if (limitedDigits.length <= 6) {
+      return `${limitedDigits.slice(0, 3)}-${limitedDigits.slice(3)}`;
+    } else {
+      return `${limitedDigits.slice(0, 3)}-${limitedDigits.slice(3, 6)}-${limitedDigits.slice(6)}`;
+    }
+  };
+
+  const handlePhoneChange = (id: string, rawValue: string) => {
+    // Format for display, but store only digits (no hyphens)
+    const digitsOnly = rawValue.replace(/\D/g, '').slice(0, 10);
+    onUpdate(id, 'phone', digitsOnly);
+  };
+
+  const handleTextOnlyChange = (id: string, field: 'title' | 'name', rawValue: string) => {
+    // Allow only letters, spaces, and basic punctuation
+    const textOnly = rawValue.replace(/[^a-zA-Z\s\-']/g, '');
+    onUpdate(id, field, textOnly);
+  };
+
+  // Helper to split full name into first and last name
+  const getNameParts = (fullName: string) => {
+    const parts = fullName.trim().split(' ');
+    const firstName = parts[0] || '';
+    const lastName = parts.slice(1).join(' ') || '';
+    return { firstName, lastName };
+  };
+
+  // Helper to combine first and last name
+  const combineName = (firstName: string, lastName: string) => {
+    const combined = [firstName.trim(), lastName.trim()].filter(Boolean).join(' ');
+    return combined || '';
+  };
+
+  // Handle first name change
+  const handleFirstNameChange = (id: string, firstName: string) => {
+    const person = team.find(member => member.id === id);
+    if (person) {
+      const { lastName } = getNameParts(person.name);
+      const combinedName = combineName(firstName, lastName);
+      handleTextOnlyChange(id, 'name', combinedName);
+    }
+  };
+
+  // Handle last name change
+  const handleLastNameChange = (id: string, lastName: string) => {
+    const person = team.find(member => member.id === id);
+    if (person) {
+      const { firstName } = getNameParts(person.name);
+      const combinedName = combineName(firstName, lastName);
+      handleTextOnlyChange(id, 'name', combinedName);
+    }
+  };
   return (
     <div className="space-y-4">
       {/* Team Section Header */}
@@ -68,11 +131,12 @@ export default function TeamReportingSection({
       <div className="space-y-2">
         {team.length > 0 ? (
           <div className="overflow-x-auto">
-            <Table className="min-w-[700px]">
+            <Table className="min-w-[800px]">
               <TableHeader>
                 <TableRow>
                   <TableHead className="text-black font-semibold text-sm">Title</TableHead>
-                  <TableHead className="text-black font-semibold text-sm">Name</TableHead>
+                  <TableHead className="text-black font-semibold text-sm">First Name</TableHead>
+                  <TableHead className="text-black font-semibold text-sm">Last Name</TableHead>
                   <TableHead className="text-black font-semibold text-sm">Email</TableHead>
                   <TableHead className="text-black font-semibold text-sm">Phone</TableHead>
                   <TableHead className="text-black font-semibold text-sm w-16">Action</TableHead>
@@ -86,7 +150,7 @@ export default function TeamReportingSection({
                         className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
                         placeholder="Enter title"
                         value={member.title}
-                        onChange={readOnly ? undefined : (e) => onUpdate(member.id, 'title', e.target.value)}
+                        onChange={readOnly ? undefined : (e) => handleTextOnlyChange(member.id, 'title', e.target.value)}
                         readOnly={readOnly}
                         aria-label="Title"
                       />
@@ -94,11 +158,21 @@ export default function TeamReportingSection({
                     <TableCell className="p-2">
                       <Input
                         className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
-                        placeholder="Full name"
-                        value={member.name}
-                        onChange={readOnly ? undefined : (e) => onUpdate(member.id, 'name', e.target.value)}
+                        placeholder="First name"
+                        value={getNameParts(member.name).firstName}
+                        onChange={readOnly ? undefined : (e) => handleFirstNameChange(member.id, e.target.value)}
                         readOnly={readOnly}
-                        aria-label="Name"
+                        aria-label="First Name"
+                      />
+                    </TableCell>
+                    <TableCell className="p-2">
+                      <Input
+                        className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
+                        placeholder="Last name"
+                        value={getNameParts(member.name).lastName}
+                        onChange={readOnly ? undefined : (e) => handleLastNameChange(member.id, e.target.value)}
+                        readOnly={readOnly}
+                        aria-label="Last Name"
                       />
                     </TableCell>
                     <TableCell className="p-2">
@@ -115,8 +189,8 @@ export default function TeamReportingSection({
                       <Input
                         className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
                         placeholder="(555) 123-4567"
-                        value={member.phone}
-                        onChange={readOnly ? undefined : (e) => onUpdate(member.id, 'phone', e.target.value)}
+                        value={formatPhoneNumber(member.phone)}
+                        onChange={readOnly ? undefined : (e) => handlePhoneChange(member.id, e.target.value)}
                         readOnly={readOnly}
                         aria-label="Phone"
                       />

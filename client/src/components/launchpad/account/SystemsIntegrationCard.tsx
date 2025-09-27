@@ -4,12 +4,20 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { SchedulingNumbersMode } from "@/components/launchpad/types";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface SystemsIntegrationCardProps {
   emrSystems: string[];
   telephonySystems: string[];
-  schedulingNumbersMode: SchedulingNumbersMode;
   schedulingPhoneNumbers: string[];
   insuranceVerificationSystem: string;
   insuranceVerificationDetails: string;
@@ -21,7 +29,6 @@ interface SystemsIntegrationCardProps {
   onAddTelephonySystem: () => void;
   onUpdateTelephonySystem: (index: number, value: string) => void;
   onRemoveTelephonySystem: (index: number) => void;
-  onChangeSchedulingMode: (mode: SchedulingNumbersMode) => void;
   onAddSchedulingPhone: () => void;
   onUpdateSchedulingPhone: (index: number, value: string) => void;
   onRemoveSchedulingPhone: (index: number) => void;
@@ -35,7 +42,6 @@ interface SystemsIntegrationCardProps {
 export default function SystemsIntegrationCard({
   emrSystems,
   telephonySystems,
-  schedulingNumbersMode,
   schedulingPhoneNumbers,
   insuranceVerificationSystem,
   insuranceVerificationDetails,
@@ -47,13 +53,59 @@ export default function SystemsIntegrationCard({
   onAddTelephonySystem,
   onUpdateTelephonySystem,
   onRemoveTelephonySystem,
-  onChangeSchedulingMode,
   onAddSchedulingPhone,
   onUpdateSchedulingPhone,
   onRemoveSchedulingPhone,
   onChangeField,
   readOnly = false,
 }: SystemsIntegrationCardProps) {
+  // Deletion confirmation dialog state
+  const [deleteDialog, setDeleteDialog] = React.useState<{
+    open: boolean;
+    phoneIndex?: number;
+    phoneNumber?: string;
+  }>({ open: false });
+
+  // Phone number formatting for display
+  const formatPhoneNumber = (value: string): string => {
+    // Remove all non-digits
+    const digits = value.replace(/\D/g, '');
+
+    // Limit to 10 digits maximum
+    const limitedDigits = digits.slice(0, 10);
+
+    // Apply US phone format: XXX-XXX-XXXX
+    if (limitedDigits.length <= 3) {
+      return limitedDigits;
+    } else if (limitedDigits.length <= 6) {
+      return `${limitedDigits.slice(0, 3)}-${limitedDigits.slice(3)}`;
+    } else {
+      return `${limitedDigits.slice(0, 3)}-${limitedDigits.slice(3, 6)}-${limitedDigits.slice(6)}`;
+    }
+  };
+
+  const handlePhoneChange = (index: number, rawValue: string) => {
+    // Format for display, but store only digits (no hyphens)
+    const digitsOnly = rawValue.replace(/\D/g, '').slice(0, 10);
+    onUpdateSchedulingPhone(index, digitsOnly);
+  };
+
+  // Deletion confirmation handlers
+  const handleDeletePhone = (index: number, phoneNumber: string) => {
+    setDeleteDialog({
+      open: true,
+      phoneIndex: index,
+      phoneNumber
+    });
+  };
+
+  const handleConfirmDelete = () => {
+    if (deleteDialog.phoneIndex !== undefined) {
+      onRemoveSchedulingPhone(deleteDialog.phoneIndex);
+      setDeleteDialog({ open: false });
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -109,36 +161,6 @@ export default function SystemsIntegrationCard({
         <div>
           <Label className="text-md font-medium">Scheduling Phone Numbers</Label>
           <div className="mt-2 space-y-2">
-            {!readOnly && (
-              <div>
-                <Label className="text-sm">Mode</Label>
-                <div className="flex items-center gap-4 mt-1">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      id="scheduling-single"
-                      name="scheduling-mode"
-                      checked={schedulingNumbersMode === "Single"}
-                      onChange={() => onChangeSchedulingMode("Single")}
-                      className="w-4 h-4"
-                    />
-                    <Label htmlFor="scheduling-single" className="text-sm">Single</Label>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      id="scheduling-multiple"
-                      name="scheduling-mode"
-                      checked={schedulingNumbersMode === "Multiple"}
-                      onChange={() => onChangeSchedulingMode("Multiple")}
-                      className="w-4 h-4"
-                    />
-                    <Label htmlFor="scheduling-multiple" className="text-sm">Multiple</Label>
-                  </div>
-                </div>
-              </div>
-            )}
-
             <div>
               <div className="flex items-center justify-between mb-2">
                 <Label className="text-sm">Phone Numbers</Label>
@@ -150,9 +172,9 @@ export default function SystemsIntegrationCard({
                 {schedulingPhoneNumbers.map((num, index) => (
                   <div key={index} className="flex items-center gap-1 bg-muted px-3 py-1 rounded-full">
                     <Input
-                      placeholder="Phone number"
-                      value={num}
-                      onChange={readOnly ? undefined : (e) => onUpdateSchedulingPhone(index, e.target.value)}
+                      placeholder="123-456-7890"
+                      value={formatPhoneNumber(num)}
+                      onChange={readOnly ? undefined : (e) => handlePhoneChange(index, e.target.value)}
                       readOnly={readOnly}
                       className="border-none bg-transparent p-0 h-auto text-sm"
                     />
@@ -161,7 +183,7 @@ export default function SystemsIntegrationCard({
                         variant="ghost"
                         size="sm"
                         className="h-4 w-4 p-0 text-red-600 hover:text-red-700"
-                        onClick={() => onRemoveSchedulingPhone(index)}
+                        onClick={() => handleDeletePhone(index, num)}
                       >
                         ×
                       </Button>
@@ -220,6 +242,28 @@ export default function SystemsIntegrationCard({
           />
         </div>
       </CardContent>
+
+      {/* Deletion Confirmation Dialog */}
+      <AlertDialog open={deleteDialog.open} onOpenChange={() => setDeleteDialog({ open: false })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Phone Number</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the phone number "{deleteDialog.phoneNumber}"?
+              This change will be applied when you click Save.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }

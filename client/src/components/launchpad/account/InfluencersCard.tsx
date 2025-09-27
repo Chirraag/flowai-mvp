@@ -31,6 +31,69 @@ export default function InfluencersCard({
   errors = {},
   readOnly = false,
 }: InfluencersCardProps) {
+  // Phone number formatting for display
+  const formatPhoneNumber = (value: string): string => {
+    // Remove all non-digits
+    const digits = value.replace(/\D/g, '');
+
+    // Limit to 10 digits maximum
+    const limitedDigits = digits.slice(0, 10);
+
+    // Apply US phone format: XXX-XXX-XXXX
+    if (limitedDigits.length <= 3) {
+      return limitedDigits;
+    } else if (limitedDigits.length <= 6) {
+      return `${limitedDigits.slice(0, 3)}-${limitedDigits.slice(3)}`;
+    } else {
+      return `${limitedDigits.slice(0, 3)}-${limitedDigits.slice(3, 6)}-${limitedDigits.slice(6)}`;
+    }
+  };
+
+  const handlePhoneChange = (id: string, rawValue: string) => {
+    // Format for display, but store only digits (no hyphens)
+    const digitsOnly = rawValue.replace(/\D/g, '').slice(0, 10);
+    onUpdate(id, 'phone', digitsOnly);
+  };
+
+  const handleTextOnlyChange = (id: string, field: 'title' | 'name', rawValue: string) => {
+    // Allow only letters, spaces, and basic punctuation
+    const textOnly = rawValue.replace(/[^a-zA-Z\s\-']/g, '');
+    onUpdate(id, field, textOnly);
+  };
+
+  // Helper to split full name into first and last name
+  const getNameParts = (fullName: string) => {
+    const parts = fullName.trim().split(' ');
+    const firstName = parts[0] || '';
+    const lastName = parts.slice(1).join(' ') || '';
+    return { firstName, lastName };
+  };
+
+  // Helper to combine first and last name
+  const combineName = (firstName: string, lastName: string) => {
+    const combined = [firstName.trim(), lastName.trim()].filter(Boolean).join(' ');
+    return combined || '';
+  };
+
+  // Handle first name change
+  const handleFirstNameChange = (id: string, firstName: string) => {
+    const person = influencers.find(inf => inf.id === id);
+    if (person) {
+      const { lastName } = getNameParts(person.name);
+      const combinedName = combineName(firstName, lastName);
+      handleTextOnlyChange(id, 'name', combinedName);
+    }
+  };
+
+  // Handle last name change
+  const handleLastNameChange = (id: string, lastName: string) => {
+    const person = influencers.find(inf => inf.id === id);
+    if (person) {
+      const { firstName } = getNameParts(person.name);
+      const combinedName = combineName(firstName, lastName);
+      handleTextOnlyChange(id, 'name', combinedName);
+    }
+  };
   if (influencers.length === 0) {
     return (
       <div className="text-center py-12 px-6 bg-gradient-to-br from-[#1C275E]/5 to-[#1C275E]/3 rounded-xl border-2 border-dashed border-[#1C275E]/30">
@@ -47,11 +110,12 @@ export default function InfluencersCard({
 
   return (
     <div className="overflow-x-auto">
-      <Table className="min-w-[700px]">
+      <Table className="min-w-[800px]">
         <TableHeader>
           <TableRow>
             <TableHead className="text-black font-semibold text-sm">Title</TableHead>
-            <TableHead className="text-black font-semibold text-sm">Name</TableHead>
+            <TableHead className="text-black font-semibold text-sm">First Name</TableHead>
+            <TableHead className="text-black font-semibold text-sm">Last Name</TableHead>
             <TableHead className="text-black font-semibold text-sm">Email</TableHead>
             <TableHead className="text-black font-semibold text-sm">Phone</TableHead>
             <TableHead className="text-black font-semibold text-sm w-16">Action</TableHead>
@@ -65,7 +129,7 @@ export default function InfluencersCard({
                   className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
                   placeholder="Enter title"
                   value={inf.title}
-                  onChange={readOnly ? undefined : (e) => onUpdate(inf.id, 'title', e.target.value)}
+                  onChange={readOnly ? undefined : (e) => handleTextOnlyChange(inf.id, 'title', e.target.value)}
                   readOnly={readOnly}
                   aria-label="Title"
                 />
@@ -74,13 +138,26 @@ export default function InfluencersCard({
                 <div className="space-y-1">
                   <Input
                     className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
-                    placeholder="Full name"
-                    value={inf.name}
-                    onChange={readOnly ? undefined : (e) => onUpdate(inf.id, 'name', e.target.value)}
+                    placeholder="First name"
+                    value={getNameParts(inf.name).firstName}
+                    onChange={readOnly ? undefined : (e) => handleFirstNameChange(inf.id, e.target.value)}
                     readOnly={readOnly}
-                    aria-label="Name"
+                    aria-label="First Name"
                   />
-                  <FieldError error={errors[`inf-${inf.id}-name`]} />
+                  <FieldError error={errors[`inf-${inf.id}-firstName`]} />
+                </div>
+              </TableCell>
+              <TableCell className="p-2">
+                <div className="space-y-1">
+                  <Input
+                    className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
+                    placeholder="Last name"
+                    value={getNameParts(inf.name).lastName}
+                    onChange={readOnly ? undefined : (e) => handleLastNameChange(inf.id, e.target.value)}
+                    readOnly={readOnly}
+                    aria-label="Last Name"
+                  />
+                  <FieldError error={errors[`inf-${inf.id}-lastName`]} />
                 </div>
               </TableCell>
               <TableCell className="p-2">
@@ -100,8 +177,8 @@ export default function InfluencersCard({
                 <Input
                   className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
                   placeholder="(555) 123-4567"
-                  value={inf.phone}
-                  onChange={readOnly ? undefined : (e) => onUpdate(inf.id, 'phone', e.target.value)}
+                  value={formatPhoneNumber(inf.phone)}
+                  onChange={readOnly ? undefined : (e) => handlePhoneChange(inf.id, e.target.value)}
                   readOnly={readOnly}
                   aria-label="Phone"
                 />

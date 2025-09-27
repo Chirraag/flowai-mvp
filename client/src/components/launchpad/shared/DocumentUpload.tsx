@@ -371,7 +371,7 @@ export default function DocumentUpload({
               input?.click();
             }}
           >
-            {isUploading ? 'Uploading...' : 'Select File'}
+            Select File
           </Button>
           <p className="text-xs text-muted-foreground mt-2">
             Max size: {maxFileSize}MB • Allowed: PDF, DOC, DOCX, TXT, JPG, PNG, GIF

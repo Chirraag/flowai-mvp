@@ -40,7 +40,6 @@ export default function OrgStructureCard({
                   <SelectItem value="Decentralized">Decentralized</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
           </div>
 
           <div className="space-y-2">
@@ -60,6 +59,7 @@ export default function OrgStructureCard({
               </SelectContent>
             </Select>
         </div>
+      </div>
     </div>
   );
 }
