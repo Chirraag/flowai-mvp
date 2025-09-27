@@ -35,6 +35,7 @@ interface SpecialtiesModuleProps {
   onRemove: (id: string) => void;
   onSave?: () => void;
   isSaving?: boolean;
+  readOnly?: boolean;
 }
 
 export default function SpecialtiesModule({
@@ -48,6 +49,7 @@ export default function SpecialtiesModule({
   onRemove,
   onSave,
   isSaving = false,
+  readOnly = false,
 }: SpecialtiesModuleProps) {
   const [locationSearchTerm, setLocationSearchTerm] = React.useState('');
   const [searchTerm, setSearchTerm] = React.useState('');
@@ -218,7 +220,7 @@ export default function SpecialtiesModule({
             >
               Docs
             </Button>
-            {onSave && (
+            {onSave && !readOnly && (
               <Button
                 onClick={onSave}
                 disabled={isSaving}
@@ -227,7 +229,9 @@ export default function SpecialtiesModule({
                 {isSaving ? "Saving..." : "Save"}
               </Button>
             )}
-            <Button variant="default" onClick={handleAddSpecialty} className="bg-[#f49024] hover:bg-[#d87f1f] text-white h-8 px-3 text-sm">Add Specialty</Button>
+            {!readOnly && (
+              <Button variant="default" onClick={handleAddSpecialty} className="bg-[#f49024] hover:bg-[#d87f1f] text-white h-8 px-3 text-sm">Add Specialty</Button>
+            )}
           </div>
         </div>
       </CardHeader>
@@ -276,17 +280,19 @@ export default function SpecialtiesModule({
                     <CardTitle className="text-lg font-semibold tracking-tight">{spec.specialty_name || "Specialty"}</CardTitle>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button
-                       variant="outline"
-                       size="sm"
-                       className="border-[#c0352b]/40 text-[#c0352b] hover:bg-[#c0352b] hover:text-white focus-visible:ring-2 focus-visible:ring-[#c0352b]/40 focus-visible:outline-none"
-                       onClick={(event) => {
-                         event.stopPropagation();
-                         handleDeleteSpecialty(spec.id, spec.specialty_name || 'this specialty');
-                       }}
-                     >
-                      Delete
-                    </Button>
+                    {!readOnly && (
+              <Button
+                         variant="outline"
+                         size="sm"
+                         className="border-[#c0352b]/40 text-[#c0352b] hover:bg-[#c0352b] hover:text-white focus-visible:ring-2 focus-visible:ring-[#c0352b]/40 focus-visible:outline-none"
+                         onClick={(event) => {
+                           event.stopPropagation();
+                           handleDeleteSpecialty(spec.id, spec.specialty_name || 'this specialty');
+                         }}
+                       >
+                        Delete
+                      </Button>
+            )}
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -344,7 +350,7 @@ export default function SpecialtiesModule({
                       <div className="flex-1 space-y-5">
                         <div className="flex-1">
                           <Label className="text-sm font-semibold text-black uppercase tracking-wide">Specialty Name</Label>
-                          <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="e.g., Cardiology" value={spec.specialty_name} onChange={(e) => onUpdate(spec.id, { specialty_name: e.target.value })} />
+                          <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="e.g., Cardiology" value={spec.specialty_name} onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { specialty_name: e.target.value })} readOnly={readOnly} />
                         </div>
 
                         <div className="space-y-3">
@@ -388,7 +394,7 @@ export default function SpecialtiesModule({
                                           ? 'bg-[#1C275E] text-white border-[#1C275E] hover:bg-[#233072] hover:text-white'
                                           : 'bg-white text-[#1C275E] border-[#BEC4DB] hover:bg-[#1C275E]/10'
                                       }`}
-                                      onClick={() => {
+                                      onClick={readOnly ? undefined : () => {
                                         const next = new Set(spec.location_ids);
                                         if (next.has(location.location_id)) {
                                           next.delete(location.location_id);
@@ -439,77 +445,77 @@ export default function SpecialtiesModule({
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
                             <Label className="text-sm font-semibold text-black uppercase tracking-wide">Physician Names Source</Label>
-                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="Source type (e.g., EMR)" value={spec.physician_names_source_type || ""} onChange={(e) => onUpdate(spec.id, { physician_names_source_type: e.target.value })} />
+                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="Source type (e.g., EMR)" value={spec.physician_names_source_type || ""} onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { physician_names_source_type: e.target.value })} readOnly={readOnly} />
                           </div>
                           <div>
                             <Label className="text-sm font-semibold text-black uppercase tracking-wide">Source Link</Label>
-                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="URL" value={spec.physician_names_source_link || ""} onChange={(e) => onUpdate(spec.id, { physician_names_source_link: e.target.value })} />
+                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="URL" value={spec.physician_names_source_link || ""} onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { physician_names_source_link: e.target.value })} readOnly={readOnly} />
                           </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
                             <Label className="text-sm font-semibold text-black uppercase tracking-wide">New Patients Source</Label>
-                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="Source type" value={spec.new_patients_source_type || ""} onChange={(e) => onUpdate(spec.id, { new_patients_source_type: e.target.value })} />
+                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="Source type" value={spec.new_patients_source_type || ""} onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { new_patients_source_type: e.target.value })} readOnly={readOnly} />
                           </div>
                           <div>
                             <Label className="text-sm font-semibold text-black uppercase tracking-wide">Source Link</Label>
-                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="URL" value={spec.new_patients_source_link || ""} onChange={(e) => onUpdate(spec.id, { new_patients_source_link: e.target.value })} />
+                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="URL" value={spec.new_patients_source_link || ""} onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { new_patients_source_link: e.target.value })} readOnly={readOnly} />
                           </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
                             <Label className="text-sm font-semibold text-black uppercase tracking-wide">Physician Locations Source</Label>
-                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="Source type" value={spec.physician_locations_source_type || ""} onChange={(e) => onUpdate(spec.id, { physician_locations_source_type: e.target.value })} />
+                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="Source type" value={spec.physician_locations_source_type || ""} onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { physician_locations_source_type: e.target.value })} readOnly={readOnly} />
                           </div>
                           <div>
                             <Label className="text-sm font-semibold text-black uppercase tracking-wide">Source Link</Label>
-                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="URL" value={spec.physician_locations_source_link || ""} onChange={(e) => onUpdate(spec.id, { physician_locations_source_link: e.target.value })} />
+                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="URL" value={spec.physician_locations_source_link || ""} onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { physician_locations_source_link: e.target.value })} readOnly={readOnly} />
                           </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
                             <Label className="text-sm font-semibold text-black uppercase tracking-wide">Physician Credentials Source</Label>
-                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="Source type" value={spec.physician_credentials_source_type || ""} onChange={(e) => onUpdate(spec.id, { physician_credentials_source_type: e.target.value })} />
+                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="Source type" value={spec.physician_credentials_source_type || ""} onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { physician_credentials_source_type: e.target.value })} readOnly={readOnly} />
                           </div>
                           <div>
                             <Label className="text-sm font-semibold text-black uppercase tracking-wide">Source Link</Label>
-                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="URL" value={spec.physician_credentials_source_link || ""} onChange={(e) => onUpdate(spec.id, { physician_credentials_source_link: e.target.value })} />
+                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="URL" value={spec.physician_credentials_source_link || ""} onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { physician_credentials_source_link: e.target.value })} readOnly={readOnly} />
                           </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
                             <Label className="text-sm font-semibold text-black uppercase tracking-wide">Services Offered Source</Label>
-                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="Source type" value={spec.services_offered_source_type || ""} onChange={(e) => onUpdate(spec.id, { services_offered_source_type: e.target.value })} />
+                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="Source type" value={spec.services_offered_source_type || ""} onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { services_offered_source_type: e.target.value })} readOnly={readOnly} />
                           </div>
                           <div>
                             <Label className="text-sm font-semibold text-black uppercase tracking-wide">Source Link</Label>
-                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="URL" value={spec.services_offered_source_link || ""} onChange={(e) => onUpdate(spec.id, { services_offered_source_link: e.target.value })} />
+                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="URL" value={spec.services_offered_source_link || ""} onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { services_offered_source_link: e.target.value })} readOnly={readOnly} />
                           </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
                             <Label className="text-sm font-semibold text-black uppercase tracking-wide">Patient Prep Source</Label>
-                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="Source type" value={spec.patient_prep_source_type || ""} onChange={(e) => onUpdate(spec.id, { patient_prep_source_type: e.target.value })} />
+                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="Source type" value={spec.patient_prep_source_type || ""} onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { patient_prep_source_type: e.target.value })} readOnly={readOnly} />
                           </div>
                           <div>
                             <Label className="text-sm font-semibold text-black uppercase tracking-wide">Source Link</Label>
-                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="URL" value={spec.patient_prep_source_link || ""} onChange={(e) => onUpdate(spec.id, { patient_prep_source_link: e.target.value })} />
+                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="URL" value={spec.patient_prep_source_link || ""} onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { patient_prep_source_link: e.target.value })} readOnly={readOnly} />
                           </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
                             <Label className="text-sm font-semibold text-black uppercase tracking-wide">Patient FAQs Source</Label>
-                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="Source type" value={spec.patient_faqs_source_type || ""} onChange={(e) => onUpdate(spec.id, { patient_faqs_source_type: e.target.value })} />
+                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="Source type" value={spec.patient_faqs_source_type || ""} onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { patient_faqs_source_type: e.target.value })} readOnly={readOnly} />
                           </div>
                           <div>
                             <Label className="text-sm font-semibold text-black uppercase tracking-wide">Source Link</Label>
-                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="URL" value={spec.patient_faqs_source_link || ""} onChange={(e) => onUpdate(spec.id, { patient_faqs_source_link: e.target.value })} />
+                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="URL" value={spec.patient_faqs_source_link || ""} onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { patient_faqs_source_link: e.target.value })} readOnly={readOnly} />
                           </div>
                         </div>
                       </div>
@@ -555,13 +561,15 @@ export default function SpecialtiesModule({
                         return (
                           <div className="flex flex-col lg:flex-row lg:gap-5 gap-4">
                             <div className="lg:w-64 shrink-0 border border-slate-200 rounded-2xl bg-slate-50/80 p-4 space-y-3 shadow-inner">
-                              <Button
-                                size="sm"
-                                className="w-full bg-[#f49024] hover:bg-[#d87f1f] text-white"
-                                onClick={handleAddService}
-                              >
-                                Add Service
-                              </Button>
+                              {!readOnly && (
+                                <Button
+                                  size="sm"
+                                  className="w-full bg-[#f49024] hover:bg-[#d87f1f] text-white"
+                                  onClick={handleAddService}
+                                >
+                                  Add Service
+                                </Button>
+                              )}
                               <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
                                 {services.length === 0 ? (
                                   <p className="text-xs text-muted-foreground text-center py-6">No services yet</p>
@@ -598,24 +606,27 @@ export default function SpecialtiesModule({
                                         className="mt-2 h-10 text-sm border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20"
                                         placeholder="e.g., MRI Scan, Blood Test"
                                         value={selectedService.name}
-                                        onChange={(e) => handleServiceFieldChange('name', e.target.value)}
+                                        onChange={readOnly ? undefined : (e) => handleServiceFieldChange('name', e.target.value)}
+                                        readOnly={readOnly}
                                       />
                                     </div>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="self-start mt-1 border-[#c0352b]/40 text-[#c0352b] hover:bg-[#c0352b] hover:text-white"
-                                      onClick={() =>
-                                        setRemoveServiceDialog({
-                                          open: true,
-                                          specialtyId: spec.id,
-                                          serviceIndex: selectedIndex ?? undefined,
-                                          serviceName: selectedService.name?.trim() || 'Untitled service',
-                                        })
-                                      }
-                                    >
-                                      Remove
-                                    </Button>
+                                    {!readOnly && (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="self-start mt-1 border-[#c0352b]/40 text-[#c0352b] hover:bg-[#c0352b] hover:text-white"
+                                        onClick={() =>
+                                          setRemoveServiceDialog({
+                                            open: true,
+                                            specialtyId: spec.id,
+                                            serviceIndex: selectedIndex ?? undefined,
+                                            serviceName: selectedService.name?.trim() || 'Untitled service',
+                                          })
+                                        }
+                                      >
+                                        Remove
+                                      </Button>
+                                    )}
                                   </div>
 
                                   <div className="space-y-2">
@@ -624,7 +635,8 @@ export default function SpecialtiesModule({
                                       className="min-h-[120px] text-sm border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
                                       placeholder="Describe what patients need to do before this service"
                                       value={selectedService.patient_prep_requirements || ''}
-                                      onChange={(e) => handleServiceFieldChange('patient_prep_requirements', e.target.value)}
+                                      onChange={readOnly ? undefined : (e) => handleServiceFieldChange('patient_prep_requirements', e.target.value)}
+                                      readOnly={readOnly}
                                     />
                                   </div>
 
@@ -634,7 +646,8 @@ export default function SpecialtiesModule({
                                       className="min-h-[120px] text-sm border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
                                       placeholder="Common questions and answers about this service"
                                       value={selectedService.faq || ''}
-                                      onChange={(e) => handleServiceFieldChange('faq', e.target.value)}
+                                      onChange={readOnly ? undefined : (e) => handleServiceFieldChange('faq', e.target.value)}
+                                      readOnly={readOnly}
                                     />
                                   </div>
 
@@ -645,7 +658,8 @@ export default function SpecialtiesModule({
                                         className="h-10 text-sm border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20"
                                         placeholder="e.g., Procedure Details, Cost Information"
                                         value={selectedService.service_information_name || ''}
-                                        onChange={(e) => handleServiceFieldChange('service_information_name', e.target.value)}
+                                        onChange={readOnly ? undefined : (e) => handleServiceFieldChange('service_information_name', e.target.value)}
+                                        readOnly={readOnly}
                                       />
                                     </div>
                                     <div className="space-y-2">
@@ -654,7 +668,8 @@ export default function SpecialtiesModule({
                                         className="h-10 text-sm border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20"
                                         placeholder="Source of this information"
                                         value={selectedService.service_information_source || ''}
-                                        onChange={(e) => handleServiceFieldChange('service_information_source', e.target.value)}
+                                        onChange={readOnly ? undefined : (e) => handleServiceFieldChange('service_information_source', e.target.value)}
+                                        readOnly={readOnly}
                                       />
                                     </div>
                                   </div>

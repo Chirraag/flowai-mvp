@@ -22,6 +22,7 @@ export type DeliveryMethodsTabProps = {
   };
   onSave?: (values: any) => Promise<void>;
   isSaving?: boolean;
+  readOnly?: boolean;
 };
 
 export type DeliveryMethodsTabHandle = {
@@ -48,7 +49,7 @@ export type DeliveryMethodsTabHandle = {
   validate: () => { valid: boolean; errors: string[] };
 };
 
-const DeliveryMethodsTab = forwardRef<DeliveryMethodsTabHandle, DeliveryMethodsTabProps>(({ initialData, onSave, isSaving = false }, ref) => {
+const DeliveryMethodsTab = forwardRef<DeliveryMethodsTabHandle, DeliveryMethodsTabProps>(({ initialData, onSave, isSaving = false, readOnly = false }, ref) => {
   // Format Preferences state (default values, overridden by initialData if provided)
   const [textMessageLink, setTextMessageLink] = useState(true);
   const [voiceCall, setVoiceCall] = useState(false);
@@ -177,9 +178,12 @@ const DeliveryMethodsTab = forwardRef<DeliveryMethodsTabHandle, DeliveryMethodsT
                 id="text-message-link"
                 checked={textMessageLink}
                 onCheckedChange={(checked) => {
-                  setTextMessageLink(checked);
-                  handleFieldChange();
+                  if (!readOnly) {
+                    setTextMessageLink(checked);
+                    handleFieldChange();
+                  }
                 }}
+                disabled={readOnly}
               />
             </div>
 
@@ -189,9 +193,12 @@ const DeliveryMethodsTab = forwardRef<DeliveryMethodsTabHandle, DeliveryMethodsT
                 id="voice-call"
                 checked={voiceCall}
                 onCheckedChange={(checked) => {
-                  setVoiceCall(checked);
-                  handleFieldChange();
+                  if (!readOnly) {
+                    setVoiceCall(checked);
+                    handleFieldChange();
+                  }
                 }}
+                disabled={readOnly}
               />
             </div>
 
@@ -201,9 +208,12 @@ const DeliveryMethodsTab = forwardRef<DeliveryMethodsTabHandle, DeliveryMethodsT
                 id="qr-code"
                 checked={qrCode}
                 onCheckedChange={(checked) => {
-                  setQrCode(checked);
-                  handleFieldChange();
+                  if (!readOnly) {
+                    setQrCode(checked);
+                    handleFieldChange();
+                  }
                 }}
+                disabled={readOnly}
               />
             </div>
 
@@ -213,9 +223,12 @@ const DeliveryMethodsTab = forwardRef<DeliveryMethodsTabHandle, DeliveryMethodsT
                 id="email-link"
                 checked={emailLink}
                 onCheckedChange={(checked) => {
-                  setEmailLink(checked);
-                  handleFieldChange();
+                  if (!readOnly) {
+                    setEmailLink(checked);
+                    handleFieldChange();
+                  }
                 }}
+                disabled={readOnly}
               />
             </div>
 
@@ -225,9 +238,12 @@ const DeliveryMethodsTab = forwardRef<DeliveryMethodsTabHandle, DeliveryMethodsT
                 id="in-person-tablet"
                 checked={inPersonTablet}
                 onCheckedChange={(checked) => {
-                  setInPersonTablet(checked);
-                  handleFieldChange();
+                  if (!readOnly) {
+                    setInPersonTablet(checked);
+                    handleFieldChange();
+                  }
                 }}
+                disabled={readOnly}
               />
             </div>
           </div>
@@ -255,9 +271,12 @@ const DeliveryMethodsTab = forwardRef<DeliveryMethodsTabHandle, DeliveryMethodsT
                 id="digital-signature"
                 checked={digitalSignature}
                 onCheckedChange={(checked) => {
-                  setDigitalSignature(checked);
-                  handleFieldChange();
+                  if (!readOnly) {
+                    setDigitalSignature(checked);
+                    handleFieldChange();
+                  }
                 }}
+                disabled={readOnly}
               />
             </div>
 
@@ -267,9 +286,12 @@ const DeliveryMethodsTab = forwardRef<DeliveryMethodsTabHandle, DeliveryMethodsT
                 id="verbal-consent"
                 checked={verbalConsentRecording}
                 onCheckedChange={(checked) => {
-                  setVerbalConsentRecording(checked);
-                  handleFieldChange();
+                  if (!readOnly) {
+                    setVerbalConsentRecording(checked);
+                    handleFieldChange();
+                  }
                 }}
+                disabled={readOnly}
               />
             </div>
 
@@ -279,10 +301,11 @@ const DeliveryMethodsTab = forwardRef<DeliveryMethodsTabHandle, DeliveryMethodsT
                 id="consent-language"
                 placeholder="Enter the consent text that will be shown to patients..."
                 value={consentLanguage}
-                onChange={(e) => {
+                onChange={readOnly ? undefined : (e) => {
                   setConsentLanguage(e.target.value);
                   handleFieldChange();
                 }}
+                readOnly={readOnly}
                 className="min-h-24 resize-none border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
               />
             </div>

@@ -19,6 +19,7 @@ interface DocumentUploadProps {
   maxFileSize?: number; // in MB
   allowedTypes?: string[];
   className?: string;
+  readOnly?: boolean;
 }
 
 const DEFAULT_MAX_SIZE = 10; // 10MB
@@ -41,7 +42,8 @@ export default function DocumentUpload({
   isDeleting = false,
   maxFileSize = DEFAULT_MAX_SIZE,
   allowedTypes = DEFAULT_ALLOWED_TYPES,
-  className = ""
+  className = "",
+  readOnly = false
 }: DocumentUploadProps) {
   const { toast } = useToast();
   const [dragOver, setDragOver] = useState(false);
@@ -337,17 +339,18 @@ export default function DocumentUpload({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Upload Area */}
-        <div
-          className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-            dragOver
-              ? 'border-primary bg-primary/5'
-              : 'border-muted-foreground/25 hover:border-muted-foreground/50'
-          } ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-        >
+        {/* Upload Area - Hidden for read-only users */}
+        {!readOnly && (
+          <div
+            className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+              dragOver
+                ? 'border-primary bg-primary/5'
+                : 'border-muted-foreground/25 hover:border-muted-foreground/50'
+            } ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
           <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
           <p className="text-sm text-muted-foreground mb-2">
             {isUploading ? 'Uploading...' : 'Drag and drop a file here, or click to select'}
@@ -368,12 +371,13 @@ export default function DocumentUpload({
               input?.click();
             }}
           >
-            {isUploading ? 'Uploading...' : 'Select File'}
+            Select File
           </Button>
           <p className="text-xs text-muted-foreground mt-2">
             Max size: {maxFileSize}MB • Allowed: PDF, DOC, DOCX, TXT, JPG, PNG, GIF
           </p>
-        </div>
+          </div>
+        )}
 
         {/* Documents List */}
         {documents.length > 0 && (
@@ -403,15 +407,17 @@ export default function DocumentUpload({
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setDeleteUrl(doc.url)}
-                      disabled={isDeleting}
-                      className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {!readOnly && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setDeleteUrl(doc.url)}
+                        disabled={isDeleting}
+                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}

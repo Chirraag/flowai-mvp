@@ -2,6 +2,7 @@ import React, { Suspense, lazy, useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { handleApiError } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import {
@@ -32,7 +33,11 @@ const PatientAgentConfigTab = lazy(() => import("@/components/patient-intake/Pat
 
 export default function PatientIntakeAgent() {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, hasWriteAccess, isReadOnlyFor } = useAuth();
+  
+  // RBAC Permission checks
+  const canWriteAgents = hasWriteAccess("ai-agents");
+  const isReadOnly = isReadOnlyFor("ai-agents");
 
   // Loading and data state
   const [isLoading, setIsLoading] = useState(true);
@@ -263,11 +268,8 @@ export default function PatientIntakeAgent() {
 
     } catch (error) {
       console.error('Save failed:', error);
-      toast({
-        title: "Save Failed",
-        description: "An error occurred while saving. Please try again.",
-        variant: "destructive",
-      });
+      const errorToast = handleApiError(error, { action: "save patient intake configuration" });
+      toast(errorToast);
     } finally {
       setIsSaving(false);
       setSavingTabs(new Set());
@@ -431,6 +433,7 @@ export default function PatientIntakeAgent() {
               initialValues={initialValues?.forms}
               onSave={undefined} // API not implemented yet
               isSaving={false} // Not applicable for forms tab
+              readOnly={isReadOnly}
             />
           </Suspense>
         </TabsContent>
@@ -443,6 +446,7 @@ export default function PatientIntakeAgent() {
               initialData={initialValues?.rules}
               onSave={handleSaveFieldRequirements}
               isSaving={isSaving}
+              readOnly={isReadOnly}
             />
           </Suspense>
         </TabsContent>
@@ -455,6 +459,7 @@ export default function PatientIntakeAgent() {
               initialData={initialValues?.delivery}
               onSave={handleSaveDeliveryMethods}
               isSaving={isSaving}
+              readOnly={isReadOnly}
             />
           </Suspense>
         </TabsContent>
@@ -462,7 +467,7 @@ export default function PatientIntakeAgent() {
         {/* Workflows tab */}
         <TabsContent value="workflows">
           <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
-            <PatientWorkflowsTab ref={workflowsRef} />
+            <PatientWorkflowsTab ref={workflowsRef} readOnly={isReadOnly} />
           </Suspense>
         </TabsContent>
 
@@ -474,6 +479,7 @@ export default function PatientIntakeAgent() {
               initialData={initialValues?.agentConfig}
               onSave={handleSaveAgentConfig}
               isSaving={isSaving}
+              readOnly={isReadOnly}
             />
           </Suspense>
         </TabsContent>

@@ -18,6 +18,7 @@ export type FieldContentRulesTabProps = {
   };
   onSave?: (values: any) => Promise<void>;
   isSaving?: boolean;
+  readOnly?: boolean;
 };
 
 export type FieldContentRulesTabHandle = {
@@ -46,7 +47,7 @@ export type FieldContentRulesTabHandle = {
   validate: () => { valid: boolean; errors: string[] };
 };
 
-const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle, FieldContentRulesTabProps>(({ initialData, onSave, isSaving = false }, ref) => {
+const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle, FieldContentRulesTabProps>(({ initialData, onSave, isSaving = false, readOnly = false }, ref) => {
   // Field Requirements state (default values, overridden by initialData if provided)
   const [patientName, setPatientName] = useState("required");
   const [dateOfBirth, setDateOfBirth] = useState("required");
@@ -177,10 +178,10 @@ const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle, FieldContent
           <div className="space-y-4">
             <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
               <Label htmlFor="patient-name" className="text-[#1c275e] font-medium">Patient Name</Label>
-              <Select value={patientName} onValueChange={(value) => {
+              <Select value={patientName} onValueChange={readOnly ? undefined : (value) => {
                 setPatientName(value);
                 handleFieldChange();
-              }}>
+              }} disabled={readOnly}>
                 <SelectTrigger className="w-32 h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]">
                   <SelectValue placeholder="Select" />
                 </SelectTrigger>
@@ -193,10 +194,10 @@ const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle, FieldContent
 
             <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
               <Label htmlFor="date-of-birth" className="text-[#1c275e] font-medium">Date of Birth</Label>
-              <Select value={dateOfBirth} onValueChange={(value) => {
+              <Select value={dateOfBirth} onValueChange={readOnly ? undefined : (value) => {
                 setDateOfBirth(value);
                 handleFieldChange();
-              }}>
+              }} disabled={readOnly}>
                 <SelectTrigger className="w-32 h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]">
                   <SelectValue placeholder="Select" />
                 </SelectTrigger>
@@ -209,10 +210,10 @@ const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle, FieldContent
 
             <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
               <Label htmlFor="phone-number" className="text-[#1c275e] font-medium">Phone Number</Label>
-              <Select value={phoneNumber} onValueChange={(value) => {
+              <Select value={phoneNumber} onValueChange={readOnly ? undefined : (value) => {
                 setPhoneNumber(value);
                 handleFieldChange();
-              }}>
+              }} disabled={readOnly}>
                 <SelectTrigger className="w-32 h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]">
                   <SelectValue placeholder="Select" />
                 </SelectTrigger>
@@ -225,10 +226,10 @@ const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle, FieldContent
 
             <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
               <Label htmlFor="email" className="text-[#1c275e] font-medium">Email</Label>
-              <Select value={email} onValueChange={(value) => {
+              <Select value={email} onValueChange={readOnly ? undefined : (value) => {
                 setEmail(value);
                 handleFieldChange();
-              }}>
+              }} disabled={readOnly}>
                 <SelectTrigger className="w-32 h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]">
                   <SelectValue placeholder="Select" />
                 </SelectTrigger>
@@ -241,10 +242,10 @@ const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle, FieldContent
 
             <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
               <Label htmlFor="insurance-id" className="text-[#1c275e] font-medium">Insurance ID</Label>
-              <Select value={insuranceId} onValueChange={(value) => {
+              <Select value={insuranceId} onValueChange={readOnly ? undefined : (value) => {
                 setInsuranceId(value);
                 handleFieldChange();
-              }}>
+              }} disabled={readOnly}>
                 <SelectTrigger className="w-32 h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]">
                   <SelectValue placeholder="Select" />
                 </SelectTrigger>
@@ -257,10 +258,10 @@ const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle, FieldContent
 
             <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
               <Label htmlFor="emergency-contact" className="text-[#1c275e] font-medium">Emergency Contact</Label>
-              <Select value={emergencyContact} onValueChange={(value) => {
+              <Select value={emergencyContact} onValueChange={readOnly ? undefined : (value) => {
                 setEmergencyContact(value);
                 handleFieldChange();
-              }}>
+              }} disabled={readOnly}>
                 <SelectTrigger className="w-32 h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]">
                   <SelectValue placeholder="Select" />
                 </SelectTrigger>
@@ -273,10 +274,10 @@ const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle, FieldContent
 
             <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
               <Label htmlFor="preferred-language" className="text-[#1c275e] font-medium">Preferred Language</Label>
-              <Select value={preferredLanguage} onValueChange={(value) => {
+              <Select value={preferredLanguage} onValueChange={readOnly ? undefined : (value) => {
                 setPreferredLanguage(value);
                 handleFieldChange();
-              }}>
+              }} disabled={readOnly}>
                 <SelectTrigger className="w-32 h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]">
                   <SelectValue placeholder="Select" />
                 </SelectTrigger>
@@ -311,10 +312,11 @@ const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle, FieldContent
                 id="menores-instructions"
                 placeholder="Enter special instructions for patients under 18..."
                 value={menoresInstructions}
-                onChange={(e) => {
+                onChange={readOnly ? undefined : (e) => {
                   setMenoresInstructions(e.target.value);
                   handleFieldChange();
                 }}
+                readOnly={readOnly}
                 className="min-h-24 resize-none border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
               />
             </div>
@@ -325,10 +327,11 @@ const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle, FieldContent
                 id="no-insurance-instructions"
                 placeholder="Enter instructions for patients without insurance..."
                 value={noInsuranceInstructions}
-                onChange={(e) => {
+                onChange={readOnly ? undefined : (e) => {
                   setNoInsuranceInstructions(e.target.value);
                   handleFieldChange();
                 }}
+                readOnly={readOnly}
                 className="min-h-24 resize-none border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
               />
             </div>
@@ -339,10 +342,11 @@ const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle, FieldContent
                 id="language-barrier-instructions"
                 placeholder="Enter instructions for handling language barriers..."
                 value={languageBarrierInstructions}
-                onChange={(e) => {
+                onChange={readOnly ? undefined : (e) => {
                   setLanguageBarrierInstructions(e.target.value);
                   handleFieldChange();
                 }}
+                readOnly={readOnly}
                 className="min-h-24 resize-none border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
               />
             </div>

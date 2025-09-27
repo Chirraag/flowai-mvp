@@ -1,6 +1,7 @@
 import React, { Suspense, lazy, useEffect, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { handleApiError } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import { apiToUi, uiToApi } from "@/lib/customer-support.mappers";
@@ -14,7 +15,11 @@ const CustomerSupportWorkflowsTab = lazy(() => import("@/components/customer-sup
 
 export default function CustomerSupportAgent() {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, hasWriteAccess, isReadOnlyFor } = useAuth();
+  
+  // RBAC Permission checks
+  const canWriteAgents = hasWriteAccess("ai-agents");
+  const isReadOnly = isReadOnlyFor("ai-agents");
 
   // Loading and data state
   const [isLoading, setIsLoading] = useState(true);
@@ -119,6 +124,8 @@ export default function CustomerSupportAgent() {
       await refetchAgentData();
     } catch (error) {
       console.error('Failed to save agent config:', error);
+      const errorToast = handleApiError(error, { action: "save customer support configuration" });
+      toast(errorToast);
       throw error; // Re-throw to let the component handle it
     }
   };
@@ -203,6 +210,7 @@ export default function CustomerSupportAgent() {
               initialData={initialValues?.agentConfig}
               onSave={handleSaveAgentConfig}
               isSaving={isSaving}
+              readOnly={isReadOnly}
             />
           </Suspense>
         </TabsContent>
@@ -210,14 +218,14 @@ export default function CustomerSupportAgent() {
         {/* Frequently Asked Questions tab */}
         <TabsContent value="frequently-asked-questions">
           <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
-            <FrequentlyAskedQuestionsTab ref={faqRef} />
+            <FrequentlyAskedQuestionsTab ref={faqRef} readOnly={isReadOnly} />
           </Suspense>
         </TabsContent>
 
         {/* Workflows tab */}
         <TabsContent value="workflows">
           <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
-            <CustomerSupportWorkflowsTab ref={workflowsRef} />
+            <CustomerSupportWorkflowsTab ref={workflowsRef} readOnly={isReadOnly} />
           </Suspense>
         </TabsContent>
       </Tabs>

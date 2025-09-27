@@ -23,6 +23,7 @@ export type FormsQuestionnairesTabProps = {
   };
   onSave?: (values: any) => Promise<void>;
   isSaving?: boolean;
+  readOnly?: boolean;
 };
 
 export type FormsQuestionnairesTabHandle = {
@@ -46,7 +47,7 @@ export type FormsQuestionnairesTabHandle = {
   validate: () => { valid: boolean; errors: string[] };
 };
 
-const FormsQuestionnairesTab = forwardRef<FormsQuestionnairesTabHandle, FormsQuestionnairesTabProps>(({ initialValues, onSave, isSaving = false }, ref) => {
+const FormsQuestionnairesTab = forwardRef<FormsQuestionnairesTabHandle, FormsQuestionnairesTabProps>(({ initialValues, onSave, isSaving = false, readOnly = false }, ref) => {
   // Intake Forms state
   const [adaptiveIntakeQuestionnaire, setAdaptiveIntakeQuestionnaire] = useState(true);
   const [consentForms, setConsentForms] = useState(true);
@@ -154,9 +155,12 @@ const FormsQuestionnairesTab = forwardRef<FormsQuestionnairesTabHandle, FormsQue
                     <IOSSwitch
                       checked={adaptiveIntakeQuestionnaire}
                       onCheckedChange={(checked) => {
-                        setAdaptiveIntakeQuestionnaire(checked);
-                        handleFieldChange();
+                        if (!readOnly) {
+                          setAdaptiveIntakeQuestionnaire(checked);
+                          handleFieldChange();
+                        }
                       }}
+                      disabled={readOnly}
                     />
                     <Edit className="h-4 w-4 text-gray-400 cursor-pointer hover:text-gray-600" />
                   </div>
@@ -181,9 +185,12 @@ const FormsQuestionnairesTab = forwardRef<FormsQuestionnairesTabHandle, FormsQue
                     <IOSSwitch
                       checked={consentForms}
                       onCheckedChange={(checked) => {
-                        setConsentForms(checked);
-                        handleFieldChange();
+                        if (!readOnly) {
+                          setConsentForms(checked);
+                          handleFieldChange();
+                        }
                       }}
+                      disabled={readOnly}
                     />
                     <Edit className="h-4 w-4 text-gray-400 cursor-pointer hover:text-gray-600" />
                   </div>
@@ -192,11 +199,13 @@ const FormsQuestionnairesTab = forwardRef<FormsQuestionnairesTabHandle, FormsQue
             </Card>
           </div>
 
-          {/* Add Custom Form Button */}
-          <Button variant="outline" className="w-full border-[#f48024] text-[#f48024] hover:bg-[#f48024] hover:text-white">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Custom Form
-          </Button>
+          {/* Add Custom Form Button - Hidden for read-only users */}
+          {!readOnly && (
+            <Button variant="outline" className="w-full border-[#f48024] text-[#f48024] hover:bg-[#f48024] hover:text-white">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Custom Form
+            </Button>
+          )}
         </CardContent>
       </Card>
 
@@ -233,9 +242,12 @@ const FormsQuestionnairesTab = forwardRef<FormsQuestionnairesTabHandle, FormsQue
                     <IOSSwitch
                       checked={mriSafetyQuestionnaire}
                       onCheckedChange={(checked) => {
-                        setMriSafetyQuestionnaire(checked);
-                        handleFieldChange();
+                        if (!readOnly) {
+                          setMriSafetyQuestionnaire(checked);
+                          handleFieldChange();
+                        }
                       }}
+                      disabled={readOnly}
                     />
                     <Edit className="h-4 w-4 text-gray-400 cursor-pointer hover:text-gray-600" />
                   </div>
@@ -260,9 +272,12 @@ const FormsQuestionnairesTab = forwardRef<FormsQuestionnairesTabHandle, FormsQue
                     <IOSSwitch
                       checked={urologySymptomSurvey}
                       onCheckedChange={(checked) => {
-                        setUrologySymptomSurvey(checked);
-                        handleFieldChange();
+                        if (!readOnly) {
+                          setUrologySymptomSurvey(checked);
+                          handleFieldChange();
+                        }
                       }}
+                      disabled={readOnly}
                     />
                     <Edit className="h-4 w-4 text-gray-400 cursor-pointer hover:text-gray-600" />
                   </div>
@@ -287,9 +302,12 @@ const FormsQuestionnairesTab = forwardRef<FormsQuestionnairesTabHandle, FormsQue
                     <IOSSwitch
                       checked={preProcedureInstructions}
                       onCheckedChange={(checked) => {
-                        setPreProcedureInstructions(checked);
-                        handleFieldChange();
+                        if (!readOnly) {
+                          setPreProcedureInstructions(checked);
+                          handleFieldChange();
+                        }
                       }}
+                      disabled={readOnly}
                     />
                     <Edit className="h-4 w-4 text-gray-400 cursor-pointer hover:text-gray-600" />
                   </div>
@@ -298,11 +316,13 @@ const FormsQuestionnairesTab = forwardRef<FormsQuestionnairesTabHandle, FormsQue
             </Card>
           </div>
 
-          {/* Add Custom Form Button */}
-          <Button variant="outline" className="w-full border-[#f48024] text-[#f48024] hover:bg-[#f48024] hover:text-white">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Custom Form
-          </Button>
+          {/* Add Custom Form Button - Hidden for read-only users */}
+          {!readOnly && (
+            <Button variant="outline" className="w-full border-[#f48024] text-[#f48024] hover:bg-[#f48024] hover:text-white">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Custom Form
+            </Button>
+          )}
 
           {/* Note about API not being implemented */}
           <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">

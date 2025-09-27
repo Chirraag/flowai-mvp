@@ -2,6 +2,7 @@ import React, { Suspense, lazy, useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { handleApiError } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import { schedulingAgentApi } from "@/api/schedulingAgent";
 import { apiToUi, uiToApi } from "@/lib/schedulingAgent.mappers";
@@ -24,7 +25,11 @@ const AgentConfigTab = lazy(() => import("@/components/scheduling-agent/AgentCon
 
 export default function SchedulingAgent() {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, hasWriteAccess, isReadOnlyFor } = useAuth();
+  
+  // RBAC Permission checks
+  const canWriteAgents = hasWriteAccess("ai-agents");
+  const isReadOnly = isReadOnlyFor("ai-agents");
 
   // Loading and data state
   const [isLoading, setIsLoading] = useState(true);
@@ -90,11 +95,11 @@ export default function SchedulingAgent() {
         setRetryCount(0); // Reset retry count on success
       } catch (error) {
         console.error('Failed to fetch scheduling agent:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load scheduling agent configuration after retries",
-          variant: "destructive",
+        const errorToast = handleApiError(error, { 
+          action: "load scheduling agent configuration",
+          fallbackMessage: "Failed to load scheduling agent configuration after retries"
         });
+        toast(errorToast);
       } finally {
         setIsLoading(false);
       }
@@ -271,11 +276,8 @@ export default function SchedulingAgent() {
 
     } catch (error) {
       console.error('Save failed:', error);
-      toast({
-        title: "Save Failed",
-        description: "An error occurred while saving. Please try again.",
-        variant: "destructive",
-      });
+      const errorToast = handleApiError(error, { action: "save scheduling agent configuration" });
+      toast(errorToast);
     } finally {
       setIsSaving(false);
       setSavingTabs(new Set());
@@ -422,6 +424,7 @@ export default function SchedulingAgent() {
               initialValues={initialValues?.appointmentSetup}
               onSave={handleSaveAppointmentSetup}
               isSaving={isSaving}
+              readOnly={isReadOnly}
             />
           </Suspense>
         </TabsContent>
@@ -434,6 +437,7 @@ export default function SchedulingAgent() {
               initialValues={initialValues?.patientEligibility}
               onSave={handleSavePatientEligibility}
               isSaving={isSaving}
+              readOnly={isReadOnly}
             />
           </Suspense>
         </TabsContent>
@@ -446,6 +450,7 @@ export default function SchedulingAgent() {
               initialValues={initialValues?.schedulingPolicies}
               onSave={handleSaveSchedulingPolicies}
               isSaving={isSaving}
+              readOnly={isReadOnly}
             />
           </Suspense>
         </TabsContent>
@@ -458,6 +463,7 @@ export default function SchedulingAgent() {
               initialValues={initialValues?.providerPreferences}
               onSave={handleSaveProviderPreferences}
               isSaving={isSaving}
+              readOnly={isReadOnly}
             />
           </Suspense>
         </TabsContent>
@@ -465,7 +471,7 @@ export default function SchedulingAgent() {
         {/* Workflows tab */}
         <TabsContent value="workflows">
           <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
-            <WorkflowsTab ref={workflowsRef} />
+            <WorkflowsTab ref={workflowsRef} readOnly={isReadOnly} />
           </Suspense>
         </TabsContent>
 
@@ -477,6 +483,7 @@ export default function SchedulingAgent() {
               initialValues={initialValues?.agentConfig}
               onSave={handleSaveAgentConfig}
               isSaving={isSaving}
+              readOnly={isReadOnly}
             />
           </Suspense>
         </TabsContent>

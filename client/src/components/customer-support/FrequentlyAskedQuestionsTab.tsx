@@ -21,7 +21,11 @@ export type FrequentlyAskedQuestionsTabHandle = {
   validate: () => { valid: boolean; errors: string[] };
 };
 
-const FrequentlyAskedQuestionsTab = forwardRef<FrequentlyAskedQuestionsTabHandle>((_props, ref) => {
+interface FrequentlyAskedQuestionsTabProps {
+  readOnly?: boolean;
+}
+
+const FrequentlyAskedQuestionsTab = forwardRef<FrequentlyAskedQuestionsTabHandle, FrequentlyAskedQuestionsTabProps>(({ readOnly = false }, ref) => {
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -243,33 +247,35 @@ const FrequentlyAskedQuestionsTab = forwardRef<FrequentlyAskedQuestionsTabHandle
                       </p>
                     </div>
 
-                    {/* Action Buttons */}
-                    <div className="flex gap-2 pt-1">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEditFAQ(faq)}
-                        disabled={updateFAQsMutation.isPending}
-                        className="flex items-center gap-1 h-8 px-3 text-xs hover:bg-[#f48024]/5 hover:border-[#f48024]"
-                      >
-                        <Pencil className="h-3 w-3" />
-                        Edit
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDeleteFAQ(index)}
-                        disabled={updateFAQsMutation.isPending}
-                        className="flex items-center gap-1 h-8 px-3 text-xs text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400"
-                      >
-                        {updateFAQsMutation.isPending ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-3 w-3" />
-                        )}
-                        Delete
-                      </Button>
-                    </div>
+                    {/* Action Buttons - Hidden for read-only users */}
+                    {!readOnly && (
+                      <div className="flex gap-2 pt-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditFAQ(faq)}
+                          disabled={updateFAQsMutation.isPending}
+                          className="flex items-center gap-1 h-8 px-3 text-xs hover:bg-[#f48024]/5 hover:border-[#f48024]"
+                        >
+                          <Pencil className="h-3 w-3" />
+                          Edit
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDeleteFAQ(index)}
+                          disabled={updateFAQsMutation.isPending}
+                          className="flex items-center gap-1 h-8 px-3 text-xs text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400"
+                        >
+                          {updateFAQsMutation.isPending ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-3 w-3" />
+                          )}
+                          Delete
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -287,17 +293,19 @@ const FrequentlyAskedQuestionsTab = forwardRef<FrequentlyAskedQuestionsTabHandle
             )}
           </div>
 
-          {/* Add New FAQ Button */}
-          <div className="pt-6">
-            <Button
-              onClick={handleAddNewFAQ}
-              disabled={updateFAQsMutation.isPending}
-              className="flex items-center gap-2 bg-[#f48024] hover:bg-[#e66f20] text-white px-4 py-2 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 text-sm disabled:opacity-50"
-            >
-              <Plus className="h-4 w-4" />
-              Add New FAQ
-            </Button>
-          </div>
+          {/* Add New FAQ Button - Hidden for read-only users */}
+          {!readOnly && (
+            <div className="pt-6">
+              <Button
+                onClick={handleAddNewFAQ}
+                disabled={updateFAQsMutation.isPending}
+                className="flex items-center gap-2 bg-[#f48024] hover:bg-[#e66f20] text-white px-4 py-2 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 text-sm disabled:opacity-50"
+              >
+                <Plus className="h-4 w-4" />
+                Add New FAQ
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -332,6 +340,7 @@ const FrequentlyAskedQuestionsTab = forwardRef<FrequentlyAskedQuestionsTabHandle
               'image/png',
               'image/gif'
             ]}
+            readOnly={readOnly}
           />
         </CardContent>
       </Card>

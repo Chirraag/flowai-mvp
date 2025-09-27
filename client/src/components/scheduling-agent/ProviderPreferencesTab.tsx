@@ -15,6 +15,7 @@ export type ProviderPreferencesTabProps = {
   initialValues?: ProviderPreferencesValues;
   onSave?: (values: ProviderPreferencesValues) => Promise<void>;
   isSaving?: boolean;
+  readOnly?: boolean;
 };
 
 export type ProviderPreferencesTabHandle = {
@@ -28,7 +29,7 @@ export type ProviderPreferencesTabHandle = {
   validate: () => { valid: boolean; errors: string[] };
 };
 
-const ProviderPreferencesTab = forwardRef<ProviderPreferencesTabHandle, ProviderPreferencesTabProps>(({ initialValues, onSave, isSaving = false }, ref) => {
+const ProviderPreferencesTab = forwardRef<ProviderPreferencesTabHandle, ProviderPreferencesTabProps>(({ initialValues, onSave, isSaving = false, readOnly = false }, ref) => {
   // Provider Preferences state
   const [providerBlackoutDates, setProviderBlackoutDates] = React.useState("");
   const [establishedPatientsOnlyDays, setEstablishedPatientsOnlyDays] = React.useState("");
@@ -93,7 +94,7 @@ const ProviderPreferencesTab = forwardRef<ProviderPreferencesTabHandle, Provider
                 <p className="text-gray-200 text-sm mt-1">Configure provider-specific scheduling rules</p>
               </div>
             </div>
-            {onSave && (
+            {onSave && !readOnly && (
               <div className="flex items-center gap-3">
                 {hasUnsavedChanges && (
                   <div className="flex items-center gap-2 text-sm">
@@ -128,9 +129,12 @@ const ProviderPreferencesTab = forwardRef<ProviderPreferencesTabHandle, Provider
                 placeholder="Enter dates when the provider is unavailable (one per line)"
                 value={providerBlackoutDates}
                 onChange={(e) => {
-                  setProviderBlackoutDates(e.target.value);
-                  handleFieldChange();
+                  if (!readOnly) {
+                    setProviderBlackoutDates(e.target.value);
+                    handleFieldChange();
+                  }
                 }}
+                readOnly={readOnly}
                 className="min-h-32 resize-none border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
               />
             </div>
@@ -147,9 +151,12 @@ const ProviderPreferencesTab = forwardRef<ProviderPreferencesTabHandle, Provider
                 placeholder="Enter days when only established patients can be scheduled (one per line)"
                 value={establishedPatientsOnlyDays}
                 onChange={(e) => {
-                  setEstablishedPatientsOnlyDays(e.target.value);
-                  handleFieldChange();
+                  if (!readOnly) {
+                    setEstablishedPatientsOnlyDays(e.target.value);
+                    handleFieldChange();
+                  }
                 }}
+                readOnly={readOnly}
                 className="min-h-32 resize-none border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
               />
             </div>
@@ -166,9 +173,12 @@ const ProviderPreferencesTab = forwardRef<ProviderPreferencesTabHandle, Provider
                 placeholder="Enter custom scheduling rules and restrictions (one per line)"
                 value={customSchedulingRules}
                 onChange={(e) => {
-                  setCustomSchedulingRules(e.target.value);
-                  handleFieldChange();
+                  if (!readOnly) {
+                    setCustomSchedulingRules(e.target.value);
+                    handleFieldChange();
+                  }
                 }}
+                readOnly={readOnly}
                 className="min-h-32 resize-none border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
               />
             </div>

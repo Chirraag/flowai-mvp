@@ -40,8 +40,6 @@ export type SpecialtyServiceEntry = {
   service_information_source?: string | null;
 };
 
-export type SchedulingNumbersMode = "Single" | "Multiple";
-
 export type ServiceInformationSource = "EMR" | "Website" | "Clinical Guidelines" | "Department Protocol" | "Other";
 
 export type AccountOpportunitySizing = {

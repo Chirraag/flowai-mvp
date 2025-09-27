@@ -13,9 +13,10 @@ interface KnowledgeModuleProps {
   orgId?: number;
   curatedKb?: CuratedKBEntry[];
   curatedKbCount?: number;
+  readOnly?: boolean;
 }
 
-export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount }: KnowledgeModuleProps) {
+export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount, readOnly = false }: KnowledgeModuleProps) {
   const { toast } = useToast();
   const [viewingDocument, setViewingDocument] = useState<CuratedKBEntry | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -347,21 +348,23 @@ export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount }: Kn
                 </button>
               )}
             </div>
-            <Button
-              variant="default"
-              onClick={handleGenerate}
-              disabled={isGenerating || isDeleting || !orgId}
-              className="bg-[#f49024] hover:bg-[#d87f1f] text-white focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2 h-8 px-3 text-sm"
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                "Generate"
-              )}
-            </Button>
+            {!readOnly && (
+              <Button
+                variant="default"
+                onClick={handleGenerate}
+                disabled={isGenerating || isDeleting || !orgId}
+                className="bg-[#f49024] hover:bg-[#d87f1f] text-white focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2 h-8 px-3 text-sm"
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  "Generate"
+                )}
+              </Button>
+            )}
           </div>
         </div>
       </CardHeader>
@@ -401,19 +404,21 @@ export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount }: Kn
                       <Download className="h-4 w-4 mr-1" />
                       Download
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDelete(document.url)}
-                      disabled={isDeleting}
-                      className="bg-transparent text-[#c0352b] border-[#c0352b] hover:bg-[#c0352b] hover:text-white focus:ring-2 focus:ring-[#c0352b] focus:ring-offset-2"
-                    >
-                      {isDeleting ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-4 w-4" />
-                      )}
-                    </Button>
+                    {!readOnly && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDelete(document.url)}
+                        disabled={isDeleting}
+                        className="bg-transparent text-[#c0352b] border-[#c0352b] hover:bg-[#c0352b] hover:text-white focus:ring-2 focus:ring-[#c0352b] focus:ring-offset-2"
+                      >
+                        {isDeleting ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardContent>

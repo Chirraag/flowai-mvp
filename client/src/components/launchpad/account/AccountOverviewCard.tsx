@@ -8,6 +8,7 @@ interface AccountOverviewCardProps {
   websiteAddress: string;
   headquartersAddress: string;
   onChange: (field: "accountName" | "websiteAddress" | "headquartersAddress", value: string) => void;
+  readOnly?: boolean;
 }
 
 export default function AccountOverviewCard({
@@ -15,6 +16,7 @@ export default function AccountOverviewCard({
   websiteAddress,
   headquartersAddress,
   onChange,
+  readOnly = false,
 }: AccountOverviewCardProps) {
   return (
     <div className="space-y-4">
@@ -25,7 +27,8 @@ export default function AccountOverviewCard({
             className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
             placeholder="Enter practice name"
             value={accountName}
-            onChange={(e) => onChange("accountName", e.target.value)}
+            onChange={readOnly ? undefined : (e) => onChange("accountName", e.target.value)}
+            readOnly={readOnly}
           />
         </div>
 
@@ -35,7 +38,8 @@ export default function AccountOverviewCard({
             className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
             placeholder="https://yourpractice.com"
             value={websiteAddress}
-            onChange={(e) => onChange("websiteAddress", e.target.value)}
+            onChange={readOnly ? undefined : (e) => onChange("websiteAddress", e.target.value)}
+            readOnly={readOnly}
           />
         </div>
       </div>
@@ -46,7 +50,8 @@ export default function AccountOverviewCard({
           className="mt-2 min-h-[80px] border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
           placeholder="Enter complete address"
           value={headquartersAddress}
-          onChange={(e) => onChange("headquartersAddress", e.target.value)}
+          onChange={readOnly ? undefined : (e) => onChange("headquartersAddress", e.target.value)}
+          readOnly={readOnly}
         />
       </div>
     </div>

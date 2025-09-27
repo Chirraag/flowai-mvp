@@ -8,6 +8,15 @@ import {
 } from "react";
 import { queryClient } from "@/lib/queryClient";
 import { api } from "@/lib/api";
+import { 
+  canReadFeature, 
+  canWriteFeature, 
+  canAccessPage, 
+  UserRole,
+  canAddMembers,
+  canChangeRoles,
+  canDeleteMembers
+} from "@/lib/permissions";
 import type { QueryFilters } from "@tanstack/react-query";
 
 interface User {
@@ -33,6 +42,16 @@ interface AuthContextType {
   logout: () => Promise<void>;
   refreshToken: () => Promise<void>;
   switchOrganization: (orgId: number) => Promise<void>;
+  // RBAC Permission Methods
+  hasReadAccess: (feature: string) => boolean;
+  hasWriteAccess: (feature: string) => boolean;
+  canAccessPage: (page: string) => boolean;
+  isReadOnlyFor: (feature: string) => boolean;
+  userRole?: UserRole;
+  // Member management permissions
+  canAddMembers: () => boolean;
+  canChangeRoles: () => boolean;
+  canDeleteMembers: () => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -431,6 +450,35 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
+  // RBAC Permission Methods
+  const userRole = user?.role as UserRole | undefined;
+
+  const hasReadAccess = (feature: string) => {
+    return !!(userRole && canReadFeature(userRole, feature as any));
+  };
+
+  const hasWriteAccess = (feature: string) => {
+    return !!(userRole && canWriteFeature(userRole, feature as any));
+  };
+
+  const canAccess = (page: string) => {
+    return !!(userRole && canAccessPage(userRole, page));
+  };
+
+  const isReadOnlyFor = (feature: string) => !hasWriteAccess(feature);
+
+  const canAddMembersCheck = () => {
+    return !!(userRole && canAddMembers(userRole));
+  };
+
+  const canChangeRolesCheck = () => {
+    return !!(userRole && canChangeRoles(userRole));
+  };
+
+  const canDeleteMembersCheck = () => {
+    return !!(userRole && canDeleteMembers(userRole));
+  };
+
   const value = {
     user,
     token,
@@ -440,6 +488,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     logout,
     refreshToken,
     switchOrganization,
+    // RBAC Permission Methods
+    hasReadAccess,
+    hasWriteAccess,
+    canAccessPage: canAccess,
+    isReadOnlyFor,
+    userRole,
+    // Member management permissions
+    canAddMembers: canAddMembersCheck,
+    canChangeRoles: canChangeRolesCheck,
+    canDeleteMembers: canDeleteMembersCheck,
   };
 
   // Clear query cache when org switches to avoid cross-tenant leakage
