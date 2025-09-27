@@ -69,6 +69,7 @@ import {
 } from "@/lib/launchpad.utils";
 import DocumentUpload from "@/components/launchpad/shared/DocumentUpload";
 import { getDocumentsForTab, getDocumentTitle } from "@/lib/launchpad.utils";
+import { handleApiError } from "@/lib/utils";
 import ScrollToTopButton from "@/components/ui/scroll-to-top";
 
 type Person = {
@@ -80,8 +81,12 @@ type Person = {
 };
 
 export default function Launchpad() {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, hasWriteAccess, isReadOnlyFor } = useAuth();
   const { toast } = useToast();
+  
+  // RBAC Permission checks
+  const canWriteLaunchpad = hasWriteAccess("launchpad");
+  const isReadOnly = isReadOnlyFor("launchpad");
   const queryClient = useQueryClient();
   const { orgId: urlOrgId } = useParams<{ orgId: string }>();
   
@@ -526,11 +531,8 @@ export default function Launchpad() {
       });
     } catch (error) {
       console.error('Failed to save account details:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save account details. Please try again.",
-        variant: "destructive",
-      });
+      const errorToast = handleApiError(error, { action: "save account details" });
+      toast(errorToast);
     }
   };
 
@@ -593,11 +595,8 @@ export default function Launchpad() {
       });
     } catch (error) {
       console.error('Failed to save locations:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save locations. Please try again.",
-        variant: "destructive",
-      });
+      const errorToast = handleApiError(error, { action: "save locations" });
+      toast(errorToast);
     }
   };
 
@@ -652,11 +651,10 @@ export default function Launchpad() {
         stack: error instanceof Error ? error.stack : undefined,
         response: error instanceof Error && 'response' in error ? (error as any).response : undefined
       });
-      toast({
-        title: "Error",
-        description: "Failed to save specialties. Please try again.",
-        variant: "destructive",
-      });
+      
+      // Enhanced error handling with RBAC support
+      const errorToast = handleApiError(error, { action: "save specialties" });
+      toast(errorToast);
     }
   };
 
@@ -687,11 +685,8 @@ export default function Launchpad() {
       });
     } catch (error) {
       console.error('Failed to save insurance:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save insurance settings. Please try again.",
-        variant: "destructive",
-      });
+      const errorToast = handleApiError(error, { action: "save insurance settings" });
+      toast(errorToast);
     }
   };
 
@@ -793,13 +788,15 @@ export default function Launchpad() {
                   >
                     Docs
                   </Button>
-                  <Button
-                    onClick={handleSaveAccount}
-                    disabled={updateAccountDetails.isPending}
-                    className="min-w-[80px] bg-white hover:bg-slate-400 active:bg-slate-500 text-[#1c275e] border-[#1c275e] focus:ring-2 focus:ring-[#1c275e] focus:ring-offset-2 h-8 px-3 text-sm"
-                  >
-                    {updateAccountDetails.isPending ? "Saving..." : "Save"}
-                  </Button>
+                  {canWriteLaunchpad && (
+                    <Button
+                      onClick={handleSaveAccount}
+                      disabled={updateAccountDetails.isPending}
+                      className="min-w-[80px] bg-white hover:bg-slate-400 active:bg-slate-500 text-[#1c275e] border-[#1c275e] focus:ring-2 focus:ring-[#1c275e] focus:ring-offset-2 h-8 px-3 text-sm"
+                    >
+                      {updateAccountDetails.isPending ? "Saving..." : "Save"}
+                    </Button>
+                  )}
                 </div>
               </div>
             </CardHeader>
@@ -855,6 +852,7 @@ export default function Launchpad() {
                         if (field === "websiteAddress") setWebsiteAddress(value);
                         if (field === "headquartersAddress") setHeadquartersAddress(value);
                       }}
+                      readOnly={isReadOnly}
                     />
                   </CardContent>
                 )}
@@ -879,17 +877,19 @@ export default function Launchpad() {
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          addPerson(setDecisionMakers);
-                        }}
-                        className="min-h-[36px] bg-[#f49024] hover:bg-[#d87f1f] text-white focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
-                      >
-                        + Add Person
-                      </Button>
+                      {!isReadOnly && (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            addPerson(setDecisionMakers);
+                          }}
+                          className="min-h-[36px] bg-[#f49024] hover:bg-[#d87f1f] text-white focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+                        >
+                          + Add Person
+                        </Button>
+                      )}
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -921,6 +921,7 @@ export default function Launchpad() {
                       decisionMakers={decisionMakers}
                       onUpdate={(id, field, value) => updatePerson(setDecisionMakers, id, field, value)}
                       onRemove={(id, personName) => handleDeletePerson(setDecisionMakers, id, personName)}
+                      readOnly={isReadOnly}
                     />
                   </CardContent>
                 )}
@@ -945,17 +946,19 @@ export default function Launchpad() {
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          addPerson(setInfluencers);
-                        }}
-                        className="min-h-[36px] bg-[#f49024] hover:bg-[#d87f1f] text-white focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
-                      >
-                        + Add Person
-                      </Button>
+                      {!isReadOnly && (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            addPerson(setInfluencers);
+                          }}
+                          className="min-h-[36px] bg-[#f49024] hover:bg-[#d87f1f] text-white focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+                        >
+                          + Add Person
+                        </Button>
+                      )}
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -987,6 +990,7 @@ export default function Launchpad() {
                       influencers={influencers}
                       onUpdate={(id, field, value) => updatePerson(setInfluencers, id, field, value)}
                       onRemove={(id, personName) => handleDeletePerson(setInfluencers, id, personName)}
+                      readOnly={isReadOnly}
                     />
                   </CardContent>
                 )}
@@ -1040,6 +1044,7 @@ export default function Launchpad() {
                         if (field === "schedulingStructure") setSchedulingStructure(value);
                         if (field === "rcmStructure") setRcmStructure(value);
                       }}
+                      readOnly={isReadOnly}
                     />
                   </CardContent>
                 )}
@@ -1092,6 +1097,7 @@ export default function Launchpad() {
                     onAdd={() => addPerson(setOrderEntryTeam)}
                     onUpdate={(id, field, value) => updatePerson(setOrderEntryTeam, id, field, value)}
                     onRemove={(id, personName) => handleDeletePerson(setOrderEntryTeam, id, personName)}
+                    readOnly={isReadOnly}
                   />
                   <TeamReportingSection
                     title="Scheduling Team Reporting"
@@ -1099,6 +1105,7 @@ export default function Launchpad() {
                     onAdd={() => addPerson(setSchedulingTeam)}
                     onUpdate={(id, field, value) => updatePerson(setSchedulingTeam, id, field, value)}
                     onRemove={(id, personName) => handleDeletePerson(setSchedulingTeam, id, personName)}
+                    readOnly={isReadOnly}
                   />
                   <TeamReportingSection
                     title="Patient Intake Team Reporting"
@@ -1106,6 +1113,7 @@ export default function Launchpad() {
                     onAdd={() => addPerson(setPatientIntakeTeam)}
                     onUpdate={(id, field, value) => updatePerson(setPatientIntakeTeam, id, field, value)}
                     onRemove={(id, personName) => handleDeletePerson(setPatientIntakeTeam, id, personName)}
+                    readOnly={isReadOnly}
                   />
                   <TeamReportingSection
                     title="RCM Team Reporting"
@@ -1113,6 +1121,7 @@ export default function Launchpad() {
                     onAdd={() => addPerson(setRcmTeam)}
                     onUpdate={(id, field, value) => updatePerson(setRcmTeam, id, field, value)}
                     onRemove={(id, personName) => handleDeletePerson(setRcmTeam, id, personName)}
+                    readOnly={isReadOnly}
                   />
                   </CardContent>
                 )}
@@ -1172,6 +1181,7 @@ export default function Launchpad() {
                       if (field === "patientIntakeTeamSize") setPatientIntakeTeamSize(value);
                       if (field === "rcmTeamSize") setRcmTeamSize(value);
                     }}
+                    readOnly={isReadOnly}
                   />
                   </CardContent>
                 )}
@@ -1221,6 +1231,7 @@ export default function Launchpad() {
                   <OpportunitySizingCard
                     opportunitySizing={opportunitySizing}
                     onChange={(updates) => setOpportunitySizing(prev => ({ ...prev, ...updates }))}
+                    readOnly={isReadOnly}
                   />
                   </CardContent>
                 )}
@@ -1293,6 +1304,7 @@ export default function Launchpad() {
                       if (field === "additionalInfo") setAdditionalInfo(value);
                       if (field === "clinicalNotes") setClinicalNotes(value);
                     }}
+                    readOnly={isReadOnly}
                   />
                   </CardContent>
                 )}
@@ -1307,6 +1319,7 @@ export default function Launchpad() {
                   onDelete={deleteAccountDocument.mutateAsync}
                   isUploading={uploadAccountDocument.isPending}
                   isDeleting={deleteAccountDocument.isPending}
+                  readOnly={isReadOnly}
                 />
               </div>
 
@@ -1339,6 +1352,7 @@ export default function Launchpad() {
             onRemove={(id) => setLocations(prev => prev.filter(l => l.id !== id))}
             onSave={handleSaveLocations}
             isSaving={updateLocations.isPending || updateSpecialties.isPending}
+            readOnly={isReadOnly}
           />
 
 
@@ -1351,6 +1365,7 @@ export default function Launchpad() {
               onDelete={deleteLocationsDocument.mutateAsync}
               isUploading={uploadLocationsDocument.isPending}
               isDeleting={deleteLocationsDocument.isPending}
+              readOnly={isReadOnly}
             />
           </div>
 
@@ -1400,6 +1415,7 @@ export default function Launchpad() {
             onRemove={(id) => setSpecialties(prev => prev.filter(s => s.id !== id))}
             onSave={handleSaveSpecialties}
             isSaving={updateSpecialties.isPending}
+            readOnly={isReadOnly}
           />
 
           {/* Specialties Documents */}
@@ -1411,6 +1427,7 @@ export default function Launchpad() {
               onDelete={deleteSpecialtiesDocument.mutateAsync}
               isUploading={uploadSpecialtiesDocument.isPending}
               isDeleting={deleteSpecialtiesDocument.isPending}
+              readOnly={isReadOnly}
             />
           </div>
 
@@ -1448,13 +1465,15 @@ export default function Launchpad() {
                   >
                     Docs
                   </Button>
-                  <Button
-                    onClick={handleSaveInsurance}
-                    disabled={updateInsurance.isPending}
-                    className="min-w-[80px] bg-white hover:bg-slate-400 active:bg-slate-500 text-[#1c275e] border-[#1c275e] focus:ring-2 focus:ring-[#1c275e] focus:ring-offset-2 h-8 px-3 text-sm"
-                  >
-                    {updateInsurance.isPending ? "Saving..." : "Save"}
-                  </Button>
+                  {canWriteLaunchpad && (
+                    <Button
+                      onClick={handleSaveInsurance}
+                      disabled={updateInsurance.isPending}
+                      className="min-w-[80px] bg-white hover:bg-slate-400 active:bg-slate-500 text-[#1c275e] border-[#1c275e] focus:ring-2 focus:ring-[#1c275e] focus:ring-offset-2 h-8 px-3 text-sm"
+                    >
+                      {updateInsurance.isPending ? "Saving..." : "Save"}
+                    </Button>
+                  )}
                 </div>
               </div>
             </CardHeader>
@@ -1462,6 +1481,7 @@ export default function Launchpad() {
               <InsuranceModule
                 insurance={insurance}
                 onChange={(updates) => setInsurance(prev => ({ ...prev, ...updates }))}
+                readOnly={isReadOnly}
               />
             </CardContent>
           </Card>
@@ -1475,6 +1495,7 @@ export default function Launchpad() {
               onDelete={deleteInsuranceDocument.mutateAsync}
               isUploading={uploadInsuranceDocument.isPending}
               isDeleting={deleteInsuranceDocument.isPending}
+              readOnly={isReadOnly}
             />
           </div>
 
@@ -1487,6 +1508,7 @@ export default function Launchpad() {
             orgId={orgId}
             curatedKb={typedData?.curated_kb}
             curatedKbCount={typedData?.metadata?.curated_kb_count}
+            readOnly={isReadOnly}
           />
 
           {/* Scroll to Top Button */}

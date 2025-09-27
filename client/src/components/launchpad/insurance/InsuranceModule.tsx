@@ -11,6 +11,7 @@ import { OrgInsurance } from "@/components/launchpad/types";
 interface InsuranceModuleProps {
   insurance: OrgInsurance;
   onChange: (updates: Partial<OrgInsurance>) => void;
+  readOnly?: boolean;
 }
 
 // Helper function to get the selected value
@@ -18,7 +19,7 @@ const getSelectedValue = (source: string | null | undefined): string => {
   return source || "";
 };
 
-export default function InsuranceModule({ insurance, onChange }: InsuranceModuleProps) {
+export default function InsuranceModule({ insurance, onChange, readOnly = false }: InsuranceModuleProps) {
   return (
     <Card className="border-0 shadow-lg bg-white rounded-xl overflow-hidden">
       <CardContent className="p-4 space-y-4">
@@ -38,7 +39,7 @@ export default function InsuranceModule({ insurance, onChange }: InsuranceModule
                         ? 'bg-[#1C275E] text-white border-[#1C275E] hover:bg-[#233072] hover:text-white'
                         : 'bg-white text-[#1C275E] border-[#1C275E] hover:bg-[#1C275E] hover:text-white'
                     }`}
-                    onClick={() => {
+                    onClick={readOnly ? undefined : () => {
                       onChange({ accepted_payers_source: isSelected ? null : option });
                     }}
                   >
@@ -51,7 +52,7 @@ export default function InsuranceModule({ insurance, onChange }: InsuranceModule
           </div>
           <div>
             <Label className="text-sm">Accepted Payers Details</Label>
-            <Textarea className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]" value={insurance.accepted_payers_source_details || ""} onChange={(e) => onChange({ accepted_payers_source_details: e.target.value })} />
+            <Textarea className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]" value={insurance.accepted_payers_source_details || ""} onChange={readOnly ? undefined : (e) => onChange({ accepted_payers_source_details: e.target.value })} readOnly={readOnly} />
           </div>
         </div>
 
@@ -71,7 +72,7 @@ export default function InsuranceModule({ insurance, onChange }: InsuranceModule
                         ? 'bg-[#1C275E] text-white border-[#1C275E] hover:bg-[#233072] hover:text-white'
                         : 'bg-white text-[#1C275E] border-[#1C275E] hover:bg-[#1C275E] hover:text-white'
                     }`}
-                    onClick={() => {
+                    onClick={readOnly ? undefined : () => {
                       onChange({ insurance_verification_source: isSelected ? null : option });
                     }}
                   >
@@ -84,7 +85,7 @@ export default function InsuranceModule({ insurance, onChange }: InsuranceModule
           </div>
           <div>
             <Label className="text-sm">Insurance Verification Details</Label>
-            <Textarea className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]" value={insurance.insurance_verification_source_details || ""} onChange={(e) => onChange({ insurance_verification_source_details: e.target.value })} />
+            <Textarea className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]" value={insurance.insurance_verification_source_details || ""} onChange={readOnly ? undefined : (e) => onChange({ insurance_verification_source_details: e.target.value })} readOnly={readOnly} />
           </div>
         </div>
 
@@ -104,7 +105,7 @@ export default function InsuranceModule({ insurance, onChange }: InsuranceModule
                         ? 'bg-[#1C275E] text-white border-[#1C275E] hover:bg-[#233072] hover:text-white'
                         : 'bg-white text-[#1C275E] border-[#1C275E] hover:bg-[#1C275E] hover:text-white'
                     }`}
-                    onClick={() => {
+                    onClick={readOnly ? undefined : () => {
                       onChange({ patient_copay_source: isSelected ? null : option });
                     }}
                   >
@@ -117,7 +118,7 @@ export default function InsuranceModule({ insurance, onChange }: InsuranceModule
           </div>
           <div>
             <Label className="text-sm">Patient Copay Details</Label>
-            <Textarea className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]" value={insurance.patient_copay_source_details || ""} onChange={(e) => onChange({ patient_copay_source_details: e.target.value })} />
+            <Textarea className="mt-1 border-[#cbd5e1] focus:border-[#1C275E] focus:ring-2 focus:ring-[#fef08a]" value={insurance.patient_copay_source_details || ""} onChange={readOnly ? undefined : (e) => onChange({ patient_copay_source_details: e.target.value })} readOnly={readOnly} />
           </div>
         </div>
 

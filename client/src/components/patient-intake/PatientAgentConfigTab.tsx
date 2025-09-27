@@ -21,6 +21,7 @@ export type PatientAgentConfigTabProps = {
   };
   onSave?: (values: any) => Promise<void>;
   isSaving?: boolean;
+  readOnly?: boolean;
 };
 
 export type PatientAgentConfigTabHandle = {
@@ -40,7 +41,7 @@ export type PatientAgentConfigTabHandle = {
   validate: () => { valid: boolean; errors: string[] };
 };
 
-const PatientAgentConfigTab = forwardRef<PatientAgentConfigTabHandle, PatientAgentConfigTabProps>(({ initialData, onSave, isSaving = false }, ref) => {
+const PatientAgentConfigTab = forwardRef<PatientAgentConfigTabHandle, PatientAgentConfigTabProps>(({ initialData, onSave, isSaving = false, readOnly = false }, ref) => {
   // Agent Configuration state (default values, overridden by initialData if provided)
   const [agentName, setAgentName] = useState("Patient Intake Agent");
   const [language, setLanguage] = useState("en-US");
@@ -159,10 +160,11 @@ const PatientAgentConfigTab = forwardRef<PatientAgentConfigTabHandle, PatientAge
                 id="agent-name"
                 placeholder="Patient Intake Agent"
                 value={agentName}
-                onChange={(e) => {
+                onChange={readOnly ? undefined : (e) => {
                   setAgentName(e.target.value);
                   handleFieldChange();
                 }}
+                readOnly={readOnly}
                 className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
               />
             </div>
@@ -173,10 +175,11 @@ const PatientAgentConfigTab = forwardRef<PatientAgentConfigTabHandle, PatientAge
                 id="language"
                 placeholder="e.g., en-US"
                 value={language}
-                onChange={(e) => {
+                onChange={readOnly ? undefined : (e) => {
                   setLanguage(e.target.value);
                   handleFieldChange();
                 }}
+                readOnly={readOnly}
                 className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
               />
             </div>
@@ -187,10 +190,11 @@ const PatientAgentConfigTab = forwardRef<PatientAgentConfigTabHandle, PatientAge
                 id="voice"
                 placeholder="e.g., alloy"
                 value={voice}
-                onChange={(e) => {
+                onChange={readOnly ? undefined : (e) => {
                   setVoice(e.target.value);
                   handleFieldChange();
                 }}
+                readOnly={readOnly}
                 className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
               />
             </div>
@@ -203,10 +207,11 @@ const PatientAgentConfigTab = forwardRef<PatientAgentConfigTabHandle, PatientAge
               id="agent-instructions"
               placeholder="Enter detailed instructions for the patient intake agent..."
               value={agentInstructions}
-              onChange={(e) => {
+              onChange={readOnly ? undefined : (e) => {
                 setAgentInstructions(e.target.value);
                 handleFieldChange();
               }}
+              readOnly={readOnly}
               className="min-h-[400px] resize-none border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
             />
           </div>
@@ -218,10 +223,11 @@ const PatientAgentConfigTab = forwardRef<PatientAgentConfigTabHandle, PatientAge
               id="transfer-criteria"
               placeholder="Define criteria for when calls should be transferred to human agents..."
               value={humanTransferCriteria}
-              onChange={(e) => {
+              onChange={readOnly ? undefined : (e) => {
                 setHumanTransferCriteria(e.target.value);
                 handleFieldChange();
               }}
+              readOnly={readOnly}
               className="min-h-32 resize-none border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
             />
           </div>

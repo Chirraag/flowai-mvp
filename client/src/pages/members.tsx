@@ -14,6 +14,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CircleAlert as AlertCircle } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
+import { handleApiError } from "@/lib/utils";
 import type { Member, AddMemberRequest } from "@/types/members";
 
 const ROLE_OPTIONS = [
@@ -32,7 +33,7 @@ const CUSTOMER_ADMIN_ALLOWED_ROLES = [
 ];
 
 export default function MembersPage() {
-  const { user } = useAuth();
+  const { user, canAddMembers, canChangeRoles } = useAuth();
   const { toast } = useToast();
   const orgId = user?.org_id;
 
@@ -49,14 +50,17 @@ export default function MembersPage() {
     lastName: "",
   });
 
-  // Check if user can add members
-  const canAddMembers = user?.role === 'super-admin' || user?.role === 'customer-admin';
+  // Use permission utilities instead of direct role checks
+  const canAddMembersPermission = canAddMembers();
+  const canChangeRolesPermission = canChangeRoles();
 
-  // Get available roles based on user's role
+  // Get available roles based on user's permissions
   const getAvailableRoles = () => {
-    if (user?.role === 'super-admin') {
+    if (canChangeRolesPermission) {
+      // Super-admin can assign all roles
       return ROLE_OPTIONS;
-    } else if (user?.role === 'customer-admin') {
+    } else if (canAddMembersPermission) {
+      // Customer-admin can only assign limited roles
       return CUSTOMER_ADMIN_ALLOWED_ROLES;
     }
     return [];
@@ -126,11 +130,8 @@ export default function MembersPage() {
       setIsDialogOpen(false);
     } catch (error: any) {
       console.error('Failed to add member:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to add member",
-        variant: "destructive",
-      });
+      const errorToast = handleApiError(error, { action: "add member" });
+      toast(errorToast);
     }
   };
 
@@ -264,8 +265,8 @@ export default function MembersPage() {
           </p>
         </div>
         
-        {/* Add Member Button - only for super-admin and customer-admin */}
-        {canAddMembers && (
+        {/* Add Member Button - only for users with add members permission */}
+        {canAddMembersPermission && (
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button className="bg-blue-600 hover:bg-blue-700">

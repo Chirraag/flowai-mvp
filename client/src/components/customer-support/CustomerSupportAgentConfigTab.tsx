@@ -27,9 +27,10 @@ export interface CustomerSupportAgentConfigTabProps {
   initialData?: CustomerSupportAgentConfig;
   onSave?: (values: CustomerSupportAgentConfig) => Promise<void>;
   isSaving?: boolean;
+  readOnly?: boolean;
 }
 
-const CustomerSupportAgentConfigTab = forwardRef<CustomerSupportAgentConfigTabHandle, CustomerSupportAgentConfigTabProps>(({ initialData, onSave, isSaving = false }, ref) => {
+const CustomerSupportAgentConfigTab = forwardRef<CustomerSupportAgentConfigTabHandle, CustomerSupportAgentConfigTabProps>(({ initialData, onSave, isSaving = false, readOnly = false }, ref) => {
   // Local state synced with initialData
   const [agentName, setAgentName] = useState("");
   const [language, setLanguage] = useState("");
@@ -144,10 +145,11 @@ const CustomerSupportAgentConfigTab = forwardRef<CustomerSupportAgentConfigTabHa
                 id="agent-name"
                 placeholder="Customer Support Agent"
                 value={agentName}
-                onChange={(e) => {
+                onChange={readOnly ? undefined : (e) => {
                   setAgentName(e.target.value);
                   handleFieldChange();
                 }}
+                readOnly={readOnly}
                 className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
               />
             </div>
@@ -158,10 +160,11 @@ const CustomerSupportAgentConfigTab = forwardRef<CustomerSupportAgentConfigTabHa
                 id="language"
                 placeholder="e.g., English"
                 value={language}
-                onChange={(e) => {
+                onChange={readOnly ? undefined : (e) => {
                   setLanguage(e.target.value);
                   handleFieldChange();
                 }}
+                readOnly={readOnly}
                 className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
               />
             </div>
@@ -172,10 +175,11 @@ const CustomerSupportAgentConfigTab = forwardRef<CustomerSupportAgentConfigTabHa
                 id="voice"
                 placeholder="e.g., Alex"
                 value={voice}
-                onChange={(e) => {
+                onChange={readOnly ? undefined : (e) => {
                   setVoice(e.target.value);
                   handleFieldChange();
                 }}
+                readOnly={readOnly}
                 className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
               />
             </div>
@@ -188,10 +192,11 @@ const CustomerSupportAgentConfigTab = forwardRef<CustomerSupportAgentConfigTabHa
               id="agent-instructions"
               placeholder="Enter detailed instructions for the customer support agent..."
               value={agentInstructions}
-              onChange={(e) => {
+              onChange={readOnly ? undefined : (e) => {
                 setAgentInstructions(e.target.value);
                 handleFieldChange();
               }}
+              readOnly={readOnly}
               className="min-h-[400px] resize-none border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
             />
           </div>
@@ -203,10 +208,11 @@ const CustomerSupportAgentConfigTab = forwardRef<CustomerSupportAgentConfigTabHa
               id="human-transfer-criteria"
               placeholder="Define criteria for when calls should be transferred to human agents..."
               value={humanTransferCriteria}
-              onChange={(e) => {
+              onChange={readOnly ? undefined : (e) => {
                 setHumanTransferCriteria(e.target.value);
                 handleFieldChange();
               }}
+              readOnly={readOnly}
               className="min-h-[100px] resize-none border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
             />
           </div>

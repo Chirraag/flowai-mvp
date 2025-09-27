@@ -29,6 +29,7 @@ interface SystemsIntegrationCardProps {
     field: "insuranceVerificationSystem" | "insuranceVerificationDetails" | "additionalInfo" | "clinicalNotes",
     value: string
   ) => void;
+  readOnly?: boolean;
 }
 
 export default function SystemsIntegrationCard({
@@ -51,6 +52,7 @@ export default function SystemsIntegrationCard({
   onUpdateSchedulingPhone,
   onRemoveSchedulingPhone,
   onChangeField,
+  readOnly = false,
 }: SystemsIntegrationCardProps) {
   return (
     <Card>
@@ -61,7 +63,9 @@ export default function SystemsIntegrationCard({
         <div>
           <div className="flex items-center justify-between mb-4">
             <Label className="text-md">EMR/RIS Systems</Label>
-            <Button variant="default" size="sm" onClick={onAddEmrSystem} className="bg-[#f48024] hover:bg-[#f48024]/90 text-white">Add System</Button>
+            {!readOnly && (
+              <Button variant="default" size="sm" onClick={onAddEmrSystem} className="bg-[#f48024] hover:bg-[#f48024]/90 text-white">Add System</Button>
+            )}
           </div>
           <div className="space-y-2">
             {emrSystems.map((system, index) => (
@@ -69,7 +73,8 @@ export default function SystemsIntegrationCard({
                 key={index}
                 placeholder="System name (e.g., Epic, Cerner)"
                 value={system}
-                onChange={(e) => onUpdateEmrSystem(index, e.target.value)}
+                onChange={readOnly ? undefined : (e) => onUpdateEmrSystem(index, e.target.value)}
+                readOnly={readOnly}
               />
             ))}
             {emrSystems.length === 0 && (
@@ -81,7 +86,9 @@ export default function SystemsIntegrationCard({
         <div>
           <div className="flex items-center justify-between mb-4">
             <Label className="text-md">Telephony/CCAS Systems</Label>
-            <Button variant="default" size="sm" onClick={onAddTelephonySystem} className="bg-[#f48024] hover:bg-[#f48024]/90 text-white">Add System</Button>
+            {!readOnly && (
+              <Button variant="default" size="sm" onClick={onAddTelephonySystem} className="bg-[#f48024] hover:bg-[#f48024]/90 text-white">Add System</Button>
+            )}
           </div>
           <div className="space-y-2">
             {telephonySystems.map((system, index) => (
@@ -89,7 +96,8 @@ export default function SystemsIntegrationCard({
                 key={index}
                 placeholder="System name (e.g., RingCentral, Five9)"
                 value={system}
-                onChange={(e) => onUpdateTelephonySystem(index, e.target.value)}
+                onChange={readOnly ? undefined : (e) => onUpdateTelephonySystem(index, e.target.value)}
+                readOnly={readOnly}
               />
             ))}
             {telephonySystems.length === 0 && (
@@ -101,38 +109,42 @@ export default function SystemsIntegrationCard({
         <div>
           <Label className="text-md font-medium">Scheduling Phone Numbers</Label>
           <div className="mt-2 space-y-2">
-            <div>
-              <Label className="text-sm">Mode</Label>
-              <div className="flex items-center gap-4 mt-1">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    id="scheduling-single"
-                    name="scheduling-mode"
-                    checked={schedulingNumbersMode === "Single"}
-                    onChange={() => onChangeSchedulingMode("Single")}
-                    className="w-4 h-4"
-                  />
-                  <Label htmlFor="scheduling-single" className="text-sm">Single</Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    id="scheduling-multiple"
-                    name="scheduling-mode"
-                    checked={schedulingNumbersMode === "Multiple"}
-                    onChange={() => onChangeSchedulingMode("Multiple")}
-                    className="w-4 h-4"
-                  />
-                  <Label htmlFor="scheduling-multiple" className="text-sm">Multiple</Label>
+            {!readOnly && (
+              <div>
+                <Label className="text-sm">Mode</Label>
+                <div className="flex items-center gap-4 mt-1">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      id="scheduling-single"
+                      name="scheduling-mode"
+                      checked={schedulingNumbersMode === "Single"}
+                      onChange={() => onChangeSchedulingMode("Single")}
+                      className="w-4 h-4"
+                    />
+                    <Label htmlFor="scheduling-single" className="text-sm">Single</Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      id="scheduling-multiple"
+                      name="scheduling-mode"
+                      checked={schedulingNumbersMode === "Multiple"}
+                      onChange={() => onChangeSchedulingMode("Multiple")}
+                      className="w-4 h-4"
+                    />
+                    <Label htmlFor="scheduling-multiple" className="text-sm">Multiple</Label>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             <div>
               <div className="flex items-center justify-between mb-2">
                 <Label className="text-sm">Phone Numbers</Label>
-                <Button variant="default" size="sm" onClick={onAddSchedulingPhone} className="bg-[#f48024] hover:bg-[#f48024]/90 text-white">Add Number</Button>
+                {!readOnly && (
+                  <Button variant="default" size="sm" onClick={onAddSchedulingPhone} className="bg-[#f48024] hover:bg-[#f48024]/90 text-white">Add Number</Button>
+                )}
               </div>
               <div className="flex flex-wrap gap-2">
                 {schedulingPhoneNumbers.map((num, index) => (
@@ -140,17 +152,20 @@ export default function SystemsIntegrationCard({
                     <Input
                       placeholder="Phone number"
                       value={num}
-                      onChange={(e) => onUpdateSchedulingPhone(index, e.target.value)}
+                      onChange={readOnly ? undefined : (e) => onUpdateSchedulingPhone(index, e.target.value)}
+                      readOnly={readOnly}
                       className="border-none bg-transparent p-0 h-auto text-sm"
                     />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-4 w-4 p-0 text-red-600 hover:text-red-700"
-                      onClick={() => onRemoveSchedulingPhone(index)}
-                    >
-                      ×
-                    </Button>
+                    {!readOnly && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-4 w-4 p-0 text-red-600 hover:text-red-700"
+                        onClick={() => onRemoveSchedulingPhone(index)}
+                      >
+                        ×
+                      </Button>
+                    )}
                   </div>
                 ))}
                 {schedulingPhoneNumbers.length === 0 && (
@@ -167,7 +182,8 @@ export default function SystemsIntegrationCard({
             className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
             placeholder="System name or process"
             value={insuranceVerificationSystem}
-            onChange={(e) => onChangeField("insuranceVerificationSystem", e.target.value)}
+            onChange={readOnly ? undefined : (e) => onChangeField("insuranceVerificationSystem", e.target.value)}
+            readOnly={readOnly}
           />
         </div>
 
@@ -177,7 +193,8 @@ export default function SystemsIntegrationCard({
             className="mt-2 min-h-32 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
             placeholder="Describe the verification process or system details"
             value={insuranceVerificationDetails}
-            onChange={(e) => onChangeField("insuranceVerificationDetails", e.target.value)}
+            onChange={readOnly ? undefined : (e) => onChangeField("insuranceVerificationDetails", e.target.value)}
+            readOnly={readOnly}
           />
         </div>
 
@@ -187,7 +204,8 @@ export default function SystemsIntegrationCard({
             className="mt-2 min-h-32 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
             placeholder="Any additional integration details..."
             value={additionalInfo}
-            onChange={(e) => onChangeField("additionalInfo", e.target.value)}
+            onChange={readOnly ? undefined : (e) => onChangeField("additionalInfo", e.target.value)}
+            readOnly={readOnly}
           />
         </div>
 
@@ -197,7 +215,8 @@ export default function SystemsIntegrationCard({
             className="mt-2 min-h-32 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
             placeholder="Clinical notes relevant to systems"
             value={clinicalNotes}
-            onChange={(e) => onChangeField("clinicalNotes", e.target.value)}
+            onChange={readOnly ? undefined : (e) => onChangeField("clinicalNotes", e.target.value)}
+            readOnly={readOnly}
           />
         </div>
       </CardContent>

@@ -21,6 +21,7 @@ interface InfluencersCardProps {
   onUpdate: (id: string, field: keyof Person, value: string) => void;
   onRemove?: (id: string, personName: string) => void;
   errors?: Record<string, string>;
+  readOnly?: boolean;
 }
 
 export default function InfluencersCard({
@@ -28,6 +29,7 @@ export default function InfluencersCard({
   onUpdate,
   onRemove,
   errors = {},
+  readOnly = false,
 }: InfluencersCardProps) {
   if (influencers.length === 0) {
     return (
@@ -63,7 +65,8 @@ export default function InfluencersCard({
                   className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
                   placeholder="Enter title"
                   value={inf.title}
-                  onChange={(e) => onUpdate(inf.id, 'title', e.target.value)}
+                  onChange={readOnly ? undefined : (e) => onUpdate(inf.id, 'title', e.target.value)}
+                  readOnly={readOnly}
                   aria-label="Title"
                 />
               </TableCell>
@@ -73,7 +76,8 @@ export default function InfluencersCard({
                     className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
                     placeholder="Full name"
                     value={inf.name}
-                    onChange={(e) => onUpdate(inf.id, 'name', e.target.value)}
+                    onChange={readOnly ? undefined : (e) => onUpdate(inf.id, 'name', e.target.value)}
+                    readOnly={readOnly}
                     aria-label="Name"
                   />
                   <FieldError error={errors[`inf-${inf.id}-name`]} />
@@ -85,7 +89,8 @@ export default function InfluencersCard({
                     className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
                     placeholder="email@practice.com"
                     value={inf.email}
-                    onChange={(e) => onUpdate(inf.id, 'email', e.target.value)}
+                    onChange={readOnly ? undefined : (e) => onUpdate(inf.id, 'email', e.target.value)}
+                    readOnly={readOnly}
                     aria-label="Email"
                   />
                   <FieldError error={errors[`inf-${inf.id}-email`]} />
@@ -96,20 +101,23 @@ export default function InfluencersCard({
                   className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
                   placeholder="(555) 123-4567"
                   value={inf.phone}
-                  onChange={(e) => onUpdate(inf.id, 'phone', e.target.value)}
+                  onChange={readOnly ? undefined : (e) => onUpdate(inf.id, 'phone', e.target.value)}
+                  readOnly={readOnly}
                   aria-label="Phone"
                 />
               </TableCell>
               <TableCell className="p-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onRemove && onRemove(inf.id, inf.name || 'this person')}
-                  className="bg-white text-black border border-black hover:bg-gray-50 h-8 w-8 p-0"
-                  aria-label="Delete person"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                {!readOnly && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onRemove && onRemove(inf.id, inf.name || 'this person')}
+                    className="bg-white text-black border border-black hover:bg-gray-50 h-8 w-8 p-0"
+                    aria-label="Delete person"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
               </TableCell>
             </TableRow>
           ))}

@@ -3,10 +3,24 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Menu, X, Rocket, ChevronDown } from "lucide-react";
 import { NAVIGATION_ITEMS } from "@/lib/constants";
+import { filterNavItemsByRole, UserRole } from "@/lib/permissions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import OrganizationSwitcher from "./OrganizationSwitcher";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
+
+interface NavigationItem {
+  name: string;
+  path: string;
+  icon: string;
+  isDropdown?: boolean;
+  children?: NavigationItem[];
+}
+
+interface NavigationSection {
+  title: string;
+  items: NavigationItem[];
+}
 
 interface SidebarProps {
   expanded: boolean;
@@ -25,8 +39,14 @@ export default function Sidebar({
 }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, userRole } = useAuth();
   const isMobile = useIsMobile();
+  
+  // Filter navigation items based on user role
+  const visibleSections = filterNavItemsByRole(
+    (userRole || "observer") as UserRole, 
+    NAVIGATION_ITEMS
+  );
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
   const [collapsedFlyoutFor, setCollapsedFlyoutFor] = useState<string | null>(null);
 
@@ -63,7 +83,7 @@ export default function Sidebar({
   };
 
   // Helper function to check if any child path is active
-  const isAnyChildActive = (children: any[]) => {
+  const isAnyChildActive = (children?: NavigationItem[]) => {
     return children?.some((child) => isPathActive(child.path)) || false;
   };
 
@@ -268,7 +288,7 @@ export default function Sidebar({
           />
         </svg>
       ),
-      users: (
+      "users-multiple": (
         <svg
           xmlns="http://www.w3.org/2000/svg"
           className="h-5 w-5 mr-3"
@@ -529,7 +549,7 @@ export default function Sidebar({
           "flex-1 pt-2 pb-3 overflow-y-auto hide-scrollbar",
           showLabels ? "px-0" : "px-2"
         )}>
-          {NAVIGATION_ITEMS.map((section, idx) => (
+          {visibleSections.map((section, idx) => (
             <div key={idx}>
               {/* Section title - only show when expanded */}
               {showLabels && section.title && (
@@ -539,7 +559,7 @@ export default function Sidebar({
                   </p>
                 </div>
               )}
-              {section.items.map((item) => (
+              {section.items.map((item: NavigationItem) => (
                 <div key={item.path || item.name}>
                   {item.isDropdown ? (
                     <>
@@ -583,7 +603,7 @@ export default function Sidebar({
                       {/* Dropdown children - only show when expanded and dropdown is open */}
                       {showLabels && dropdownOpen === item.name && item.children && (
                         <div className="ml-6 mt-1 space-y-1">
-                          {item.children.map((child) => (
+                          {item.children?.map((child: NavigationItem) => (
                             <button
                               key={child.path}
                               className={cn(
@@ -608,7 +628,7 @@ export default function Sidebar({
                       {/* Collapsed state: show child icons below parent when flyout is active */}
                       {!showLabels && collapsedFlyoutFor === item.name && item.children && (
                         <div className="mt-1 space-y-1">
-                          {item.children.map((child) => (
+                          {item.children?.map((child: NavigationItem) => (
                             <button
                               key={child.path}
                               className={cn(

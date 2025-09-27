@@ -1,6 +1,7 @@
 import React, { lazy } from "react";
 import { RouteObject } from "react-router-dom";
 import RootLayout from "@/components/layout/RootLayout";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
 // Lazy load components for better performance
 const LaunchpadPage = lazy(() => import("@/pages/launchpad"));
@@ -42,29 +43,59 @@ export const routes: RouteObject[] = [
             // LAUNCHPAD
             {
                 path: "launchpad",
-                element: React.createElement(LaunchpadPage),
+                element: React.createElement(() => 
+                    React.createElement(ProtectedRoute, { 
+                        requiredPage: "launchpad",
+                        children: React.createElement(LaunchpadPage)
+                    })
+                ),
             },
             // AI AGENTS
             {
                 path: "ai-agents/scheduling",
-                element: React.createElement(SchedulingAgent),
+                element: React.createElement(() => 
+                    React.createElement(ProtectedRoute, { 
+                        requiredPage: "ai-agents/scheduling",
+                        children: React.createElement(SchedulingAgent)
+                    })
+                ),
             },
             {
                 path: "ai-agents/patient-intake",
-                element: React.createElement(PatientIntakeAgent),
+                element: React.createElement(() => 
+                    React.createElement(ProtectedRoute, { 
+                        requiredPage: "ai-agents/patient-intake",
+                        children: React.createElement(PatientIntakeAgent)
+                    })
+                ),
             },
             {
                 path: "ai-agents/customer-support",
-                element: React.createElement(CustomerSupportAgent),
+                element: React.createElement(() => 
+                    React.createElement(ProtectedRoute, { 
+                        requiredPage: "ai-agents/customer-support",
+                        children: React.createElement(CustomerSupportAgent)
+                    })
+                ),
             },
             {
                 path: "analytics",
-                element: React.createElement(AnalyticsAgent),
+                element: React.createElement(() => 
+                    React.createElement(ProtectedRoute, { 
+                        requiredPage: "analytics",
+                        children: React.createElement(AnalyticsAgent)
+                    })
+                ),
             },
             // MEMBERS
             {
                 path: "members",
-                element: React.createElement(MembersPage),
+                element: React.createElement(() => 
+                    React.createElement(ProtectedRoute, { 
+                        requiredPage: "members",
+                        children: React.createElement(MembersPage)
+                    })
+                ),
             },
             // 404 handler
             {

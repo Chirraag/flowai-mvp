@@ -24,6 +24,7 @@ interface LocationsModuleProps {
   onRemove: (id: string) => void;
   onSave?: () => void;
   isSaving?: boolean;
+  readOnly?: boolean;
 }
 
 export default function LocationsModule({
@@ -33,6 +34,7 @@ export default function LocationsModule({
   onRemove,
   onSave,
   isSaving = false,
+  readOnly = false,
 }: LocationsModuleProps) {
 
   const [searchTerm, setSearchTerm] = React.useState("");
@@ -153,7 +155,7 @@ export default function LocationsModule({
             >
               Docs
             </Button>
-            {onSave && (
+            {onSave && !readOnly && (
               <Button
                 onClick={onSave}
                 disabled={isSaving}
@@ -162,7 +164,9 @@ export default function LocationsModule({
                 {isSaving ? "Saving..." : "Save"}
               </Button>
             )}
-            <Button variant="default" onClick={handleAddLocation} className="bg-[#f49024] hover:bg-[#d87f1f] text-white focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2 h-8 px-3 text-sm">Add Location</Button>
+            {!readOnly && (
+              <Button variant="default" onClick={handleAddLocation} className="bg-[#f49024] hover:bg-[#d87f1f] text-white focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2 h-8 px-3 text-sm">Add Location</Button>
+            )}
           </div>
         </div>
       </CardHeader>
@@ -185,6 +189,7 @@ export default function LocationsModule({
                 onDelete={() => handleDeleteLocation(loc.id, loc.name || `Location ${originalIndex + 1}`)}
                 isMinimized={minimizedCards[cardId]}
                 onToggleMinimize={() => toggleCardMinimize(cardId)}
+                readOnly={readOnly}
               />
             </div>
           );

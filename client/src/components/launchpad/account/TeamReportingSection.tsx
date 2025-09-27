@@ -19,6 +19,7 @@ interface TeamReportingSectionProps {
   onAdd: () => void;
   onUpdate: (id: string, field: keyof Person, value: string) => void;
   onRemove: (id: string, personName: string) => void;
+  readOnly?: boolean;
 }
 
 export default function TeamReportingSection({
@@ -27,6 +28,7 @@ export default function TeamReportingSection({
   onAdd,
   onUpdate,
   onRemove,
+  readOnly = false,
 }: TeamReportingSectionProps) {
   return (
     <div className="space-y-4">
@@ -46,17 +48,19 @@ export default function TeamReportingSection({
               </span>
             )}
           </div>
-          <Button
-            variant="default"
-            size="sm"
-            onClick={onAdd}
-            className="bg-[#F48024] hover:bg-[#F48024]/90 text-white px-4 py-2 rounded-lg shadow-sm"
-          >
+          {!readOnly && (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={onAdd}
+              className="bg-[#F48024] hover:bg-[#F48024]/90 text-white px-4 py-2 rounded-lg shadow-sm"
+            >
             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
             </svg>
             Add Person
-          </Button>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -82,7 +86,8 @@ export default function TeamReportingSection({
                         className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
                         placeholder="Enter title"
                         value={member.title}
-                        onChange={(e) => onUpdate(member.id, 'title', e.target.value)}
+                        onChange={readOnly ? undefined : (e) => onUpdate(member.id, 'title', e.target.value)}
+                        readOnly={readOnly}
                         aria-label="Title"
                       />
                     </TableCell>
@@ -91,7 +96,8 @@ export default function TeamReportingSection({
                         className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
                         placeholder="Full name"
                         value={member.name}
-                        onChange={(e) => onUpdate(member.id, 'name', e.target.value)}
+                        onChange={readOnly ? undefined : (e) => onUpdate(member.id, 'name', e.target.value)}
+                        readOnly={readOnly}
                         aria-label="Name"
                       />
                     </TableCell>
@@ -100,7 +106,8 @@ export default function TeamReportingSection({
                         className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
                         placeholder="email@practice.com"
                         value={member.email}
-                        onChange={(e) => onUpdate(member.id, 'email', e.target.value)}
+                        onChange={readOnly ? undefined : (e) => onUpdate(member.id, 'email', e.target.value)}
+                        readOnly={readOnly}
                         aria-label="Email"
                       />
                     </TableCell>
@@ -109,20 +116,23 @@ export default function TeamReportingSection({
                         className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
                         placeholder="(555) 123-4567"
                         value={member.phone}
-                        onChange={(e) => onUpdate(member.id, 'phone', e.target.value)}
+                        onChange={readOnly ? undefined : (e) => onUpdate(member.id, 'phone', e.target.value)}
+                        readOnly={readOnly}
                         aria-label="Phone"
                       />
                     </TableCell>
                     <TableCell className="p-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onRemove(member.id, member.name || 'this person')}
-                        className="bg-white text-black border border-black hover:bg-gray-50 h-8 w-8 p-0"
-                        aria-label="Delete person"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {!readOnly && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onRemove(member.id, member.name || 'this person')}
+                          className="bg-white text-black border border-black hover:bg-gray-50 h-8 w-8 p-0"
+                          aria-label="Delete person"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

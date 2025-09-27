@@ -15,6 +15,7 @@ export type AgentConfigTabProps = {
   initialValues?: AgentConfigValues;
   onSave?: (values: AgentConfigValues) => Promise<void>;
   isSaving?: boolean;
+  readOnly?: boolean;
 };
 
 export type AgentConfigTabHandle = {
@@ -28,7 +29,7 @@ export type AgentConfigTabHandle = {
   validate: () => { valid: boolean; errors: string[] };
 };
 
-const AgentConfigTab = forwardRef<AgentConfigTabHandle, AgentConfigTabProps>(({ initialValues, onSave, isSaving = false }, ref) => {
+const AgentConfigTab = forwardRef<AgentConfigTabHandle, AgentConfigTabProps>(({ initialValues, onSave, isSaving = false, readOnly = false }, ref) => {
   // Local state synced with initialValues
   const [agentName, setAgentName] = useState("Flow Scheduling Agent");
   const [language, setLanguage] = useState("en-US");
@@ -109,7 +110,7 @@ const AgentConfigTab = forwardRef<AgentConfigTabHandle, AgentConfigTabProps>(({ 
                 <p className="text-gray-200 text-sm mt-1">Configure the basic settings and instructions for the scheduling agent</p>
               </div>
             </div>
-            {onSave && (
+            {onSave && !readOnly && (
               <div className="flex items-center gap-3">
                 {hasUnsavedChanges && (
                   <div className="flex items-center gap-2 text-sm">
@@ -139,9 +140,12 @@ const AgentConfigTab = forwardRef<AgentConfigTabHandle, AgentConfigTabProps>(({ 
                 placeholder="Flow Scheduling Agent"
                 value={agentName}
                 onChange={(e) => {
-                  setAgentName(e.target.value);
-                  handleFieldChange();
+                  if (!readOnly) {
+                    setAgentName(e.target.value);
+                    handleFieldChange();
+                  }
                 }}
+                readOnly={readOnly}
                 className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
               />
             </div>
@@ -153,9 +157,12 @@ const AgentConfigTab = forwardRef<AgentConfigTabHandle, AgentConfigTabProps>(({ 
                 placeholder="e.g., en-US"
                 value={language}
                 onChange={(e) => {
-                  setLanguage(e.target.value);
-                  handleFieldChange();
+                  if (!readOnly) {
+                    setLanguage(e.target.value);
+                    handleFieldChange();
+                  }
                 }}
+                readOnly={readOnly}
                 className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
               />
             </div>
@@ -167,9 +174,12 @@ const AgentConfigTab = forwardRef<AgentConfigTabHandle, AgentConfigTabProps>(({ 
                 placeholder="e.g., nova"
                 value={voice}
                 onChange={(e) => {
-                  setVoice(e.target.value);
-                  handleFieldChange();
+                  if (!readOnly) {
+                    setVoice(e.target.value);
+                    handleFieldChange();
+                  }
                 }}
+                readOnly={readOnly}
                 className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
               />
             </div>
@@ -183,9 +193,12 @@ const AgentConfigTab = forwardRef<AgentConfigTabHandle, AgentConfigTabProps>(({ 
               placeholder="Enter detailed instructions for the scheduling agent..."
               value={agentInstructions}
               onChange={(e) => {
-                setAgentInstructions(e.target.value);
-                handleFieldChange();
+                if (!readOnly) {
+                  setAgentInstructions(e.target.value);
+                  handleFieldChange();
+                }
               }}
+              readOnly={readOnly}
               className="min-h-[400px] resize-none border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
             />
           </div>
@@ -198,9 +211,12 @@ const AgentConfigTab = forwardRef<AgentConfigTabHandle, AgentConfigTabProps>(({ 
               placeholder="Define criteria for when calls should be transferred to human agents..."
               value={humanTransferCriteria}
               onChange={(e) => {
-                setHumanTransferCriteria(e.target.value);
-                handleFieldChange();
+                if (!readOnly) {
+                  setHumanTransferCriteria(e.target.value);
+                  handleFieldChange();
+                }
               }}
+              readOnly={readOnly}
               className="min-h-32 resize-none border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
             />
           </div>

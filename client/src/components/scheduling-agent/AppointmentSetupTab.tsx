@@ -17,6 +17,7 @@ export type AppointmentSetupTabProps = {
   initialValues?: AppointmentSetupValues;
   onSave?: (values: AppointmentSetupValues) => Promise<void>;
   isSaving?: boolean;
+  readOnly?: boolean;
 };
 
 export type AppointmentSetupTabHandle = {
@@ -30,7 +31,7 @@ export type AppointmentSetupTabHandle = {
   validate: () => { valid: boolean; errors: string[] };
 };
 
-const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSetupTabProps>(({ initialValues, onSave, isSaving = false }, ref) => {
+const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSetupTabProps>(({ initialValues, onSave, isSaving = false, readOnly = false }, ref) => {
   const [newPatientDuration, setNewPatientDuration] = React.useState("");
   const [followUpDuration, setFollowUpDuration] = React.useState("");
   const [procedureSpecific, setProcedureSpecific] = React.useState("");
@@ -130,7 +131,7 @@ const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSet
                 <p className="text-gray-200 text-sm mt-1">Configure the types of appointments available for booking</p>
               </div>
             </div>
-            {onSave && (
+            {onSave && !readOnly && (
               <div className="flex items-center gap-3">
                 {hasUnsavedChanges && (
                   <div className="flex items-center gap-2 text-sm">
@@ -164,9 +165,12 @@ const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSet
                 id="new-patient-enabled"
                 checked={newPatientEnabled}
                 onCheckedChange={(checked) => {
-                  setNewPatientEnabled(checked);
-                  handleFieldChange();
+                  if (!readOnly) {
+                    setNewPatientEnabled(checked);
+                    handleFieldChange();
+                  }
                 }}
+                disabled={readOnly}
               />
             </div>
 
@@ -181,9 +185,12 @@ const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSet
                 id="follow-up-enabled"
                 checked={followUpEnabled}
                 onCheckedChange={(checked) => {
-                  setFollowUpEnabled(checked);
-                  handleFieldChange();
+                  if (!readOnly) {
+                    setFollowUpEnabled(checked);
+                    handleFieldChange();
+                  }
                 }}
+                disabled={readOnly}
               />
             </div>
 
@@ -198,9 +205,12 @@ const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSet
                 id="procedure-enabled"
                 checked={procedureEnabled}
                 onCheckedChange={(checked) => {
-                  setProcedureEnabled(checked);
-                  handleFieldChange();
+                  if (!readOnly) {
+                    setProcedureEnabled(checked);
+                    handleFieldChange();
+                  }
                 }}
+                disabled={readOnly}
               />
             </div>
           </div>
@@ -213,9 +223,11 @@ const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSet
               <div className="space-y-2">
                 <Label htmlFor="new-patient-duration" className="text-sm font-semibold text-[#1c275e]">New Patient Appointments</Label>
                 <Select value={newPatientDuration} onValueChange={(value) => {
-                  setNewPatientDuration(value);
-                  handleFieldChange();
-                }}>
+                  if (!readOnly) {
+                    setNewPatientDuration(value);
+                    handleFieldChange();
+                  }
+                }} disabled={readOnly}>
                   <SelectTrigger className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]">
                     <SelectValue placeholder="Select duration" />
                   </SelectTrigger>
@@ -229,9 +241,11 @@ const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSet
               <div className="space-y-2">
                 <Label htmlFor="follow-up-duration" className="text-sm font-semibold text-[#1c275e]">Follow-up Appointments</Label>
                 <Select value={followUpDuration} onValueChange={(value) => {
-                  setFollowUpDuration(value);
-                  handleFieldChange();
-                }}>
+                  if (!readOnly) {
+                    setFollowUpDuration(value);
+                    handleFieldChange();
+                  }
+                }} disabled={readOnly}>
                   <SelectTrigger className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]">
                     <SelectValue placeholder="Select duration" />
                   </SelectTrigger>
@@ -251,18 +265,23 @@ const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSet
                   placeholder="Enter procedure type"
                   value={procedureSpecific}
                   onChange={(e) => {
-                    setProcedureSpecific(e.target.value);
-                    handleFieldChange();
+                    if (!readOnly) {
+                      setProcedureSpecific(e.target.value);
+                      handleFieldChange();
+                    }
                   }}
+                  readOnly={readOnly}
                   className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="procedure-duration" className="text-sm font-semibold text-[#1c275e]">Duration</Label>
                 <Select value={procedureDuration} onValueChange={(value) => {
-                  setProcedureDuration(value);
-                  handleFieldChange();
-                }}>
+                  if (!readOnly) {
+                    setProcedureDuration(value);
+                    handleFieldChange();
+                  }
+                }} disabled={readOnly}>
                   <SelectTrigger className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]">
                     <SelectValue placeholder="Select duration" />
                   </SelectTrigger>
@@ -305,9 +324,12 @@ const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSet
                   placeholder="10"
                   value={maxNewPatients}
                   onChange={(e) => {
-                    setMaxNewPatients(e.target.value);
-                    handleFieldChange();
+                    if (!readOnly) {
+                      setMaxNewPatients(e.target.value);
+                      handleFieldChange();
+                    }
                   }}
+                  readOnly={readOnly}
                   className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
                   min="1"
                 />
@@ -320,9 +342,12 @@ const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSet
                   placeholder="20"
                   value={maxFollowUps}
                   onChange={(e) => {
-                    setMaxFollowUps(e.target.value);
-                    handleFieldChange();
+                    if (!readOnly) {
+                      setMaxFollowUps(e.target.value);
+                      handleFieldChange();
+                    }
                   }}
+                  readOnly={readOnly}
                   className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
                   min="1"
                 />

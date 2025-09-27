@@ -70,6 +70,22 @@ export async function apiCall<T = any>(
               retryConfig,
             );
             if (!retryResponse.ok) {
+              // Handle 403 errors in retry response
+              if (retryResponse.status === 403) {
+                let errorMessage = "You don't have permission to perform this action";
+                
+                try {
+                  const errorData = await retryResponse.json();
+                  if (errorData.message) {
+                    errorMessage = errorData.message;
+                  }
+                } catch {
+                  // If we can't parse the error response, use the default message
+                }
+                
+                throw new ApiError(403, errorMessage);
+              }
+              
               throw new ApiError(
                 retryResponse.status,
                 `API call failed: ${retryResponse.statusText}`,
@@ -100,10 +116,37 @@ export async function apiCall<T = any>(
   }
 
   if (!response.ok) {
-    throw new ApiError(
-      response.status,
-      `API call failed: ${response.statusText}`,
-    );
+    // Handle 403 Forbidden errors with user-friendly messages
+    if (response.status === 403) {
+      let errorMessage = "You don't have permission to perform this action";
+      
+      try {
+        const errorData = await response.json();
+        if (errorData.message) {
+          errorMessage = errorData.message;
+        }
+      } catch {
+        // If we can't parse the error response, use the default message
+      }
+      
+      throw new ApiError(403, errorMessage);
+    }
+    
+    // Handle other HTTP errors
+    let errorMessage = `API call failed: ${response.statusText}`;
+    
+    try {
+      const errorData = await response.json();
+      if (errorData.message) {
+        errorMessage = errorData.message;
+      } else if (errorData.error) {
+        errorMessage = errorData.error;
+      }
+    } catch {
+      // If we can't parse the error response, use the default message
+    }
+    
+    throw new ApiError(response.status, errorMessage);
   }
 
   const contentType = response.headers.get("content-type");

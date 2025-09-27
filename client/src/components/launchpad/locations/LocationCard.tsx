@@ -16,6 +16,7 @@ interface LocationCardProps {
   onDelete: () => void;
   isMinimized?: boolean;
   onToggleMinimize?: () => void;
+  readOnly?: boolean;
 }
 
 export default function LocationCard({
@@ -25,6 +26,7 @@ export default function LocationCard({
   onDelete,
   isMinimized = false,
   onToggleMinimize,
+  readOnly = false,
 }: LocationCardProps) {
 
   return (
@@ -40,17 +42,19 @@ export default function LocationCard({
             <CardTitle className="text-lg font-semibold tracking-tight">{location.name || `Location ${index + 1}`}</CardTitle>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="border-[#c0352b]/40 text-[#c0352b] hover:bg-[#c0352b] hover:text-white focus-visible:ring-2 focus-visible:ring-[#c0352b]/40 focus-visible:outline-none"
-              onClick={(event) => {
-                event.stopPropagation();
-                onDelete();
-              }}
-            >
-              Delete
-            </Button>
+            {!readOnly && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-[#c0352b]/40 text-[#c0352b] hover:bg-[#c0352b] hover:text-white focus-visible:ring-2 focus-visible:ring-[#c0352b]/40 focus-visible:outline-none"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onDelete();
+                }}
+              >
+                Delete
+              </Button>
+            )}
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -85,7 +89,8 @@ export default function LocationCard({
             className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
             placeholder="Enter location name"
             value={location.name}
-            onChange={(e) => onChange({ name: e.target.value })}
+            onChange={readOnly ? undefined : (e) => onChange({ name: e.target.value })}
+            readOnly={readOnly}
           />
         </div>
 
@@ -95,7 +100,8 @@ export default function LocationCard({
             className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
             placeholder="External location ID (e.g., LOC001)"
             value={location.location_id}
-            onChange={(e) => onChange({ location_id: e.target.value })}
+            onChange={readOnly ? undefined : (e) => onChange({ location_id: e.target.value })}
+            readOnly={readOnly}
           />
         </div>
 
@@ -106,7 +112,8 @@ export default function LocationCard({
               className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
               placeholder="Street Address"
               value={location.address_line1}
-              onChange={(e) => onChange({ address_line1: e.target.value })}
+              onChange={readOnly ? undefined : (e) => onChange({ address_line1: e.target.value })}
+              readOnly={readOnly}
             />
           </div>
           <div className="space-y-2">
@@ -115,7 +122,8 @@ export default function LocationCard({
               className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
               placeholder="Apt, Suite, etc."
               value={location.address_line2 || ""}
-              onChange={(e) => onChange({ address_line2: e.target.value })}
+              onChange={readOnly ? undefined : (e) => onChange({ address_line2: e.target.value })}
+              readOnly={readOnly}
             />
           </div>
         </div>
@@ -127,7 +135,8 @@ export default function LocationCard({
               className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
               placeholder="City"
               value={location.city}
-              onChange={(e) => onChange({ city: e.target.value })}
+              onChange={readOnly ? undefined : (e) => onChange({ city: e.target.value })}
+              readOnly={readOnly}
             />
           </div>
           <div className="space-y-2 col-span-1">
@@ -136,7 +145,8 @@ export default function LocationCard({
               className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
               placeholder="State"
               value={location.state}
-              onChange={(e) => onChange({ state: e.target.value })}
+              onChange={readOnly ? undefined : (e) => onChange({ state: e.target.value })}
+              readOnly={readOnly}
             />
           </div>
           <div className="space-y-2 col-span-2">
@@ -145,7 +155,8 @@ export default function LocationCard({
               className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
               placeholder="Zip"
               value={location.zip_code}
-              onChange={(e) => onChange({ zip_code: e.target.value })}
+              onChange={readOnly ? undefined : (e) => onChange({ zip_code: e.target.value })}
+              readOnly={readOnly}
             />
           </div>
         </div>
@@ -157,7 +168,8 @@ export default function LocationCard({
               className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
               placeholder="e.g., 8:00 AM - 5:00 PM"
               value={location.weekday_hours}
-              onChange={(e) => onChange({ weekday_hours: e.target.value })}
+              onChange={readOnly ? undefined : (e) => onChange({ weekday_hours: e.target.value })}
+              readOnly={readOnly}
             />
           </div>
           <div className="space-y-2">
@@ -166,7 +178,8 @@ export default function LocationCard({
               className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
               placeholder="e.g., 9:00 AM - 2:00 PM or Closed"
               value={location.weekend_hours}
-              onChange={(e) => onChange({ weekend_hours: e.target.value })}
+              onChange={readOnly ? undefined : (e) => onChange({ weekend_hours: e.target.value })}
+              readOnly={readOnly}
             />
           </div>
         </div>
@@ -177,7 +190,8 @@ export default function LocationCard({
             className="min-h-[80px] border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
             placeholder="Provide parking information and directions"
             value={location.parking_directions}
-            onChange={(e) => onChange({ parking_directions: e.target.value })}
+            onChange={readOnly ? undefined : (e) => onChange({ parking_directions: e.target.value })}
+            readOnly={readOnly}
           />
         </div>
 
