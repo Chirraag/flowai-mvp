@@ -8,14 +8,15 @@ import {
 } from "react";
 import { queryClient } from "@/lib/queryClient";
 import { api } from "@/lib/api";
-import { 
-  canReadFeature, 
-  canWriteFeature, 
-  canAccessPage, 
+import {
+  canReadFeature,
+  canWriteFeature,
+  canAccessPage,
   UserRole,
   canAddMembers,
   canChangeRoles,
-  canDeleteMembers
+  canDeleteMembers,
+  canCreateOrganizations
 } from "@/lib/permissions";
 import type { QueryFilters } from "@tanstack/react-query";
 
@@ -52,6 +53,8 @@ interface AuthContextType {
   canAddMembers: () => boolean;
   canChangeRoles: () => boolean;
   canDeleteMembers: () => boolean;
+  // Organization management permissions
+  canCreateOrganizations: () => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -498,6 +501,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     canAddMembers: canAddMembersCheck,
     canChangeRoles: canChangeRolesCheck,
     canDeleteMembers: canDeleteMembersCheck,
+    // Organization management permissions
+    canCreateOrganizations: () => !!(userRole && canCreateOrganizations(userRole)),
   };
 
   // Clear query cache when org switches to avoid cross-tenant leakage

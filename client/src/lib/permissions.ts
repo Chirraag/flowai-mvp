@@ -36,6 +36,14 @@ const FEATURE_PERMISSIONS = {
     "observer": { read: false, write: false },
     "analytics-user": { read: false, write: false },
   },
+  organizations: {
+    "super-admin": { read: true, write: true }, // can create/manage organizations
+    "customer-admin": { read: true, write: false }, // can view organizations but not create
+    "member": { read: true, write: false }, // can view organizations but not create
+    "core-team-member": { read: false, write: false }, // no organization access
+    "observer": { read: true, write: false }, // can view organizations but not create
+    "analytics-user": { read: false, write: false }, // no organization access
+  },
 } as const;
 
 export const canReadFeature = (role: UserRole, feature: keyof typeof FEATURE_PERMISSIONS): boolean => {
@@ -90,4 +98,24 @@ export const canChangeRoles = (role: UserRole): boolean => {
 
 export const canDeleteMembers = (role: UserRole): boolean => {
   return role === "super-admin";
+};
+
+// Organization management specific permissions
+export const canCreateOrganizations = (role: UserRole): boolean => {
+  return role === "super-admin";
+};
+
+// Role-based default page routing
+export const getDefaultPageForRole = (role: UserRole): string => {
+  switch (role) {
+    case "analytics-user":
+      return "analytics";
+    case "super-admin":
+    case "customer-admin":
+    case "member":
+    case "core-team-member":
+    case "observer":
+    default:
+      return "launchpad";
+  }
 };

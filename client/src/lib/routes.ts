@@ -2,6 +2,7 @@ import React, { lazy } from "react";
 import { RouteObject } from "react-router-dom";
 import RootLayout from "@/components/layout/RootLayout";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import { getDefaultPageForRole, UserRole } from "@/lib/permissions";
 
 // Lazy load components for better performance
 const LaunchpadPage = lazy(() => import("@/pages/launchpad"));
@@ -27,14 +28,29 @@ export const routes: RouteObject[] = [
         path: "/:orgId",
         element: React.createElement(RootLayout),
         children: [
-            // Default route for organization - redirect to launchpad
+            // Default route for organization - redirect based on user role
             {
                 path: "",
                 element: React.createElement(() => {
                     React.useEffect(() => {
                         const orgId = window.location.pathname.split("/")[1];
                         if (orgId) {
-                            window.location.href = `/${orgId}/launchpad`;
+                            // Get user role from token to determine default page
+                            const token = localStorage.getItem("auth_token");
+                            if (token) {
+                                try {
+                                    const payload = JSON.parse(atob(token.split(".")[1]));
+                                    const userRole = payload.role as UserRole;
+                                    const defaultPage = getDefaultPageForRole(userRole);
+                                    window.location.href = `/${orgId}/${defaultPage}`;
+                                } catch {
+                                    // Fallback to launchpad if token parsing fails
+                                    window.location.href = `/${orgId}/launchpad`;
+                                }
+                            } else {
+                                // No token, redirect to login
+                                window.location.href = "/login";
+                            }
                         }
                     }, []);
                     return null;
@@ -104,7 +120,7 @@ export const routes: RouteObject[] = [
             },
         ],
     },
-    // Root redirect - redirect to login or user's organization
+    // Root redirect - redirect to login or user's organization with role-aware routing
     {
         path: "/",
         element: React.createElement(() => {
@@ -116,12 +132,15 @@ export const routes: RouteObject[] = [
                     return;
                 }
 
-                // Try to get user's current org_id from token or localStorage
+                // Try to get user's current org_id and role from token
                 try {
                     const payload = JSON.parse(atob(token.split(".")[1]));
                     const orgId = payload.orgId;
-                    if (orgId) {
-                        window.location.href = `/${orgId}/launchpad`;
+                    const userRole = payload.role as UserRole;
+                    
+                    if (orgId && userRole) {
+                        const defaultPage = getDefaultPageForRole(userRole);
+                        window.location.href = `/${orgId}/${defaultPage}`;
                     } else {
                         window.location.href = "/login";
                     }
