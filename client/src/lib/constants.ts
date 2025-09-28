@@ -60,7 +60,7 @@ export const NAVIGATION_ITEMS = [
           {
             name: "Customer Support Agent",
             path: "ai-agents/customer-support",
-            icon: "users",
+            icon: "phone",
           },
         ],
       },

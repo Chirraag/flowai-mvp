@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { IOSSwitch } from "@/components/ui/ios-switch";
 import { Button } from "@/components/ui/button";
 import { Calendar, Users } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import type { AppointmentSetupValues } from "@/types/schedulingAgent";
 
 /**
@@ -32,6 +33,7 @@ export type AppointmentSetupTabHandle = {
 };
 
 const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSetupTabProps>(({ initialValues, onSave, isSaving = false, readOnly = false }, ref) => {
+  const { toast } = useToast();
   const [newPatientDuration, setNewPatientDuration] = React.useState("");
   const [followUpDuration, setFollowUpDuration] = React.useState("");
   const [procedureSpecific, setProcedureSpecific] = React.useState("");
@@ -40,8 +42,8 @@ const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSet
   const [maxFollowUps, setMaxFollowUps] = React.useState("");
 
   // Appointment type toggles
-  const [newPatientEnabled, setNewPatientEnabled] = React.useState(true);
-  const [followUpEnabled, setFollowUpEnabled] = React.useState(true);
+  const [newPatientEnabled, setNewPatientEnabled] = React.useState(false);
+  const [followUpEnabled, setFollowUpEnabled] = React.useState(false);
   const [procedureEnabled, setProcedureEnabled] = React.useState(false);
 
   // Track unsaved changes
@@ -75,7 +77,12 @@ const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSet
     const currentRef = (ref as React.MutableRefObject<AppointmentSetupTabHandle | null>).current;
     const validation = currentRef?.validate();
     if (validation && !validation.valid) {
-      // Validation errors will be handled by the parent
+      // Show validation errors to user
+      toast({
+        title: "Validation Error",
+        description: validation.errors[0],
+        variant: "destructive",
+      });
       return;
     }
 
@@ -104,12 +111,16 @@ const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSet
     validate: () => {
       const errors: string[] = [];
 
-      if (maxNewPatients && parseInt(maxNewPatients) <= 0) {
+      if (!maxNewPatients || maxNewPatients.trim() === "") {
+        errors.push("Max new patients per day is required");
+      } else if (parseInt(maxNewPatients) <= 0) {
         errors.push("Max new patients must be a positive number");
       }
 
-      if (maxFollowUps && parseInt(maxFollowUps) <= 0) {
-        errors.push("Max follow ups must be a positive number");
+      if (!maxFollowUps || maxFollowUps.trim() === "") {
+        errors.push("Max follow-ups per day is required");
+      } else if (parseInt(maxFollowUps) <= 0) {
+        errors.push("Max follow-ups must be a positive number");
       }
 
       return { valid: errors.length === 0, errors };
@@ -320,36 +331,38 @@ const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSet
                 <Label htmlFor="max-new-patients" className="text-sm font-semibold text-[#1c275e]">Max New Patients per day</Label>
                 <Input
                   id="max-new-patients"
-                  type="number"
+                  type="text"
                   placeholder="10"
                   value={maxNewPatients}
                   onChange={(e) => {
                     if (!readOnly) {
-                      setMaxNewPatients(e.target.value);
+                      // Only allow numeric input
+                      const numericValue = e.target.value.replace(/[^0-9]/g, '');
+                      setMaxNewPatients(numericValue);
                       handleFieldChange();
                     }
                   }}
                   readOnly={readOnly}
                   className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
-                  min="1"
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="max-follow-ups" className="text-sm font-semibold text-[#1c275e]">Max Follow-ups per day</Label>
                 <Input
                   id="max-follow-ups"
-                  type="number"
+                  type="text"
                   placeholder="20"
                   value={maxFollowUps}
                   onChange={(e) => {
                     if (!readOnly) {
-                      setMaxFollowUps(e.target.value);
+                      // Only allow numeric input
+                      const numericValue = e.target.value.replace(/[^0-9]/g, '');
+                      setMaxFollowUps(numericValue);
                       handleFieldChange();
                     }
                   }}
                   readOnly={readOnly}
                   className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
-                  min="1"
                 />
               </div>
             </div>

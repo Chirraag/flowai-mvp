@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { Menu, X, Rocket, ChevronDown } from "lucide-react";
+import { Menu, X, Rocket, ChevronDown, Phone } from "lucide-react";
 import { NAVIGATION_ITEMS } from "@/lib/constants";
 import { filterNavItemsByRole, UserRole } from "@/lib/permissions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -49,6 +49,7 @@ export default function Sidebar({
   );
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
   const [collapsedFlyoutFor, setCollapsedFlyoutFor] = useState<string | null>(null);
+  const collapseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Close mobile menu when switching to desktop
   useEffect(() => {
@@ -56,6 +57,15 @@ export default function Sidebar({
       setMobileMenuOpen(false);
     }
   }, [isMobile, mobileMenuOpen, setMobileMenuOpen]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (collapseTimeoutRef.current) {
+        clearTimeout(collapseTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Handle mobile menu item click
   const handleMobileMenuItemClick = () => {
@@ -104,6 +114,11 @@ export default function Sidebar({
   // Hover handlers for sidebar expansion (desktop only)
   const handleMouseEnter = () => {
     if (!isMobile) {
+      // Clear any pending collapse timeout
+      if (collapseTimeoutRef.current) {
+        clearTimeout(collapseTimeoutRef.current);
+        collapseTimeoutRef.current = null;
+      }
       onHoverChange(true);
       // Restore dropdown state when expanding if flyout was active
       if (collapsedFlyoutFor) {
@@ -114,9 +129,13 @@ export default function Sidebar({
 
   const handleMouseLeave = () => {
     if (!isMobile) {
-      // Close any open dropdown when collapsing, but keep flyout state
-      setDropdownOpen(null);
-      onHoverChange(false);
+      // Delay collapse by 300ms to prevent accidental closes
+      collapseTimeoutRef.current = setTimeout(() => {
+        // Close any open dropdown when collapsing, but keep flyout state
+        setDropdownOpen(null);
+        onHoverChange(false);
+        collapseTimeoutRef.current = null;
+      }, 300);
     }
   };
 
@@ -481,6 +500,7 @@ export default function Sidebar({
         </svg>
       ),
       rocket: <Rocket className="h-5 w-5 mr-3" />,
+      phone: <Phone className="h-5 w-5 mr-3" />,
     };
 
     return icons[iconName] || <div className="h-5 w-5" />;
@@ -571,7 +591,7 @@ export default function Sidebar({
                             ? "px-3 sm:px-3 py-1.5 mx-2 sm:mx-2 justify-between"
                             : "justify-center px-2 py-2 mx-1 rounded-lg",
                           isAnyChildActive(item.children) || dropdownOpen === item.name
-                            ? "bg-blue-50 border-r-4 border-blue-500 text-blue-700"
+                            ? "bg-orange-50 border-r-4 border-[#F48024] text-[#F48024]"
                             : "hover:bg-gray-50 text-gray-700",
                         )}
                         onClick={() => handleDropdownToggle(item.name)}
@@ -609,7 +629,7 @@ export default function Sidebar({
                               className={cn(
                                 "transition-colors duration-200 w-full text-left flex items-center px-3 py-1.5",
                                 isPathActive(child.path)
-                                  ? "bg-blue-50 border-r-4 border-blue-500 text-blue-700"
+                                  ? "bg-orange-50 border-r-4 border-[#F48024] text-[#F48024]"
                                   : "hover:bg-gray-50 text-gray-600",
                               )}
                               onClick={() => handleNavigation(child.path)}
@@ -634,7 +654,7 @@ export default function Sidebar({
                               className={cn(
                                 "transition-colors duration-200 w-full flex items-center justify-center px-2 py-2 mx-1 rounded-lg",
                                 isPathActive(child.path)
-                                  ? "bg-blue-50 text-blue-700"
+                                  ? "bg-orange-50 text-[#F48024]"
                                   : "hover:bg-gray-50 text-gray-600",
                               )}
                               onClick={() => handleNavigation(child.path)}
@@ -655,7 +675,7 @@ export default function Sidebar({
                           ? "px-3 sm:px-3 py-1.5 mx-2 sm:mx-2"
                           : "justify-center px-2 py-2 mx-1 rounded-lg",
                         isPathActive(item.path)
-                          ? "bg-blue-50 border-r-4 border-blue-500 text-blue-700"
+                          ? "bg-orange-50 border-r-4 border-[#F48024] text-[#F48024]"
                           : "hover:bg-gray-50 text-gray-700",
                       )}
                       onClick={() => handleNavigation(item.path)}

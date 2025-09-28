@@ -92,11 +92,11 @@ export const apiToUi = {
       followUpDuration: durationHelpers.apiDurationToUi(api.followup_duration),
       procedureSpecific: api.procedure_specific || '',
       procedureDuration: durationHelpers.apiDurationToUi(api.procedure_duration),
-      maxNewPatients: String(api.max_new_patients_per_day || 0),
-      maxFollowUps: String(api.max_followups_per_day || 0),
+      maxNewPatients: api.max_new_patients_per_day ? String(api.max_new_patients_per_day) : '',
+      maxFollowUps: api.max_followups_per_day ? String(api.max_followups_per_day) : '',
       appointmentTypes: {
-        newPatient: api.appointment_types?.new_patient ?? true,
-        followUp: api.appointment_types?.follow_up ?? true,
+        newPatient: api.appointment_types?.new_patient ?? false,
+        followUp: api.appointment_types?.follow_up ?? false,
         procedure: api.appointment_types?.procedure ?? false,
       },
     };
@@ -108,12 +108,12 @@ export const apiToUi = {
   patientEligibility(api: SchedulingAgent): PatientEligibilityValues {
     return {
       patientTypes: {
-        newPatients: api.patient_types_accepted?.new_patients ?? true,
-        existingPatients: api.patient_types_accepted?.existing_patients ?? true,
-        selfPay: api.patient_types_accepted?.self_pay ?? true,
+        newPatients: api.patient_types_accepted?.new_patients ?? false,
+        existingPatients: api.patient_types_accepted?.existing_patients ?? false,
+        selfPay: api.patient_types_accepted?.self_pay ?? false,
         hmo: api.patient_types_accepted?.hmo ?? false,
-        ppo: api.patient_types_accepted?.ppo ?? true,
-        medicare: api.patient_types_accepted?.medicare ?? true,
+        ppo: api.patient_types_accepted?.ppo ?? false,
+        medicare: api.patient_types_accepted?.medicare ?? false,
         medicaid: api.patient_types_accepted?.medicaid ?? false,
       },
       referralRequirements: {

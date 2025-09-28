@@ -32,12 +32,12 @@ export type PatientEligibilityTabHandle = {
 
 const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEligibilityTabProps>(({ initialValues, onSave, isSaving = false, readOnly = false }, ref) => {
   // Patient Types state
-  const [newPatients, setNewPatients] = React.useState(true);
-  const [existingPatients, setExistingPatients] = React.useState(true);
-  const [selfPay, setSelfPay] = React.useState(true);
+  const [newPatients, setNewPatients] = React.useState(false);
+  const [existingPatients, setExistingPatients] = React.useState(false);
+  const [selfPay, setSelfPay] = React.useState(false);
   const [hmo, setHmo] = React.useState(false);
-  const [ppo, setPpo] = React.useState(true);
-  const [medicare, setMedicare] = React.useState(true);
+  const [ppo, setPpo] = React.useState(false);
+  const [medicare, setMedicare] = React.useState(false);
   const [medicaid, setMedicaid] = React.useState(false);
 
   // Referral Requirements state

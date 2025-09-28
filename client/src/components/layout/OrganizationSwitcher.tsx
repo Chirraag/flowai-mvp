@@ -60,6 +60,13 @@ export default function OrganizationSwitcher({
     }
   }, [isExpanded]);
 
+  // Close dropdown when sidebar collapses
+  useEffect(() => {
+    if (isCollapsed && isExpanded) {
+      setIsExpanded(false);
+    }
+  }, [isCollapsed, isExpanded]);
+
   const fetchOrganizations = async () => {
     setLoading(true);
     try {
