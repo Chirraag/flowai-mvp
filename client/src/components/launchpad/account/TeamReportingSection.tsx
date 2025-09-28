@@ -188,7 +188,7 @@ export default function TeamReportingSection({
                     <TableCell className="p-2">
                       <Input
                         className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
-                        placeholder="(555) 123-4567"
+                        placeholder="123-456-7890"
                         value={formatPhoneNumber(member.phone)}
                         onChange={readOnly ? undefined : (e) => handlePhoneChange(member.id, e.target.value)}
                         readOnly={readOnly}
