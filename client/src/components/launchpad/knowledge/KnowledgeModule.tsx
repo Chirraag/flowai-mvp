@@ -3,9 +3,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useCreateCuratedKB, useDeleteCuratedKB } from "@/lib/launchpad.api";
-import { Download, Trash2, FileText, Loader2, Eye, AlertCircle } from "lucide-react";
+import { Download, Trash2, FileText, Loader2, Eye, AlertCircle, CheckCircle, Circle, XCircle } from "lucide-react";
 import { CuratedKBEntry } from "@/lib/launchpad.types";
 import DocumentTextViewer from "@/components/launchpad/shared/DocumentTextViewer";
 
@@ -13,13 +23,36 @@ interface KnowledgeModuleProps {
   orgId?: number;
   curatedKb?: CuratedKBEntry[];
   curatedKbCount?: number;
+  readOnly?: boolean;
 }
 
-export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount }: KnowledgeModuleProps) {
+type GenerationStepStatus = 'pending' | 'current' | 'completed' | 'error';
+
+interface GenerationStep {
+  id: string;
+  label: string;
+  status: GenerationStepStatus;
+}
+
+export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount, readOnly = false }: KnowledgeModuleProps) {
   const { toast } = useToast();
   const [viewingDocument, setViewingDocument] = useState<CuratedKBEntry | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isScrolled, setIsScrolled] = useState(false);
+  const [showProgress, setShowProgress] = useState(false);
+  const [deleteDialog, setDeleteDialog] = useState<{
+    open: boolean;
+    documentUrl?: string;
+    documentName?: string;
+  }>({ open: false });
+  const [generationSteps, setGenerationSteps] = useState<GenerationStep[]>([
+    { id: 'account', label: 'Gathering account details', status: 'pending' },
+    { id: 'locations', label: 'Processing locations data', status: 'pending' },
+    { id: 'specialties', label: 'Collecting specialties info', status: 'pending' },
+    { id: 'insurance', label: 'Adding insurance settings', status: 'pending' },
+    { id: 'generating', label: 'Creating document', status: 'pending' },
+    { id: 'almost-ready', label: 'Almost ready', status: 'pending' }
+  ]);
 
   const createCuratedKB = useCreateCuratedKB(orgId);
   const deleteCuratedKB = useDeleteCuratedKB(orgId);
@@ -45,13 +78,94 @@ export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount }: Kn
       return;
     }
 
+    // Reset generation steps and show progress
+    setShowProgress(true);
+    setGenerationSteps(prev => prev.map(step => ({ ...step, status: 'pending' })));
+
+    // Start mock progress simulation
+    let stepIndex = 0;
+    let progressInterval: NodeJS.Timeout | undefined;
+    let longWaitTimeout: NodeJS.Timeout | undefined;
+
+    const startProgressSimulation = () => {
+      const advanceStep = () => {
+        setGenerationSteps(prev => prev.map((step, index) => ({
+          ...step,
+          status: index < stepIndex ? 'completed' :
+                  index === stepIndex ? 'current' : 'pending'
+        })));
+
+        stepIndex++;
+
+        // Special handling for "Creating document" step - wait up to 3 minutes
+        if (stepIndex === 5) { // Creating document is index 4, so stepIndex 5 means we just moved to it
+          longWaitTimeout = setTimeout(() => {
+            // After 3 minutes, advance to "Almost ready" and stay there until API completes
+            stepIndex = 5; // Set to almost-ready index
+            setGenerationSteps(prev => prev.map((step, index) => ({
+              ...step,
+              status: index < stepIndex ? 'completed' :
+                      index === stepIndex ? 'current' : 'pending'
+            })));
+            // Don't advance further - stay on "Almost ready" until API completes
+          }, 180000); // 3 minutes = 180,000ms
+        } else if (stepIndex >= generationSteps.length) {
+          clearInterval(progressInterval);
+        }
+      };
+
+      // Advance through first 4 steps quickly
+      progressInterval = setInterval(() => {
+        if (stepIndex < 4) { // Stop advancing after "Adding insurance settings"
+          advanceStep();
+        }
+      }, 800);
+
+      // Manually advance to "Creating document" after 4 steps
+      setTimeout(() => {
+        stepIndex = 4;
+        advanceStep();
+      }, 3200); // 4 steps * 800ms = 3200ms
+    };
+
+    startProgressSimulation();
+
     try {
       const response = await createCuratedKB.mutateAsync();
+
+      // Clear all timers
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
+      if (longWaitTimeout) {
+        clearTimeout(longWaitTimeout);
+      }
+
+      // Complete all steps on success
+      setGenerationSteps(prev => prev.map(step => ({ ...step, status: 'completed' })));
+
+      // Hide progress after a brief delay to show completion
+      setTimeout(() => setShowProgress(false), 1500);
+
       toast({
         title: "Success",
         description: response.message || "Knowledge base generated successfully",
       });
     } catch (error) {
+      // Clear all timers
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
+      if (longWaitTimeout) {
+        clearTimeout(longWaitTimeout);
+      }
+
+      // Show error state for all steps
+      setGenerationSteps(prev => prev.map(step => ({ ...step, status: 'error' })));
+
+      // Hide progress after showing error state
+      setTimeout(() => setShowProgress(false), 2000);
+
       console.error('Failed to generate curated KB:', error);
       toast({
         title: "Error",
@@ -84,6 +198,13 @@ export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount }: Kn
         description: error instanceof Error ? error.message : "Failed to delete knowledge base",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (deleteDialog.documentUrl) {
+      await handleDelete(deleteDialog.documentUrl);
+      setDeleteDialog({ open: false });
     }
   };
 
@@ -347,24 +468,60 @@ export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount }: Kn
                 </button>
               )}
             </div>
-            <Button
-              variant="default"
-              onClick={handleGenerate}
-              disabled={isGenerating || isDeleting || !orgId}
-              className="bg-[#f49024] hover:bg-[#d87f1f] text-white focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2 h-8 px-3 text-sm"
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                "Generate"
-              )}
-            </Button>
+            {!readOnly && (
+              <Button
+                variant="default"
+                onClick={handleGenerate}
+                disabled={isGenerating || isDeleting || !orgId}
+                className="bg-[#f49024] hover:bg-[#d87f1f] text-white focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2 h-8 px-3 text-sm"
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  "Generate"
+                )}
+              </Button>
+            )}
           </div>
         </div>
       </CardHeader>
+
+      {/* Generation Progress Checklist - Horizontal Card */}
+      {showProgress && (
+        <Card className="border-0 shadow-lg bg-white rounded-xl mx-4 mt-4">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-center gap-6 flex-wrap">
+              {generationSteps.map((step) => (
+                <div key={step.id} className="flex items-center gap-2 text-sm min-w-0">
+                  {step.status === 'completed' && (
+                    <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+                  )}
+                  {step.status === 'current' && (
+                    <Loader2 className="h-5 w-5 text-blue-500 animate-spin flex-shrink-0" />
+                  )}
+                  {step.status === 'error' && (
+                    <XCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
+                  )}
+                  {step.status === 'pending' && (
+                    <Circle className="h-5 w-5 text-gray-300 flex-shrink-0" />
+                  )}
+                  <span className={`transition-colors duration-200 whitespace-nowrap ${
+                    step.status === 'completed' ? 'text-green-700' :
+                    step.status === 'current' ? 'text-blue-700' :
+                    step.status === 'error' ? 'text-red-700' :
+                    'text-gray-500'
+                  }`}>
+                    {step.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
       <CardContent className="p-4 space-y-4">
         {curatedKb && curatedKb.length > 0 && filteredDocuments.length > 0 ? (
           filteredDocuments.map((document) => (
@@ -401,19 +558,25 @@ export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount }: Kn
                       <Download className="h-4 w-4 mr-1" />
                       Download
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDelete(document.url)}
-                      disabled={isDeleting}
-                      className="bg-transparent text-[#c0352b] border-[#c0352b] hover:bg-[#c0352b] hover:text-white focus:ring-2 focus:ring-[#c0352b] focus:ring-offset-2"
-                    >
-                      {isDeleting ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-4 w-4" />
-                      )}
-                    </Button>
+                    {!readOnly && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setDeleteDialog({
+                          open: true,
+                          documentUrl: document.url,
+                          documentName: document.name
+                        })}
+                        disabled={isDeleting}
+                        className="bg-transparent text-[#c0352b] border-[#c0352b] hover:bg-[#c0352b] hover:text-white focus:ring-2 focus:ring-[#c0352b] focus:ring-offset-2"
+                      >
+                        {isDeleting ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -451,6 +614,27 @@ export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount }: Kn
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialog.open} onOpenChange={() => setDeleteDialog({ open: false })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Document</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{deleteDialog.documentName}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }

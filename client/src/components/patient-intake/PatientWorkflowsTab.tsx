@@ -22,7 +22,11 @@ export type PatientWorkflowsTabHandle = {
   validate: () => { valid: boolean; errors: string[] };
 };
 
-const PatientWorkflowsTab = forwardRef<PatientWorkflowsTabHandle>((_props, ref) => {
+interface PatientWorkflowsTabProps {
+  readOnly?: boolean;
+}
+
+const PatientWorkflowsTab = forwardRef<PatientWorkflowsTabHandle, PatientWorkflowsTabProps>(({ readOnly = false }, ref) => {
   // Workflow loader function for patient intake agent
   // Reuse the same fetching pattern used by index/editor:
   // 1) GET list /api/v1/business-workflows
@@ -127,14 +131,16 @@ const PatientWorkflowsTab = forwardRef<PatientWorkflowsTabHandle>((_props, ref) 
                   <span className="font-medium">Last Saved: {updatedAt ? new Date(updatedAt).toLocaleString() : '—'}</span>
                 </div>
               </div>
-              <Button
-                onClick={handleSave}
-                disabled={saving}
-                className="bg-white hover:bg-slate-400 active:bg-slate-500 text-[#1c275e] border-[#1c275e] px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2"
-              >
-                <Save className="h-4 w-4" />
-                {saving ? "Saving..." : "Save Workflow"}
-              </Button>
+              {!readOnly && (
+                <Button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="bg-white hover:bg-slate-400 active:bg-slate-500 text-[#1c275e] border-[#1c275e] px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2"
+                >
+                  <Save className="h-4 w-4" />
+                  {saving ? "Saving..." : "Save Workflow"}
+                </Button>
+              )}
               <button
                 className="px-4 py-2 rounded-lg bg-[#f48024] hover:bg-[#e66f20] text-white font-medium shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2"
                 onClick={() => exportRef.current && exportRef.current()}

@@ -16,6 +16,7 @@ interface TeamSizesCardProps {
       | "rcmTeamSize",
     value: number | undefined
   ) => void;
+  readOnly?: boolean;
 }
 
 export default function TeamSizesCard({
@@ -24,6 +25,7 @@ export default function TeamSizesCard({
   patientIntakeTeamSize,
   rcmTeamSize,
   onChange,
+  readOnly = false,
 }: TeamSizesCardProps) {
   return (
     <div className="space-y-4">
@@ -35,7 +37,8 @@ export default function TeamSizesCard({
             type="number"
             placeholder="Number of employees"
             value={orderEntryTeamSize ?? ""}
-            onChange={(e) => onChange("orderEntryTeamSize", e.target.value === "" ? undefined : Number(e.target.value))}
+            onChange={readOnly ? undefined : (e) => onChange("orderEntryTeamSize", e.target.value === "" ? undefined : Number(e.target.value))}
+            readOnly={readOnly}
           />
         </div>
 
@@ -46,7 +49,8 @@ export default function TeamSizesCard({
             type="number"
             placeholder="Number of employees"
             value={schedulingTeamSize ?? ""}
-            onChange={(e) => onChange("schedulingTeamSize", e.target.value === "" ? undefined : Number(e.target.value))}
+            onChange={readOnly ? undefined : (e) => onChange("schedulingTeamSize", e.target.value === "" ? undefined : Number(e.target.value))}
+            readOnly={readOnly}
           />
         </div>
 
@@ -57,7 +61,8 @@ export default function TeamSizesCard({
             type="number"
             placeholder="Number of employees"
             value={patientIntakeTeamSize ?? ""}
-            onChange={(e) => onChange("patientIntakeTeamSize", e.target.value === "" ? undefined : Number(e.target.value))}
+            onChange={readOnly ? undefined : (e) => onChange("patientIntakeTeamSize", e.target.value === "" ? undefined : Number(e.target.value))}
+            readOnly={readOnly}
           />
         </div>
 
@@ -68,7 +73,8 @@ export default function TeamSizesCard({
             type="number"
             placeholder="Number of employees"
             value={rcmTeamSize ?? ""}
-            onChange={(e) => onChange("rcmTeamSize", e.target.value === "" ? undefined : Number(e.target.value))}
+            onChange={readOnly ? undefined : (e) => onChange("rcmTeamSize", e.target.value === "" ? undefined : Number(e.target.value))}
+            readOnly={readOnly}
           />
         </div>
       </div>

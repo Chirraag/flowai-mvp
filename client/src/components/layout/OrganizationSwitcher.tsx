@@ -35,7 +35,7 @@ interface OrganizationSwitcherProps {
 export default function OrganizationSwitcher({
   isCollapsed = false,
 }: OrganizationSwitcherProps) {
-  const { user, switchOrganization } = useAuth();
+  const { user, switchOrganization, canCreateOrganizations } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -59,6 +59,13 @@ export default function OrganizationSwitcher({
       fetchOrganizations();
     }
   }, [isExpanded]);
+
+  // Close dropdown when sidebar collapses
+  useEffect(() => {
+    if (isCollapsed && isExpanded) {
+      setIsExpanded(false);
+    }
+  }, [isCollapsed, isExpanded]);
 
   const fetchOrganizations = async () => {
     setLoading(true);
@@ -333,21 +340,23 @@ export default function OrganizationSwitcher({
                   </div>
                 </div>
 
-                {/* Add Organization Button */}
-                <div className="px-3 pb-3">
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start p-3 h-auto hover:bg-blue-50 rounded-lg border-0 text-blue-600 hover:text-blue-700"
-                    onClick={handleAddOrganization}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Plus className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm font-semibold">
-                        Add organisation
-                      </span>
-                    </div>
-                  </Button>
-                </div>
+                {/* Add Organization Button - Only visible to super-admin */}
+                {canCreateOrganizations() && (
+                  <div className="px-3 pb-3">
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start p-3 h-auto hover:bg-blue-50 rounded-lg border-0 text-blue-600 hover:text-blue-700"
+                      onClick={handleAddOrganization}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Plus className="h-4 w-4 text-gray-500" />
+                        <span className="text-sm font-semibold">
+                          Add organisation
+                        </span>
+                      </div>
+                    </Button>
+                  </div>
+                )}
               </div>
 
               {/* Scrollable Organizations List */}

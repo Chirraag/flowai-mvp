@@ -60,13 +60,13 @@ export const NAVIGATION_ITEMS = [
           {
             name: "Customer Support Agent",
             path: "ai-agents/customer-support",
-            icon: "users",
+            icon: "phone",
           },
         ],
       },
       {
         name: "Analytics",
-        path: "ai-agents/analytics",
+        path: "analytics",
         icon: "bar-chart-2",
       },
       {

@@ -7,11 +7,13 @@ import { AccountOpportunitySizing } from "@/components/launchpad/types";
 interface OpportunitySizingCardProps {
   opportunitySizing: AccountOpportunitySizing;
   onChange: (updates: Partial<AccountOpportunitySizing>) => void;
+  readOnly?: boolean;
 }
 
 export default function OpportunitySizingCard({
   opportunitySizing,
   onChange,
+  readOnly = false,
 }: OpportunitySizingCardProps) {
   return (
     <div className="space-y-4">
@@ -23,9 +25,10 @@ export default function OpportunitySizingCard({
             type="number"
             placeholder="Total monthly orders"
             value={opportunitySizing.monthly_orders_count ?? ""}
-            onChange={(e) => onChange({
+            onChange={readOnly ? undefined : (e) => onChange({
               monthly_orders_count: e.target.value === "" ? undefined : Number(e.target.value)
             })}
+            readOnly={readOnly}
           />
         </div>
 
@@ -36,9 +39,10 @@ export default function OpportunitySizingCard({
             type="number"
             placeholder="Total monthly scheduled patients"
             value={opportunitySizing.monthly_patients_scheduled ?? ""}
-            onChange={(e) => onChange({
+            onChange={readOnly ? undefined : (e) => onChange({
               monthly_patients_scheduled: e.target.value === "" ? undefined : Number(e.target.value)
             })}
+            readOnly={readOnly}
           />
         </div>
 
@@ -49,9 +53,10 @@ export default function OpportunitySizingCard({
             type="number"
             placeholder="Total monthly check-ins"
             value={opportunitySizing.monthly_patients_checked_in ?? ""}
-            onChange={(e) => onChange({
+            onChange={readOnly ? undefined : (e) => onChange({
               monthly_patients_checked_in: e.target.value === "" ? undefined : Number(e.target.value)
             })}
+            readOnly={readOnly}
           />
         </div>
       </div>

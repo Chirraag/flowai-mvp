@@ -14,6 +14,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CircleAlert as AlertCircle } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
+import { handleApiError } from "@/lib/utils";
 import type { Member, AddMemberRequest } from "@/types/members";
 
 const ROLE_OPTIONS = [
@@ -32,7 +33,7 @@ const CUSTOMER_ADMIN_ALLOWED_ROLES = [
 ];
 
 export default function MembersPage() {
-  const { user } = useAuth();
+  const { user, canAddMembers, canChangeRoles } = useAuth();
   const { toast } = useToast();
   const orgId = user?.org_id;
 
@@ -49,18 +50,35 @@ export default function MembersPage() {
     lastName: "",
   });
 
-  // Check if user can add members
-  const canAddMembers = user?.role === 'super-admin' || user?.role === 'customer-admin';
+  // Scroll-aware header state
+  const [isScrolled, setIsScrolled] = React.useState(false);
 
-  // Get available roles based on user's role
+  // Use permission utilities instead of direct role checks
+  const canAddMembersPermission = canAddMembers();
+  const canChangeRolesPermission = canChangeRoles();
+
+  // Get available roles based on user's permissions
   const getAvailableRoles = () => {
-    if (user?.role === 'super-admin') {
+    if (canChangeRolesPermission) {
+      // Super-admin can assign all roles
       return ROLE_OPTIONS;
-    } else if (user?.role === 'customer-admin') {
+    } else if (canAddMembersPermission) {
+      // Customer-admin can only assign limited roles
       return CUSTOMER_ADMIN_ALLOWED_ROLES;
     }
     return [];
   };
+
+  // Scroll detection effect for header styling
+  React.useEffect(() => {
+    const handleScroll = () => {
+      const scrollTop = window.scrollY;
+      setIsScrolled(scrollTop > 10); // Reduced trigger threshold for smoother animation
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const handleInputChange = (field: keyof AddMemberRequest, value: string) => {
     setFormData(prev => ({
@@ -126,11 +144,8 @@ export default function MembersPage() {
       setIsDialogOpen(false);
     } catch (error: any) {
       console.error('Failed to add member:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to add member",
-        variant: "destructive",
-      });
+      const errorToast = handleApiError(error, { action: "add member" });
+      toast(errorToast);
     }
   };
 
@@ -165,295 +180,328 @@ export default function MembersPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-4 sm:p-6 space-y-6">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-          <div className="min-w-0 flex-1">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 truncate flex items-center gap-3">
-              <Users className="h-8 w-8 text-blue-600" />
-              Members
-            </h1>
-            <p className="text-gray-600 mt-1 sm:mt-2 text-sm sm:text-base">
-              Loading workspace members...
-            </p>
+      <Card className="border border-slate-200/80 bg-white shadow-sm rounded-2xl transition-shadow duration-200">
+        <CardHeader className={`sticky top-0 z-50 bg-[#1C275E] text-white border-b border-[#1C275E]/20 rounded-t-2xl transition-all duration-300 ${
+          isScrolled
+            ? 'p-1.5 shadow-lg shadow-black/10'
+            : 'p-2 shadow-sm'
+        }`}>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-[#F48024]/20 rounded-lg flex items-center justify-center">
+                <Users className="w-4 h-4 text-[#F48024]" />
+              </div>
+              <CardTitle className="text-lg font-semibold">Members</CardTitle>
+            </div>
+            <div className="flex items-center gap-2">
+              <p className="text-[#e6eff7] text-sm">Loading workspace members...</p>
+            </div>
           </div>
-        </div>
-        
-        {/* Loading skeleton */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card className="border border-gray-200">
-            <CardContent className="p-4">
-              <Skeleton className="h-16 w-full" />
+        </CardHeader>
+        <CardContent className="p-6 space-y-6">
+          {/* Loading skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card className="border border-slate-200/70 bg-white rounded-xl overflow-hidden shadow-sm transition-all duration-200">
+              <CardContent className="p-4">
+                <Skeleton className="h-16 w-full" />
+              </CardContent>
+            </Card>
+            <Card className="border border-slate-200/70 bg-white rounded-xl overflow-hidden shadow-sm transition-all duration-200">
+              <CardContent className="p-4">
+                <Skeleton className="h-16 w-full" />
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="border border-slate-200/70 bg-white rounded-xl overflow-hidden shadow-sm transition-all duration-200">
+            <CardContent className="p-6">
+              <Skeleton className="h-64 w-full" />
             </CardContent>
           </Card>
-          <Card className="border border-gray-200">
-            <CardContent className="p-4">
-              <Skeleton className="h-16 w-full" />
-            </CardContent>
-          </Card>
-        </div>
-        
-        <Card className="border border-gray-200">
-          <CardContent className="p-6">
-            <Skeleton className="h-64 w-full" />
-          </CardContent>
-        </Card>
-      </div>
+        </CardContent>
+      </Card>
     );
   }
 
   if (error) {
     return (
-      <div className="container mx-auto p-4 sm:p-6 space-y-6">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-          <div className="min-w-0 flex-1">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 truncate flex items-center gap-3">
-              <Users className="h-8 w-8 text-blue-600" />
-              Members
-            </h1>
-            <p className="text-gray-600 mt-1 sm:mt-2 text-sm sm:text-base">
-              Manage workspace members
-            </p>
+      <Card className="border border-slate-200/80 bg-white shadow-sm rounded-2xl transition-shadow duration-200">
+        <CardHeader className={`sticky top-0 z-50 bg-[#1C275E] text-white border-b border-[#1C275E]/20 rounded-t-2xl transition-all duration-300 ${
+          isScrolled
+            ? 'p-1.5 shadow-lg shadow-black/10'
+            : 'p-2 shadow-sm'
+        }`}>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-[#F48024]/20 rounded-lg flex items-center justify-center">
+                <Users className="w-4 h-4 text-[#F48024]" />
+              </div>
+              <CardTitle className="text-lg font-semibold">Members</CardTitle>
+            </div>
+            <div className="flex items-center gap-2">
+              <p className="text-[#e6eff7] text-sm">Manage workspace members</p>
+            </div>
           </div>
-        </div>
-
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Failed to load members. Please try again later.
-          </AlertDescription>
-        </Alert>
-      </div>
+        </CardHeader>
+        <CardContent className="p-6 space-y-6">
+          <Alert variant="destructive" className="border-[#c0352b]/20 bg-red-50/90">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Failed to load members. Please try again later.
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
     );
   }
 
   if (!membersData) {
     return (
-      <div className="container mx-auto p-4 sm:p-6 space-y-6">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-          <div className="min-w-0 flex-1">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 truncate flex items-center gap-3">
-              <Users className="h-8 w-8 text-blue-600" />
-              Members
-            </h1>
-            <p className="text-gray-600 mt-1 sm:mt-2 text-sm sm:text-base">
-              Manage workspace members
-            </p>
+      <Card className="border border-slate-200/80 bg-white shadow-sm rounded-2xl transition-shadow duration-200">
+        <CardHeader className={`sticky top-0 z-50 bg-[#1C275E] text-white border-b border-[#1C275E]/20 rounded-t-2xl transition-all duration-300 ${
+          isScrolled
+            ? 'p-1.5 shadow-lg shadow-black/10'
+            : 'p-2 shadow-sm'
+        }`}>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-[#F48024]/20 rounded-lg flex items-center justify-center">
+                <Users className="w-4 h-4 text-[#F48024]" />
+              </div>
+              <CardTitle className="text-lg font-semibold">Members</CardTitle>
+            </div>
+            <div className="flex items-center gap-2">
+              <p className="text-[#e6eff7] text-sm">Manage workspace members</p>
+            </div>
           </div>
-        </div>
-
-        <div className="text-center py-12">
-          <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No members found</h3>
-          <p className="text-gray-600">No members data available for this workspace.</p>
-        </div>
-      </div>
+        </CardHeader>
+        <CardContent className="p-6 space-y-6">
+          <div className="text-center py-12">
+            <Users className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No members found</h3>
+            <p className="text-slate-600">No members data available for this workspace.</p>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="container mx-auto p-4 sm:p-6 space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 truncate flex items-center gap-3">
-            <Users className="h-8 w-8 text-blue-600" />
-            Members
-          </h1>
-          <p className="text-gray-600 mt-1 sm:mt-2 text-sm sm:text-base">
-            Manage workspace members
-          </p>
+    <Card className="border border-slate-200/80 bg-white shadow-sm rounded-2xl transition-shadow duration-200">
+      <CardHeader className={`sticky top-0 z-50 bg-[#1C275E] text-white border-b border-[#1C275E]/20 rounded-t-2xl transition-all duration-300 ${
+        isScrolled
+          ? 'p-1.5 shadow-lg shadow-black/10'
+          : 'p-2 shadow-sm'
+      }`}>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-[#F48024]/20 rounded-lg flex items-center justify-center">
+              <Users className="w-4 h-4 text-[#F48024]" />
+            </div>
+            <CardTitle className="text-lg font-semibold">Members</CardTitle>
+          </div>
+          <div className="flex items-center gap-2">
+            {/* Add Member Button - only for users with add members permission */}
+            {canAddMembersPermission && (
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="default" className="bg-[#f49024] hover:bg-[#d87f1f] text-white h-8 px-3 text-sm">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Member
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[500px]">
+                  <DialogHeader>
+                    <DialogTitle className="text-[#1C275E]">Add New Member</DialogTitle>
+                  </DialogHeader>
+
+                  <div className="space-y-5 py-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold text-black uppercase tracking-wide">Email *</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="member@example.com"
+                        value={formData.email}
+                        onChange={(e) => handleInputChange("email", e.target.value)}
+                        disabled={addMemberMutation.isPending}
+                        className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold text-black uppercase tracking-wide">First Name *</Label>
+                      <Input
+                        id="firstName"
+                        placeholder="John"
+                        value={formData.firstName}
+                        onChange={(e) => handleInputChange("firstName", e.target.value)}
+                        disabled={addMemberMutation.isPending}
+                        className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold text-black uppercase tracking-wide">Last Name</Label>
+                      <Input
+                        id="lastName"
+                        placeholder="Doe"
+                        value={formData.lastName}
+                        onChange={(e) => handleInputChange("lastName", e.target.value)}
+                        disabled={addMemberMutation.isPending}
+                        className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold text-black uppercase tracking-wide">Username *</Label>
+                      <Input
+                        id="username"
+                        placeholder="john.doe"
+                        value={formData.username}
+                        onChange={(e) => handleInputChange("username", e.target.value)}
+                        disabled={addMemberMutation.isPending}
+                        className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold text-black uppercase tracking-wide">Role *</Label>
+                      <Select
+                        value={formData.role}
+                        onValueChange={(value) => handleInputChange("role", value)}
+                        disabled={addMemberMutation.isPending}
+                      >
+                        <SelectTrigger className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition">
+                          <SelectValue placeholder="Select a role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getAvailableRoles().map((role) => (
+                            <SelectItem key={role} value={role}>
+                              {role}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsDialogOpen(false)}
+                      disabled={addMemberMutation.isPending}
+                      className="border-[#cbd5e1] hover:bg-slate-50"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleAddMember}
+                      disabled={
+                        addMemberMutation.isPending ||
+                        !formData.email.trim() ||
+                        !formData.firstName.trim() ||
+                        !formData.username.trim() ||
+                        !formData.role
+                      }
+                      className="bg-[#f49024] hover:bg-[#d87f1f] text-white focus:ring-2 focus:ring-[#f49024]/20"
+                    >
+                      {addMemberMutation.isPending ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Adding...
+                        </>
+                      ) : (
+                        "Add Member"
+                      )}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
         </div>
-        
-        {/* Add Member Button - only for super-admin and customer-admin */}
-        {canAddMembers && (
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-blue-600 hover:bg-blue-700">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Member
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
-                <DialogTitle>Add New Member</DialogTitle>
-              </DialogHeader>
 
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="member@example.com"
-                    value={formData.email}
-                    onChange={(e) => handleInputChange("email", e.target.value)}
-                    disabled={addMemberMutation.isPending}
-                  />
+      </CardHeader>
+      <CardContent className="p-6 space-y-6">
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card className="border border-slate-200/70 bg-white rounded-xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px]">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-600 uppercase tracking-wide">Total Members</p>
+                  <p className="text-2xl font-bold text-gray-900">{membersData.totalMembers}</p>
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name *</Label>
-                  <Input
-                    id="firstName"
-                    placeholder="John"
-                    value={formData.firstName}
-                    onChange={(e) => handleInputChange("firstName", e.target.value)}
-                    disabled={addMemberMutation.isPending}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name</Label>
-                  <Input
-                    id="lastName"
-                    placeholder="Doe"
-                    value={formData.lastName}
-                    onChange={(e) => handleInputChange("lastName", e.target.value)}
-                    disabled={addMemberMutation.isPending}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="username">Username *</Label>
-                  <Input
-                    id="username"
-                    placeholder="john.doe"
-                    value={formData.username}
-                    onChange={(e) => handleInputChange("username", e.target.value)}
-                    disabled={addMemberMutation.isPending}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="role">Role *</Label>
-                  <Select
-                    value={formData.role}
-                    onValueChange={(value) => handleInputChange("role", value)}
-                    disabled={addMemberMutation.isPending}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {getAvailableRoles().map((role) => (
-                        <SelectItem key={role} value={role}>
-                          {role}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <Users className="h-8 w-8 text-[#F48024]" />
               </div>
+            </CardContent>
+          </Card>
 
-              <div className="flex justify-end gap-2 pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsDialogOpen(false)}
-                  disabled={addMemberMutation.isPending}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleAddMember}
-                  disabled={
-                    addMemberMutation.isPending ||
-                    !formData.email.trim() ||
-                    !formData.firstName.trim() ||
-                    !formData.username.trim() ||
-                    !formData.role
-                  }
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  {addMemberMutation.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      Adding...
-                    </>
-                  ) : (
-                    "Add Member"
-                  )}
-                </Button>
+          <Card className="border border-slate-200/70 bg-white rounded-xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px]">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-600 uppercase tracking-wide">Active Members</p>
+                  <p className="text-2xl font-bold text-green-600">{membersData.summary.totalActive}</p>
+                </div>
+                <Shield className="h-8 w-8 text-green-600" />
               </div>
-            </DialogContent>
-          </Dialog>
-        )}
-      </div>
+            </CardContent>
+          </Card>
+        </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="border border-gray-200">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Members</p>
-                <p className="text-2xl font-bold text-gray-900">{membersData.totalMembers}</p>
+        {/* Members Table */}
+        <Card className="border border-slate-200/70 bg-white rounded-xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px]">
+          <CardHeader className="bg-[#eef2ff] text-[#1C275E] p-4 border-b border-slate-200">
+            <CardTitle className="flex items-center gap-3 text-lg font-semibold tracking-tight">
+              <div className="w-9 h-9 bg-[#F48024]/20 rounded-xl flex items-center justify-center">
+                <Users className="w-4.5 h-4.5 text-[#F48024]" />
               </div>
-              <Users className="h-8 w-8 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border border-gray-200">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Active Members</p>
-                <p className="text-2xl font-bold text-green-600">{membersData.summary.totalActive}</p>
-              </div>
-              <Shield className="h-8 w-8 text-green-600" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Members Table */}
-      <Card className="border border-gray-200">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Workspace Members
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>First Name</TableHead>
-                <TableHead>Last Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Last Login</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {membersData.members.map((member: Member) => (
-                <TableRow key={member.id}>
-                  <TableCell className="font-medium">{member.firstName}</TableCell>
-                  <TableCell>{member.lastName}</TableCell>
-                  <TableCell>{member.email}</TableCell>
-                  <TableCell>
-                    <Badge className={getRoleBadgeColor(member.role)} variant="secondary">
-                      {member.role}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-sm text-gray-600">
-                    {formatDate(member.lastLogin)}
-                  </TableCell>
+              Workspace Members
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-b border-slate-200/70 hover:bg-slate-50/50">
+                  <TableHead className="px-6 py-3 text-sm font-semibold text-black uppercase tracking-wide">First Name</TableHead>
+                  <TableHead className="px-6 py-3 text-sm font-semibold text-black uppercase tracking-wide">Last Name</TableHead>
+                  <TableHead className="px-6 py-3 text-sm font-semibold text-black uppercase tracking-wide">Email</TableHead>
+                  <TableHead className="px-6 py-3 text-sm font-semibold text-black uppercase tracking-wide">Role</TableHead>
+                  <TableHead className="px-6 py-3 text-sm font-semibold text-black uppercase tracking-wide">Last Login</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {membersData.members.map((member: Member) => (
+                  <TableRow key={member.id} className="border-b border-slate-200/50 hover:bg-slate-50/30 transition-colors">
+                    <TableCell className="px-6 py-4 font-medium">{member.firstName}</TableCell>
+                    <TableCell className="px-6 py-4">{member.lastName}</TableCell>
+                    <TableCell className="px-6 py-4">{member.email}</TableCell>
+                    <TableCell className="px-6 py-4">
+                      <Badge className={getRoleBadgeColor(member.role)} variant="secondary">
+                        {member.role}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="px-6 py-4 text-sm text-slate-600">
+                      {formatDate(member.lastLogin)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
 
-          {/* Empty state */}
-          {membersData.members.length === 0 && (
-            <div className="text-center py-12">
-              <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No members found</h3>
-              <p className="text-gray-600">This workspace doesn't have any members yet.</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+            {/* Empty state */}
+            {membersData.members.length === 0 && (
+              <div className="text-center py-12">
+                <Users className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No members found</h3>
+                <p className="text-slate-600">This workspace doesn't have any members yet.</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </CardContent>
+    </Card>
   );
 }

@@ -14,9 +14,10 @@ interface ServicesModalProps {
   services: SpecialtyServiceEntry[];
   onUpdate: (services: SpecialtyServiceEntry[]) => void;
   onOpenChange: (open: boolean) => void;
+  readOnly?: boolean;
 }
 
-export default function ServicesModal({ open, title, services, onUpdate, onOpenChange }: ServicesModalProps) {
+export default function ServicesModal({ open, title, services, onUpdate, onOpenChange, readOnly = false }: ServicesModalProps) {
   const [draftServices, setDraftServices] = React.useState<SpecialtyServiceEntry[]>(services);
 
   React.useEffect(() => {
@@ -64,24 +65,27 @@ export default function ServicesModal({ open, title, services, onUpdate, onOpenC
                   <CardTitle className="text-lg font-medium text-[#1C275E]">
                     Service {index + 1}
                   </CardTitle>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="border-red-500 text-red-500 hover:bg-red-50"
-                    onClick={() => removeService(index)}
-                  >
-                    Remove
-                  </Button>
+                  {!readOnly && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-red-500 text-red-500 hover:bg-red-50"
+                      onClick={() => removeService(index)}
+                    >
+                      Remove
+                    </Button>
+                  )}
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Service Name */}
                 <div className="space-y-2">
                   <Label className="text-base font-medium text-black">Service Name *</Label>
-                  <Input 
-                    placeholder="Enter service name" 
-                    value={service.name} 
-                    onChange={(e) => updateService(index, 'name', e.target.value)}
+                  <Input
+                    placeholder="Enter service name"
+                    value={service.name}
+                    onChange={readOnly ? undefined : (e) => updateService(index, 'name', e.target.value)}
+                    readOnly={readOnly}
                     className="border-2 border-gray-200 focus:border-[#1C275E]"
                   />
                 </div>
@@ -91,10 +95,11 @@ export default function ServicesModal({ open, title, services, onUpdate, onOpenC
                 {/* Patient Prep Requirements */}
                 <div className="space-y-2">
                   <Label className="text-base font-medium text-black">Patient Preparation Requirements</Label>
-                  <Textarea 
+                  <Textarea
                     placeholder="Enter patient preparation requirements..."
                     value={service.patient_prep_requirements || ""}
-                    onChange={(e) => updateService(index, 'patient_prep_requirements', e.target.value)}
+                    onChange={readOnly ? undefined : (e) => updateService(index, 'patient_prep_requirements', e.target.value)}
+                    readOnly={readOnly}
                     className="border-2 border-gray-200 focus:border-[#1C275E] min-h-[80px]"
                   />
                 </div>
@@ -102,10 +107,11 @@ export default function ServicesModal({ open, title, services, onUpdate, onOpenC
                 {/* FAQ */}
                 <div className="space-y-2">
                   <Label className="text-base font-medium text-black">Frequently Asked Questions</Label>
-                  <Textarea 
+                  <Textarea
                     placeholder="Enter frequently asked questions and answers..."
                     value={service.faq || ""}
-                    onChange={(e) => updateService(index, 'faq', e.target.value)}
+                    onChange={readOnly ? undefined : (e) => updateService(index, 'faq', e.target.value)}
+                    readOnly={readOnly}
                     className="border-2 border-gray-200 focus:border-[#1C275E] min-h-[80px]"
                   />
                 </div>
@@ -114,19 +120,21 @@ export default function ServicesModal({ open, title, services, onUpdate, onOpenC
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-base font-medium text-black">Service Information Name</Label>
-                    <Input 
+                    <Input
                       placeholder="Enter information source name"
                       value={service.service_information_name || ""}
-                      onChange={(e) => updateService(index, 'service_information_name', e.target.value)}
+                      onChange={readOnly ? undefined : (e) => updateService(index, 'service_information_name', e.target.value)}
+                      readOnly={readOnly}
                       className="border-2 border-gray-200 focus:border-[#1C275E]"
                     />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-base font-medium text-black">Service Information Source</Label>
-                    <Input 
+                    <Input
                       placeholder="Enter information source"
                       value={service.service_information_source || ""}
-                      onChange={(e) => updateService(index, 'service_information_source', e.target.value)}
+                      onChange={readOnly ? undefined : (e) => updateService(index, 'service_information_source', e.target.value)}
+                      readOnly={readOnly}
                       className="border-2 border-gray-200 focus:border-[#1C275E]"
                     />
                   </div>
@@ -142,26 +150,30 @@ export default function ServicesModal({ open, title, services, onUpdate, onOpenC
           )}
           
           <div className="flex gap-3 pt-4 border-t">
-            <Button 
-              variant="default" 
-              onClick={addService} 
-              className="bg-[#F48024] hover:bg-[#F48024]/90 text-white"
-            >
-              Add Service
-            </Button>
-            <Button 
-              variant="default" 
-              onClick={handleSave} 
-              className="bg-teal-600 hover:bg-teal-700 text-white"
-            >
-              Save Services
-            </Button>
-            <Button 
-              variant="outline" 
+            {!readOnly && (
+              <Button
+                variant="default"
+                onClick={addService}
+                className="bg-[#F48024] hover:bg-[#F48024]/90 text-white"
+              >
+                Add Service
+              </Button>
+            )}
+            {!readOnly && (
+              <Button
+                variant="default"
+                onClick={handleSave}
+                className="bg-teal-600 hover:bg-teal-700 text-white"
+              >
+                Save Services
+              </Button>
+            )}
+            <Button
+              variant="outline"
               onClick={() => onOpenChange(false)}
               className="border-gray-300 text-gray-700 hover:bg-gray-50"
             >
-              Cancel
+              Close
             </Button>
           </div>
         </div>

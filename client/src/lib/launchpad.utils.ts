@@ -39,17 +39,15 @@ const isValidPhoneNumber = (phone: string): boolean => {
 const validatePerson = (person: { title: string; name: string; email: string; phone: string }, prefix: string): ValidationError[] => {
   const errors: ValidationError[] = [];
 
-  if (!person.name.trim()) {
-    errors.push({ field: `${prefix}.name`, message: 'Name is required' });
-  }
+  // Name is now optional - no validation
+  // Title is optional - no validation
 
+  // Email validation - more lenient, only check if provided
   if (person.email.trim() && !isValidEmail(person.email.trim())) {
     errors.push({ field: `${prefix}.email`, message: 'Invalid email format' });
   }
 
-  if (person.phone.trim() && !isValidPhoneNumber(person.phone.trim())) {
-    errors.push({ field: `${prefix}.phone`, message: 'Invalid phone number format' });
-  }
+  // Phone validation removed - handled by formatting logic in UI components
 
   return errors;
 };
@@ -97,12 +95,7 @@ export const validateAccountData = (data: {
     errors.push(...validatePerson(person, `rcmTeam[${index}]`));
   });
 
-  // Validate scheduling phone numbers
-  data.schedulingPhoneNumbers.forEach((phone, index) => {
-    if (phone.trim() && !isValidPhoneNumber(phone.trim())) {
-      errors.push({ field: `schedulingPhoneNumbers[${index}]`, message: 'Invalid phone number format' });
-    }
-  });
+  // Phone number validation removed - handled by formatting logic in UI components
 
   return {
     isValid: errors.length === 0,

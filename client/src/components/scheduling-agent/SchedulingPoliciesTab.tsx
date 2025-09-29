@@ -16,6 +16,7 @@ export type SchedulingPoliciesTabProps = {
   initialValues?: SchedulingPoliciesValues;
   onSave?: (values: SchedulingPoliciesValues) => Promise<void>;
   isSaving?: boolean;
+  readOnly?: boolean;
 };
 
 export type SchedulingPoliciesTabHandle = {
@@ -29,7 +30,7 @@ export type SchedulingPoliciesTabHandle = {
   validate: () => { valid: boolean; errors: string[] };
 };
 
-const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, SchedulingPoliciesTabProps>(({ initialValues, onSave, isSaving = false }, ref) => {
+const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, SchedulingPoliciesTabProps>(({ initialValues, onSave, isSaving = false, readOnly = false }, ref) => {
   // Walk-in Policy state
   const [acceptWalkIns, setAcceptWalkIns] = React.useState(true);
   const [allowSameDayAppointments, setAllowSameDayAppointments] = React.useState(true);
@@ -119,7 +120,7 @@ const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, Scheduling
                 <p className="text-gray-200 text-sm mt-1">Configure policies for urgent and same-day appointments</p>
               </div>
             </div>
-            {onSave && (
+            {onSave && !readOnly && (
               <div className="flex items-center gap-3">
                 {hasUnsavedChanges && (
                   <div className="flex items-center gap-2 text-sm">
@@ -152,7 +153,13 @@ const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, Scheduling
               <IOSSwitch
                 id="accept-walk-ins"
                 checked={acceptWalkIns}
-                onCheckedChange={setAcceptWalkIns}
+                onCheckedChange={(checked) => {
+                  if (!readOnly) {
+                    setAcceptWalkIns(checked);
+                    handleFieldChange();
+                  }
+                }}
+                disabled={readOnly}
               />
             </div>
 
@@ -167,9 +174,12 @@ const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, Scheduling
                 id="same-day-appointments"
                 checked={allowSameDayAppointments}
                 onCheckedChange={(checked) => {
-                  setAllowSameDayAppointments(checked);
-                  handleFieldChange();
+                  if (!readOnly) {
+                    setAllowSameDayAppointments(checked);
+                    handleFieldChange();
+                  }
                 }}
+                disabled={readOnly}
               />
             </div>
 
@@ -182,9 +192,12 @@ const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, Scheduling
                   type="time"
                   value={sameDayCutoffTime}
                   onChange={(e) => {
-                    setSameDayCutoffTime(e.target.value);
-                    handleFieldChange();
+                    if (!readOnly) {
+                      setSameDayCutoffTime(e.target.value);
+                      handleFieldChange();
+                    }
                   }}
+                  readOnly={readOnly}
                   className="h-11 pl-10 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
                 />
               </div>
@@ -221,9 +234,12 @@ const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, Scheduling
                   placeholder="24"
                   value={minimumCancellationNotice}
                   onChange={(e) => {
-                    setMinimumCancellationNotice(e.target.value);
-                    handleFieldChange();
+                    if (!readOnly) {
+                      setMinimumCancellationNotice(e.target.value);
+                      handleFieldChange();
+                    }
                   }}
+                  readOnly={readOnly}
                   className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
                 />
               </div>
@@ -238,9 +254,12 @@ const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, Scheduling
                   placeholder="50.00"
                   value={noShowFee}
                   onChange={(e) => {
-                    setNoShowFee(e.target.value);
-                    handleFieldChange();
+                    if (!readOnly) {
+                      setNoShowFee(e.target.value);
+                      handleFieldChange();
+                    }
                   }}
+                  readOnly={readOnly}
                   className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
                 />
               </div>

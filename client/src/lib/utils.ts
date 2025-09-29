@@ -66,3 +66,51 @@ export function truncateText(text: string, maxLength: number) {
   if (text.length <= maxLength) return text;
   return text.slice(0, maxLength) + '...';
 }
+
+// RBAC Error Handling Utilities
+export interface ErrorHandlerOptions {
+  action?: string; // e.g., "save specialties", "add member", "update settings"
+  fallbackMessage?: string;
+}
+
+export function handleApiError(error: unknown, options: ErrorHandlerOptions = {}) {
+  const { action = "perform this action", fallbackMessage } = options;
+  
+  // Handle ApiError with status code
+  if (error instanceof Error && 'status' in error) {
+    const apiError = error as any;
+    
+    if (apiError.status === 403) {
+      return {
+        title: "Permission Denied",
+        description: apiError.message || `You don't have permission to ${action}. Contact your administrator for access.`,
+        variant: "destructive" as const,
+      };
+    }
+    
+    if (apiError.status === 401) {
+      return {
+        title: "Authentication Required",
+        description: "Your session has expired. Please log in again.",
+        variant: "destructive" as const,
+      };
+    }
+    
+    if (apiError.status >= 500) {
+      return {
+        title: "Server Error",
+        description: "A server error occurred. Please try again later.",
+        variant: "destructive" as const,
+      };
+    }
+  }
+  
+  // Handle generic errors
+  const errorMessage = error instanceof Error ? error.message : fallbackMessage || `Failed to ${action}. Please try again.`;
+  
+  return {
+    title: "Error",
+    description: errorMessage,
+    variant: "destructive" as const,
+  };
+}

@@ -16,6 +16,7 @@ export type PatientEligibilityTabProps = {
   initialValues?: PatientEligibilityValues;
   onSave?: (values: PatientEligibilityValues) => Promise<void>;
   isSaving?: boolean;
+  readOnly?: boolean;
 };
 
 export type PatientEligibilityTabHandle = {
@@ -29,14 +30,14 @@ export type PatientEligibilityTabHandle = {
   validate: () => { valid: boolean; errors: string[] };
 };
 
-const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEligibilityTabProps>(({ initialValues, onSave, isSaving = false }, ref) => {
+const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEligibilityTabProps>(({ initialValues, onSave, isSaving = false, readOnly = false }, ref) => {
   // Patient Types state
-  const [newPatients, setNewPatients] = React.useState(true);
-  const [existingPatients, setExistingPatients] = React.useState(true);
-  const [selfPay, setSelfPay] = React.useState(true);
+  const [newPatients, setNewPatients] = React.useState(false);
+  const [existingPatients, setExistingPatients] = React.useState(false);
+  const [selfPay, setSelfPay] = React.useState(false);
   const [hmo, setHmo] = React.useState(false);
-  const [ppo, setPpo] = React.useState(true);
-  const [medicare, setMedicare] = React.useState(true);
+  const [ppo, setPpo] = React.useState(false);
+  const [medicare, setMedicare] = React.useState(false);
   const [medicaid, setMedicaid] = React.useState(false);
 
   // Referral Requirements state
@@ -118,7 +119,7 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEli
                 <p className="text-gray-200 text-sm mt-1">Configure which patient types can be scheduled</p>
               </div>
             </div>
-            {onSave && (
+            {onSave && !readOnly && (
               <div className="flex items-center gap-3">
                 {hasUnsavedChanges && (
                   <div className="flex items-center gap-2 text-sm">
@@ -152,9 +153,12 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEli
                 id="new-patients"
                 checked={newPatients}
                 onCheckedChange={(checked) => {
-                  setNewPatients(checked);
-                  handleFieldChange();
+                  if (!readOnly) {
+                    setNewPatients(checked);
+                    handleFieldChange();
+                  }
                 }}
+                disabled={readOnly}
               />
             </div>
 
@@ -169,9 +173,12 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEli
                 id="existing-patients"
                 checked={existingPatients}
                 onCheckedChange={(checked) => {
-                  setExistingPatients(checked);
-                  handleFieldChange();
+                  if (!readOnly) {
+                    setExistingPatients(checked);
+                    handleFieldChange();
+                  }
                 }}
+                disabled={readOnly}
               />
             </div>
 
@@ -186,9 +193,12 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEli
                 id="self-pay"
                 checked={selfPay}
                 onCheckedChange={(checked) => {
-                  setSelfPay(checked);
-                  handleFieldChange();
+                  if (!readOnly) {
+                    setSelfPay(checked);
+                    handleFieldChange();
+                  }
                 }}
+                disabled={readOnly}
               />
             </div>
 
@@ -203,9 +213,12 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEli
                 id="hmo"
                 checked={hmo}
                 onCheckedChange={(checked) => {
-                  setHmo(checked);
-                  handleFieldChange();
+                  if (!readOnly) {
+                    setHmo(checked);
+                    handleFieldChange();
+                  }
                 }}
+                disabled={readOnly}
               />
             </div>
 
@@ -220,9 +233,12 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEli
                 id="ppo"
                 checked={ppo}
                 onCheckedChange={(checked) => {
-                  setPpo(checked);
-                  handleFieldChange();
+                  if (!readOnly) {
+                    setPpo(checked);
+                    handleFieldChange();
+                  }
                 }}
+                disabled={readOnly}
               />
             </div>
 
@@ -237,9 +253,12 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEli
                 id="medicare"
                 checked={medicare}
                 onCheckedChange={(checked) => {
-                  setMedicare(checked);
-                  handleFieldChange();
+                  if (!readOnly) {
+                    setMedicare(checked);
+                    handleFieldChange();
+                  }
                 }}
+                disabled={readOnly}
               />
             </div>
 
@@ -254,9 +273,12 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEli
                 id="medicaid"
                 checked={medicaid}
                 onCheckedChange={(checked) => {
-                  setMedicaid(checked);
-                  handleFieldChange();
+                  if (!readOnly) {
+                    setMedicaid(checked);
+                    handleFieldChange();
+                  }
                 }}
+                disabled={readOnly}
               />
             </div>
           </div>
@@ -287,9 +309,12 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEli
                 placeholder="Enter services that require referrals (one per line)"
                 value={servicesRequiringReferrals}
                 onChange={(e) => {
-                  setServicesRequiringReferrals(e.target.value);
-                  handleFieldChange();
+                  if (!readOnly) {
+                    setServicesRequiringReferrals(e.target.value);
+                    handleFieldChange();
+                  }
                 }}
+                readOnly={readOnly}
                 className="min-h-32 resize-none border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
               />
             </div>
@@ -301,9 +326,12 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEli
                 placeholder="Enter insurance plans that require referrals (one per line)"
                 value={insurancePlansRequiringReferrals}
                 onChange={(e) => {
-                  setInsurancePlansRequiringReferrals(e.target.value);
-                  handleFieldChange();
+                  if (!readOnly) {
+                    setInsurancePlansRequiringReferrals(e.target.value);
+                    handleFieldChange();
+                  }
                 }}
+                readOnly={readOnly}
                 className="min-h-32 resize-none border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
               />
             </div>
