@@ -9,18 +9,15 @@ import {
   PatientIntakeApiData,
   mapApiToFieldContentRules,
   mapApiToDeliveryMethods,
-  mapApiToAgentConfig,
   mapApiToFormsQuestionnaires,
   mapFieldContentRulesToApi,
-  mapDeliveryMethodsToApi,
-  mapAgentConfigToApi
+  mapDeliveryMethodsToApi
 } from "@/lib/patient-intake.mappers";
 
 // Import types for better type safety
 import type {
   FieldContentRulesTabData,
   DeliveryMethodsTabData,
-  PatientAgentConfigTabData,
   FormsQuestionnairesTabData,
 } from "@/lib/patient-intake.mappers";
 
@@ -29,7 +26,6 @@ const FormsQuestionnairesTab = lazy(() => import("@/components/patient-intake/Fo
 const FieldContentRulesTab = lazy(() => import("@/components/patient-intake/FieldContentRulesTab"));
 const DeliveryMethodsTab = lazy(() => import("@/components/patient-intake/DeliveryMethodsTab"));
 const PatientWorkflowsTab = lazy(() => import("@/components/patient-intake/PatientWorkflowsTab"));
-const PatientAgentConfigTab = lazy(() => import("@/components/patient-intake/PatientAgentConfigTab"));
 
 export default function PatientIntakeAgent() {
   const { toast } = useToast();
@@ -52,7 +48,6 @@ export default function PatientIntakeAgent() {
   const rulesRef = React.useRef<any>(null);
   const deliveryRef = React.useRef<any>(null);
   const workflowsRef = React.useRef<any>(null);
-  const agentConfigRef = React.useRef<any>(null);
 
   // Retry utility with exponential backoff
   const retryWithBackoff = async <T,>(
@@ -127,7 +122,6 @@ export default function PatientIntakeAgent() {
       const validations = await Promise.all([
         rulesRef.current?.validate?.(),
         deliveryRef.current?.validate?.(),
-        agentConfigRef.current?.validate?.(),
         // Note: Forms tab validation skipped as API is not implemented yet
       ]);
 
@@ -148,7 +142,6 @@ export default function PatientIntakeAgent() {
       const tabValues = {
         rules: rulesRef.current?.getValues?.(),
         delivery: deliveryRef.current?.getValues?.(),
-        agentConfig: agentConfigRef.current?.getValues?.(),
       };
 
       // Build update tasks with metadata (excluding forms which doesn't have API yet)
@@ -174,14 +167,6 @@ export default function PatientIntakeAgent() {
             { ...mapDeliveryMethodsToApi(tabValues.delivery), current_version: agentData.current_version }),
           currentValues: mapApiToDeliveryMethods(agentData),
           newValues: tabValues.delivery,
-        },
-        {
-          key: 'agentConfig',
-          name: 'Agent Config',
-          apiFn: () => api.put(`/api/v1/patient-intake-agent/${user.org_id}/agent-config`,
-            { ...mapAgentConfigToApi(tabValues.agentConfig), current_version: agentData.current_version }),
-          currentValues: mapApiToAgentConfig(agentData),
-          newValues: tabValues.agentConfig,
         },
       ];
 
@@ -317,26 +302,6 @@ export default function PatientIntakeAgent() {
     }
   };
 
-  const handleSaveAgentConfig = async () => {
-    if (!agentData || !user?.org_id) return;
-    const validation = agentConfigRef.current?.validate?.();
-    if (validation && !validation.valid) {
-      toast({
-        title: "Validation Error",
-        description: validation.errors[0],
-        variant: "destructive",
-      });
-      return;
-    }
-    const tabData = agentConfigRef.current?.getValues?.();
-    if (tabData) {
-      await api.put(`/api/v1/patient-intake-agent/${user.org_id}/agent-config`,
-        { ...mapAgentConfigToApi(tabData), current_version: agentData.current_version });
-      toast({ title: "Success", description: "Agent configuration saved successfully." });
-      await refetchAgentData();
-    }
-  };
-
   // Function to refetch agent data after save
   const refetchAgentData = async () => {
     if (!user?.org_id) return;
@@ -357,7 +322,6 @@ export default function PatientIntakeAgent() {
   const initialValues = agentData ? {
     rules: mapApiToFieldContentRules(agentData),
     delivery: mapApiToDeliveryMethods(agentData),
-    agentConfig: mapApiToAgentConfig(agentData),
     forms: mapApiToFormsQuestionnaires(agentData),
   } : null;
 
@@ -417,12 +381,6 @@ export default function PatientIntakeAgent() {
           >
             Workflows
           </TabsTrigger>
-          <TabsTrigger
-            value="agent-config"
-            className="flex-1 first:rounded-l-3xl last:rounded-r-3xl data-[state=active]:bg-[#1c275e] data-[state=active]:text-white transition-all duration-300 font-medium text-center h-full flex items-center justify-center px-1 py-0 text-xs sm:text-sm border-0 leading-none"
-          >
-            Agent Config
-          </TabsTrigger>
         </TabsList>
 
         {/* Forms & Questionnaires tab */}
@@ -468,19 +426,6 @@ export default function PatientIntakeAgent() {
         <TabsContent value="workflows">
           <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
             <PatientWorkflowsTab ref={workflowsRef} readOnly={isReadOnly} />
-          </Suspense>
-        </TabsContent>
-
-        {/* Agent Config tab */}
-        <TabsContent value="agent-config">
-          <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
-            <PatientAgentConfigTab
-              ref={agentConfigRef}
-              initialData={initialValues?.agentConfig}
-              onSave={handleSaveAgentConfig}
-              isSaving={isSaving}
-              readOnly={isReadOnly}
-            />
           </Suspense>
         </TabsContent>
       </Tabs>

@@ -181,8 +181,8 @@ export const uiToApi = {
   appointmentSetup(values: AppointmentSetupValues) {
     return {
       appointment_types: {
-        new_patient: values.appointmentTypes.newPatient,
-        follow_up: values.appointmentTypes.followUp,
+        newPatient: values.appointmentTypes.newPatient,
+        followUp: values.appointmentTypes.followUp,
         procedure: values.appointmentTypes.procedure,
       },
       new_patient_duration: durationHelpers.uiDurationToApi(values.newPatientDuration),
@@ -200,19 +200,19 @@ export const uiToApi = {
   patientEligibility(values: PatientEligibilityValues) {
     return {
       patient_types_accepted: {
-        new_patients: values.patientTypes.newPatients,
-        existing_patients: values.patientTypes.existingPatients,
-        self_pay: values.patientTypes.selfPay,
+        newPatients: values.patientTypes.newPatients,
+        existingPatients: values.patientTypes.existingPatients,
+        selfPay: values.patientTypes.selfPay,
         hmo: values.patientTypes.hmo,
         ppo: values.patientTypes.ppo,
         medicare: values.patientTypes.medicare,
         medicaid: values.patientTypes.medicaid,
       },
       referral_requirements: {
-        services_requiring_referrals: textareaHelpers.textareaToArray(
+        servicesRequiringReferrals: textareaHelpers.textareaToArray(
           values.referralRequirements.servicesRequiringReferrals
         ),
-        insurance_plans_requiring_referrals: textareaHelpers.textareaToArray(
+        insurancePlansRequiringReferrals: textareaHelpers.textareaToArray(
           values.referralRequirements.insurancePlansRequiringReferrals
         ),
       },

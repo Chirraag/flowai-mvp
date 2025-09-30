@@ -185,7 +185,7 @@ const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, Scheduling
 
             <div className="space-y-2 p-4 bg-gray-50 rounded-lg">
               <Label htmlFor="cutoff-time" className="text-sm font-semibold text-[#1c275e]">Same-day Cutoff Time</Label>
-              <div className="relative">
+              <div className="relative max-w-[120px]">
                 <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#1c275e]" />
                 <Input
                   id="cutoff-time"
@@ -245,23 +245,26 @@ const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, Scheduling
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="no-show-fee" className="text-sm font-semibold text-[#1c275e]">No-show Fee ($)</Label>
-                <Input
-                  id="no-show-fee"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="50.00"
-                  value={noShowFee}
-                  onChange={(e) => {
-                    if (!readOnly) {
-                      setNoShowFee(e.target.value);
-                      handleFieldChange();
-                    }
-                  }}
-                  readOnly={readOnly}
-                  className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
-                />
+                <Label htmlFor="no-show-fee" className="text-sm font-semibold text-[#1c275e]">No-show Fee</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#1c275e] font-medium">$</span>
+                  <Input
+                    id="no-show-fee"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="50.00"
+                    value={noShowFee}
+                    onChange={(e) => {
+                      if (!readOnly) {
+                        setNoShowFee(e.target.value);
+                        handleFieldChange();
+                      }
+                    }}
+                    readOnly={readOnly}
+                    className="h-11 pl-8 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
+                  />
+                </div>
               </div>
             </div>
           </div>

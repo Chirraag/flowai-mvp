@@ -3,14 +3,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { handleApiError } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
-import { api } from "@/lib/api";
-import { apiToUi, uiToApi } from "@/lib/customer-support.mappers";
+import { apiToUi } from "@/lib/customer-support.mappers";
 import { customerSupportApi } from "@/lib/customer-support";
-import type { CustomerSupportAgentData, CustomerSupportAgentConfig } from "@/lib/customer-support.types";
+import type { CustomerSupportAgentData } from "@/lib/customer-support.types";
 
 // Lazy-load tab sections so future heavy UIs don't bloat initial load.
 const FrequentlyAskedQuestionsTab = lazy(() => import("@/components/customer-support/FrequentlyAskedQuestionsTab"));
-const CustomerSupportAgentConfigTab = lazy(() => import("@/components/customer-support/CustomerSupportAgentConfigTab"));
 const CustomerSupportWorkflowsTab = lazy(() => import("@/components/customer-support/CustomerSupportWorkflowsTab"));
 
 export default function CustomerSupportAgent() {
@@ -30,7 +28,6 @@ export default function CustomerSupportAgent() {
   const [savingTabs, setSavingTabs] = useState<Set<string>>(new Set());
 
   // Refs used to call validation on Save Configuration
-  const agentConfigRef = React.useRef<any>(null);
   const faqRef = React.useRef<any>(null);
   const workflowsRef = React.useRef<any>(null);
 
@@ -97,39 +94,6 @@ export default function CustomerSupportAgent() {
     fetchAgentData();
   }, [orgId, toast]);
 
-  // Individual save handlers for each tab
-  const handleSaveAgentConfig = async (values: CustomerSupportAgentConfig) => {
-    if (!agentData || !orgId) return;
-
-    try {
-      // Save each field separately using the individual APIs
-      if (values.agent_name) {
-        await customerSupportApi.updateAgentName(Number(orgId), values.agent_name);
-      }
-      if (values.voice) {
-        await customerSupportApi.updateVoice(Number(orgId), values.voice);
-      }
-      if (values.language) {
-        await customerSupportApi.updateLanguage(Number(orgId), values.language);
-      }
-      if (values.agent_instructions || values.human_transfer_criteria) {
-        await customerSupportApi.updateInstructions(
-          Number(orgId),
-          values.agent_instructions,
-          values.human_transfer_criteria || ""
-        );
-      }
-
-      toast({ title: "Success", description: "Agent configuration saved successfully." });
-      await refetchAgentData();
-    } catch (error) {
-      console.error('Failed to save agent config:', error);
-      const errorToast = handleApiError(error, { action: "save customer support configuration" });
-      toast(errorToast);
-      throw error; // Re-throw to let the component handle it
-    }
-  };
-
   // Function to refetch agent data after save
   const refetchAgentData = async () => {
     if (!orgId) return;
@@ -147,9 +111,7 @@ export default function CustomerSupportAgent() {
   };
 
   // Prepare initial values for tabs
-  const initialValues = agentData ? {
-    agentConfig: apiToUi.agentConfig(agentData),
-  } : null;
+  const initialValues = agentData ? {} : null;
 
   // Show loading state
   if (isLoading) {
@@ -179,15 +141,9 @@ export default function CustomerSupportAgent() {
     <div className="container mx-auto p-4 sm:p-6 space-y-6">
 
       {/* Enhanced tabbed layout with consistent styling */}
-      <Tabs defaultValue="agent-config" className="w-full">
+      <Tabs defaultValue="frequently-asked-questions" className="w-full">
         {/* Enhanced tab navigation with brand styling */}
         <TabsList className="w-full flex gap-0 rounded-3xl outline outline-offset-[-1px] bg-muted p-1 overflow-hidden mb-6 h-12">
-          <TabsTrigger
-            value="agent-config"
-            className="flex-1 first:rounded-l-3xl last:rounded-r-3xl data-[state=active]:bg-[#1c275e] data-[state=active]:text-white transition-all duration-300 font-medium text-center h-full flex items-center justify-center px-1 py-0 text-xs sm:text-sm border-0 leading-none"
-          >
-            Agent Config
-          </TabsTrigger>
           <TabsTrigger
             value="frequently-asked-questions"
             className="flex-1 first:rounded-l-3xl last:rounded-r-3xl data-[state=active]:bg-[#1c275e] data-[state=active]:text-white transition-all duration-300 font-medium text-center h-full flex items-center justify-center px-1 py-0 text-xs sm:text-sm border-0 leading-none"
@@ -201,19 +157,6 @@ export default function CustomerSupportAgent() {
             Workflows
           </TabsTrigger>
         </TabsList>
-
-        {/* Agent Config tab */}
-        <TabsContent value="agent-config">
-          <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
-            <CustomerSupportAgentConfigTab
-              ref={agentConfigRef}
-              initialData={initialValues?.agentConfig}
-              onSave={handleSaveAgentConfig}
-              isSaving={isSaving}
-              readOnly={isReadOnly}
-            />
-          </Suspense>
-        </TabsContent>
 
         {/* Frequently Asked Questions tab */}
         <TabsContent value="frequently-asked-questions">
