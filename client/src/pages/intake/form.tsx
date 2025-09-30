@@ -157,7 +157,7 @@ export default function IntakeFormPage({ organization, intakeForm }: IntakeFormP
               {field.required && <span className="text-red-500 ml-1">*</span>}
             </Label>
             <Select
-              value={value}
+              value={value || undefined}
               onValueChange={(val) => handleFieldChange(field.id, val)}
               required={field.required}
             >
@@ -165,7 +165,7 @@ export default function IntakeFormPage({ organization, intakeForm }: IntakeFormP
                 <SelectValue placeholder="Select an option" />
               </SelectTrigger>
               <SelectContent>
-                {field.options?.map((option) => (
+                {field.options?.filter(opt => opt.value).map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
                   </SelectItem>
