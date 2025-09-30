@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { FieldError } from "@/components/ui/form-error";
+import { SectionErrorSummary } from "@/components/ui/validation-components";
+import type { ValidationError } from "@/lib/launchpad.utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Trash2 } from "lucide-react";
 
@@ -21,6 +23,9 @@ interface InfluencersCardProps {
   onUpdate: (id: string, field: keyof Person, value: string) => void;
   onRemove?: (id: string, personName: string) => void;
   errors?: Record<string, string>;
+  formErrors?: ValidationError[];
+  formWarnings?: ValidationError[];
+  onValidateField?: (fieldName: string, value: string, section: string) => void;
   readOnly?: boolean;
 }
 
@@ -29,6 +34,9 @@ export default function InfluencersCard({
   onUpdate,
   onRemove,
   errors = {},
+  formErrors = [],
+  formWarnings = [],
+  onValidateField,
   readOnly = false,
 }: InfluencersCardProps) {
   // Phone number formatting for display
@@ -53,6 +61,9 @@ export default function InfluencersCard({
     // Format for display, but store only digits (no hyphens)
     const digitsOnly = rawValue.replace(/\D/g, '').slice(0, 10);
     onUpdate(id, 'phone', digitsOnly);
+
+    // Trigger real-time validation if available
+    onValidateField?.(`inf-${id}-phone`, digitsOnly, 'influencers');
   };
 
   const handleTextOnlyChange = (id: string, field: 'title' | 'name', rawValue: string) => {
@@ -109,7 +120,14 @@ export default function InfluencersCard({
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="space-y-4">
+      <SectionErrorSummary
+        errors={formErrors}
+        warnings={formWarnings}
+        sectionName="influencers"
+      />
+
+      <div className="overflow-x-auto">
       <Table className="min-w-[800px]">
         <TableHeader>
           <TableRow>
@@ -137,7 +155,9 @@ export default function InfluencersCard({
               <TableCell className="p-2">
                 <div className="space-y-1">
                   <Input
-                    className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
+                    className={`h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition ${
+                      errors[`inf-${inf.id}-firstName`] ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''
+                    }`}
                     placeholder="First name"
                     value={getNameParts(inf.name).firstName}
                     onChange={readOnly ? undefined : (e) => handleFirstNameChange(inf.id, e.target.value)}
@@ -148,22 +168,21 @@ export default function InfluencersCard({
                 </div>
               </TableCell>
               <TableCell className="p-2">
-                <div className="space-y-1">
-                  <Input
-                    className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
-                    placeholder="Last name"
-                    value={getNameParts(inf.name).lastName}
-                    onChange={readOnly ? undefined : (e) => handleLastNameChange(inf.id, e.target.value)}
-                    readOnly={readOnly}
-                    aria-label="Last Name"
-                  />
-                  <FieldError error={errors[`inf-${inf.id}-lastName`]} />
-                </div>
+                <Input
+                  className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
+                  placeholder="Last name"
+                  value={getNameParts(inf.name).lastName}
+                  onChange={readOnly ? undefined : (e) => handleLastNameChange(inf.id, e.target.value)}
+                  readOnly={readOnly}
+                  aria-label="Last Name"
+                />
               </TableCell>
               <TableCell className="p-2">
                 <div className="space-y-1">
                   <Input
-                    className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
+                    className={`h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition ${
+                      errors[`inf-${inf.id}-email`] ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''
+                    }`}
                     placeholder="email@practice.com"
                     value={inf.email}
                     onChange={readOnly ? undefined : (e) => onUpdate(inf.id, 'email', e.target.value)}
@@ -174,14 +193,19 @@ export default function InfluencersCard({
                 </div>
               </TableCell>
               <TableCell className="p-2">
-                <Input
-                  className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
-                  placeholder="123-456-7890"
-                  value={formatPhoneNumber(inf.phone)}
-                  onChange={readOnly ? undefined : (e) => handlePhoneChange(inf.id, e.target.value)}
-                  readOnly={readOnly}
-                  aria-label="Phone"
-                />
+                <div className="space-y-1">
+                  <Input
+                    className={`h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition ${
+                      errors[`inf-${inf.id}-phone`] ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''
+                    }`}
+                    placeholder="123-456-7890"
+                    value={formatPhoneNumber(inf.phone)}
+                    onChange={readOnly ? undefined : (e) => handlePhoneChange(inf.id, e.target.value)}
+                    readOnly={readOnly}
+                    aria-label="Phone"
+                  />
+                  <FieldError error={errors[`inf-${inf.id}-phone`]} />
+                </div>
               </TableCell>
               <TableCell className="p-2">
                 {!readOnly && (
@@ -200,6 +224,7 @@ export default function InfluencersCard({
           ))}
         </TableBody>
       </Table>
+      </div>
     </div>
   );
 }

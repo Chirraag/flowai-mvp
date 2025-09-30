@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { FieldError } from "@/components/ui/form-error";
+import type { ValidationError } from "@/lib/launchpad.utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,6 +38,8 @@ interface SystemsIntegrationCardProps {
     field: "insuranceVerificationSystem" | "insuranceVerificationDetails" | "additionalInfo" | "clinicalNotes",
     value: string
   ) => void;
+  errors?: Record<string, string>;
+  onValidateField?: (fieldName: string, value: string, section: string) => void;
   readOnly?: boolean;
 }
 
@@ -57,6 +61,8 @@ export default function SystemsIntegrationCard({
   onUpdateSchedulingPhone,
   onRemoveSchedulingPhone,
   onChangeField,
+  errors = {},
+  onValidateField,
   readOnly = false,
 }: SystemsIntegrationCardProps) {
   // Deletion confirmation dialog state
@@ -88,6 +94,9 @@ export default function SystemsIntegrationCard({
     // Format for display, but store only digits (no hyphens)
     const digitsOnly = rawValue.replace(/\D/g, '').slice(0, 10);
     onUpdateSchedulingPhone(index, digitsOnly);
+
+    // Trigger real-time validation if available
+    onValidateField?.(`scheduling-phone-${index}`, digitsOnly, 'systems-integration');
   };
 
   // Deletion confirmation handlers
@@ -168,26 +177,29 @@ export default function SystemsIntegrationCard({
                   <Button variant="default" size="sm" onClick={onAddSchedulingPhone} className="bg-[#f48024] hover:bg-[#f48024]/90 text-white">Add Number</Button>
                 )}
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="space-y-2">
                 {schedulingPhoneNumbers.map((num, index) => (
-                  <div key={index} className="flex items-center gap-1 bg-muted px-3 py-1 rounded-full">
-                    <Input
-                      placeholder="123-456-7890"
-                      value={formatPhoneNumber(num)}
-                      onChange={readOnly ? undefined : (e) => handlePhoneChange(index, e.target.value)}
-                      readOnly={readOnly}
-                      className="border-none bg-transparent p-0 h-auto text-sm"
-                    />
-                    {!readOnly && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-4 w-4 p-0 text-red-600 hover:text-red-700"
-                        onClick={() => handleDeletePhone(index, num)}
-                      >
-                        ×
-                      </Button>
-                    )}
+                  <div key={index} className="space-y-1">
+                    <div className="flex items-center gap-1 bg-muted px-3 py-1 rounded-full">
+                      <Input
+                        placeholder="123-456-7890"
+                        value={formatPhoneNumber(num)}
+                        onChange={readOnly ? undefined : (e) => handlePhoneChange(index, e.target.value)}
+                        readOnly={readOnly}
+                        className="border-none bg-transparent p-0 h-auto text-sm"
+                      />
+                      {!readOnly && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-4 w-4 p-0 text-red-600 hover:text-red-700"
+                          onClick={() => handleDeletePhone(index, num)}
+                        >
+                          ×
+                        </Button>
+                      )}
+                    </div>
+                    <FieldError error={errors[`scheduling-phone-${index}`]} />
                   </div>
                 ))}
                 {schedulingPhoneNumbers.length === 0 && (

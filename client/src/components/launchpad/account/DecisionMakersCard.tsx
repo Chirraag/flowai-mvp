@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { FieldError } from "@/components/ui/form-error";
+import { SectionErrorSummary } from "@/components/ui/validation-components";
+import type { ValidationError } from "@/lib/launchpad.utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Trash2 } from "lucide-react";
 
@@ -21,6 +23,9 @@ interface DecisionMakersCardProps {
   onUpdate: (id: string, field: keyof Person, value: string) => void;
   onRemove?: (id: string, personName: string) => void;
   errors?: Record<string, string>;
+  formErrors?: ValidationError[];
+  formWarnings?: ValidationError[];
+  onValidateField?: (fieldName: string, value: string, section: string) => void;
   readOnly?: boolean;
 }
 
@@ -29,6 +34,9 @@ export default function DecisionMakersCard({
   onUpdate,
   onRemove,
   errors = {},
+  formErrors = [],
+  formWarnings = [],
+  onValidateField,
   readOnly = false,
 }: DecisionMakersCardProps) {
   // Phone number formatting for display
@@ -53,6 +61,9 @@ export default function DecisionMakersCard({
     // Format for display, but store only digits (no hyphens)
     const digitsOnly = rawValue.replace(/\D/g, '').slice(0, 10);
     onUpdate(id, 'phone', digitsOnly);
+
+    // Trigger real-time validation if available
+    onValidateField?.(`dm-${id}-phone`, digitsOnly, 'decision-makers');
   };
 
   const handleTextOnlyChange = (id: string, field: 'title' | 'name', rawValue: string) => {
@@ -109,7 +120,14 @@ export default function DecisionMakersCard({
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="space-y-4">
+      <SectionErrorSummary
+        errors={formErrors}
+        warnings={formWarnings}
+        sectionName="decision-makers"
+      />
+
+      <div className="overflow-x-auto">
       <Table className="min-w-[800px]">
         <TableHeader>
           <TableRow>
@@ -137,7 +155,9 @@ export default function DecisionMakersCard({
               <TableCell className="p-2">
                 <div className="space-y-1">
                   <Input
-                    className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
+                    className={`h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition ${
+                      errors[`dm-${dm.id}-firstName`] ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''
+                    }`}
                     placeholder="First name"
                     value={getNameParts(dm.name).firstName}
                     onChange={readOnly ? undefined : (e) => handleFirstNameChange(dm.id, e.target.value)}
@@ -148,22 +168,21 @@ export default function DecisionMakersCard({
                 </div>
               </TableCell>
               <TableCell className="p-2">
-                <div className="space-y-1">
-                  <Input
-                    className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
-                    placeholder="Last name"
-                    value={getNameParts(dm.name).lastName}
-                    onChange={readOnly ? undefined : (e) => handleLastNameChange(dm.id, e.target.value)}
-                    readOnly={readOnly}
-                    aria-label="Last Name"
-                  />
-                  <FieldError error={errors[`dm-${dm.id}-lastName`]} />
-                </div>
+                <Input
+                  className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
+                  placeholder="Last name"
+                  value={getNameParts(dm.name).lastName}
+                  onChange={readOnly ? undefined : (e) => handleLastNameChange(dm.id, e.target.value)}
+                  readOnly={readOnly}
+                  aria-label="Last Name"
+                />
               </TableCell>
               <TableCell className="p-2">
                 <div className="space-y-1">
                   <Input
-                    className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
+                    className={`h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition ${
+                      errors[`dm-${dm.id}-email`] ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''
+                    }`}
                     placeholder="email@practice.com"
                     value={dm.email}
                     onChange={readOnly ? undefined : (e) => onUpdate(dm.id, 'email', e.target.value)}
@@ -174,14 +193,19 @@ export default function DecisionMakersCard({
                 </div>
               </TableCell>
               <TableCell className="p-2">
-                <Input
-                  className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
-                  placeholder="123-456-7890"
-                  value={formatPhoneNumber(dm.phone)}
-                  onChange={readOnly ? undefined : (e) => handlePhoneChange(dm.id, e.target.value)}
-                  readOnly={readOnly}
-                  aria-label="Phone"
-                />
+                <div className="space-y-1">
+                  <Input
+                    className={`h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition ${
+                      errors[`dm-${dm.id}-phone`] ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''
+                    }`}
+                    placeholder="123-456-7890"
+                    value={formatPhoneNumber(dm.phone)}
+                    onChange={readOnly ? undefined : (e) => handlePhoneChange(dm.id, e.target.value)}
+                    readOnly={readOnly}
+                    aria-label="Phone"
+                  />
+                  <FieldError error={errors[`dm-${dm.id}-phone`]} />
+                </div>
               </TableCell>
               <TableCell className="p-2">
                 {!readOnly && (
@@ -200,6 +224,7 @@ export default function DecisionMakersCard({
           ))}
         </TableBody>
       </Table>
+      </div>
     </div>
   );
 }

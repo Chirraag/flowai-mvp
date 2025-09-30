@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FormSummary } from "@/components/ui/form-error";
+import { FormValidationSummary, SectionErrorSummary } from "@/components/ui/validation-components";
 import { ContextualHelp } from "@/components/ui/breadcrumb-nav";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -65,7 +66,14 @@ import {
   validateLocationsData,
   validateSpecialtiesData,
   validateInsuranceData,
-  formatValidationErrors
+  formatValidationErrors,
+  groupErrorsBySection,
+  getFieldError,
+  sectionHasErrors,
+  sectionHasWarnings,
+  validateField,
+  type ValidationResult,
+  type ValidationError
 } from "@/lib/launchpad.utils";
 import DocumentUpload from "@/components/launchpad/shared/DocumentUpload";
 import { getDocumentsForTab, getDocumentTitle } from "@/lib/launchpad.utils";
@@ -177,8 +185,17 @@ export default function Launchpad() {
   // Locations (hydrated from API snapshot)
   const [locations, setLocations] = useState<OrgLocation[]>([]);
 
-  // Basic form error summary (placeholder for future validation)
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  // Enhanced form validation state
+  const [formValidation, setFormValidation] = useState<ValidationResult>({
+    isValid: true,
+    errors: [],
+    warnings: [],
+    hasErrors: false,
+    hasWarnings: false,
+  });
+
+  // Real-time validation state for individual fields
+  const [fieldValidations, setFieldValidations] = useState<Record<string, ValidationError | null>>({});
 
   // Specialties (hydrated from API snapshot)
   const [specialties, setSpecialties] = useState<OrgSpecialityService[]>([]);
@@ -233,7 +250,14 @@ export default function Launchpad() {
     setPatientIntakeTeamReporting(undefined);
     setRcmTeamReporting(undefined);
     setLocations([]);
-    setFormErrors({});
+    setFormValidation({
+      isValid: true,
+      errors: [],
+      warnings: [],
+      hasErrors: false,
+      hasWarnings: false,
+    });
+    setFieldValidations({});
     setSpecialties([]);
     setInsurance({ is_active: true });
     originalLocationsRef.current = [];
@@ -462,6 +486,16 @@ export default function Launchpad() {
     }
   };
 
+  // Real-time field validation
+  const validateFieldRealTime = (fieldName: string, value: string, section: string) => {
+    const result = validateField(fieldName, value, section);
+
+    setFieldValidations(prev => ({
+      ...prev,
+      [fieldName]: result.isValid ? null : result.error || null
+    }));
+  };
+
   // Save handlers (Steps 5, 6 & 8)
   const handleSaveAccount = async () => {
     try {
@@ -476,20 +510,25 @@ export default function Launchpad() {
         rcmTeam,
         schedulingPhoneNumbers,
       });
-      
+
+      // Update form validation state
+      setFormValidation(validation);
+
       if (!validation.isValid) {
-        const formattedErrors = formatValidationErrors(validation.errors);
-        setFormErrors(formattedErrors);
+        const errorCount = validation.errors.length;
+        const warningCount = validation.warnings.length;
+        const totalIssues = errorCount + warningCount;
+
         toast({
-          title: "Validation Error",
-          description: `Please fix ${validation.errors.length} validation error(s) before saving.`,
+          title: "Validation Issues Found",
+          description: `Please fix ${errorCount} error(s)${warningCount > 0 ? ` and review ${warningCount} warning(s)` : ''} before saving.`,
           variant: "destructive",
         });
         return;
       }
-      
-      // Clear any previous validation errors
-      setFormErrors({});
+
+      // Clear any previous field validations
+      setFieldValidations({});
 
       const payload = mapAccountUIToApi({
         accountName,
@@ -522,6 +561,17 @@ export default function Launchpad() {
       });
       
       await updateAccountDetails.mutateAsync({ data: payload });
+
+      // Clear validation states on success
+      setFormValidation({
+        isValid: true,
+        errors: [],
+        warnings: [],
+        hasErrors: false,
+        hasWarnings: false,
+      });
+      setFieldValidations({});
+
       toast({
         title: "Success",
         description: "Account details saved successfully",
@@ -537,20 +587,24 @@ export default function Launchpad() {
     try {
       // Step 8: Client-side validation
       const validation = validateLocationsData(locations);
-      
+
+      // Update form validation state
+      setFormValidation(validation);
+
       if (!validation.isValid) {
-        const formattedErrors = formatValidationErrors(validation.errors);
-        setFormErrors(formattedErrors);
+        const errorCount = validation.errors.length;
+        const warningCount = validation.warnings.length;
+
         toast({
-          title: "Validation Error",
-          description: `Please fix ${validation.errors.length} validation error(s) before saving.`,
+          title: "Validation Issues Found",
+          description: `Please fix ${errorCount} error(s)${warningCount > 0 ? ` and review ${warningCount} warning(s)` : ''} before saving.`,
           variant: "destructive",
         });
         return;
       }
-      
-      // Clear any previous validation errors
-      setFormErrors({});
+
+      // Clear any previous field validations
+      setFieldValidations({});
       
       // Step 5: Chained locations → specialties flow
       const locationsPayload = mapLocationsUIToApi(locations);
@@ -586,6 +640,16 @@ export default function Launchpad() {
         queryClient.invalidateQueries({ queryKey: ['launchpad', String(orgId)] });
       }
       
+      // Clear validation states on success
+      setFormValidation({
+        isValid: true,
+        errors: [],
+        warnings: [],
+        hasErrors: false,
+        hasWarnings: false,
+      });
+      setFieldValidations({});
+
       toast({
         title: "Success",
         description: "Locations saved successfully" + (codeChanges.size > 0 || hasRemovedLocations ? " (specialties updated automatically)" : ""),
@@ -602,41 +666,43 @@ export default function Launchpad() {
       console.log('handleSaveSpecialties: Starting save process');
       console.log('handleSaveSpecialties: Current specialties state:', specialties);
 
-      // Check for duplicate specialty_name
-      const specialtyNames = specialties.map(s => s.specialty_name.trim().toLowerCase());
-      const duplicateNames = specialtyNames.filter((name, index) => specialtyNames.indexOf(name) !== index);
-      if (duplicateNames.length > 0) {
-        setFormErrors({ 'specialty_name': `Duplicate specialty names found: ${Array.from(new Set(duplicateNames)).join(', ')}` });
-        toast({
-          title: "Validation Error",
-          description: "Duplicate specialty names are not allowed. Please ensure each specialty has a unique name.",
-          variant: "destructive",
-        });
-        return;
-      }
-
       // Step 8: Client-side validation
       const availableLocationCodes = locations.map(loc => loc.location_id);
       const validation = validateSpecialtiesData(specialties, availableLocationCodes);
 
+      // Update form validation state
+      setFormValidation(validation);
+
       if (!validation.isValid) {
-        const formattedErrors = formatValidationErrors(validation.errors);
-        setFormErrors(formattedErrors);
+        const errorCount = validation.errors.length;
+        const warningCount = validation.warnings.length;
+
         toast({
-          title: "Validation Error",
-          description: `Please fix ${validation.errors.length} validation error(s) before saving.`,
+          title: "Validation Issues Found",
+          description: `Please fix ${errorCount} error(s)${warningCount > 0 ? ` and review ${warningCount} warning(s)` : ''} before saving.`,
           variant: "destructive",
         });
         return;
       }
 
-      // Clear any previous validation errors
-      setFormErrors({});
+      // Clear any previous field validations
+      setFieldValidations({});
 
       const payload = mapSpecialtiesUIToApi(specialties);
       console.log('handleSaveSpecialties: Mapped payload for API:', payload);
 
       await updateSpecialties.mutateAsync({ speciality_services: payload });
+
+      // Clear validation states on success
+      setFormValidation({
+        isValid: true,
+        errors: [],
+        warnings: [],
+        hasErrors: false,
+        hasWarnings: false,
+      });
+      setFieldValidations({});
+
       toast({
         title: "Success",
         description: "Specialties saved successfully",
@@ -659,23 +725,38 @@ export default function Launchpad() {
     try {
       // Step 8: Client-side validation
       const validation = validateInsuranceData(insurance);
-      
+
+      // Update form validation state
+      setFormValidation(validation);
+
       if (!validation.isValid) {
-        const formattedErrors = formatValidationErrors(validation.errors);
-        setFormErrors(formattedErrors);
+        const errorCount = validation.errors.length;
+        const warningCount = validation.warnings.length;
+
         toast({
-          title: "Validation Error",
-          description: `Please fix ${validation.errors.length} validation error(s) before saving.`,
+          title: "Validation Issues Found",
+          description: `Please fix ${errorCount} error(s)${warningCount > 0 ? ` and review ${warningCount} warning(s)` : ''} before saving.`,
           variant: "destructive",
         });
         return;
       }
-      
-      // Clear any previous validation errors
-      setFormErrors({});
-      
+
+      // Clear any previous field validations
+      setFieldValidations({});
+
       const payload = mapInsuranceUIToApi(insurance);
       await updateInsurance.mutateAsync({ insurance: payload });
+
+      // Clear validation states on success
+      setFormValidation({
+        isValid: true,
+        errors: [],
+        warnings: [],
+        hasErrors: false,
+        hasWarnings: false,
+      });
+      setFieldValidations({});
+
       toast({
         title: "Success",
         description: "Insurance settings saved successfully",
@@ -720,8 +801,12 @@ export default function Launchpad() {
       )}
       {/* Organization data loaded successfully */}
 
-      {Object.keys(formErrors).length > 0 && (
-        <FormSummary errors={formErrors} />
+      {(formValidation.hasErrors || formValidation.hasWarnings) && (
+        <FormValidationSummary
+          errors={formValidation.errors}
+          warnings={formValidation.warnings}
+          showSectionBreakdown={true}
+        />
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
@@ -845,11 +930,16 @@ export default function Launchpad() {
                       websiteAddress={websiteAddress}
                       headquartersAddress={headquartersAddress}
                       onChange={(field, value) => {
-                        if (field === "accountName") setAccountName(value);
+                        if (field === "accountName") {
+                          setAccountName(value);
+                          validateFieldRealTime('accountName', value, 'overview');
+                        }
                         if (field === "websiteAddress") setWebsiteAddress(value);
                         if (field === "headquartersAddress") setHeadquartersAddress(value);
                       }}
                       readOnly={isReadOnly}
+                      fieldErrors={fieldValidations}
+                      errors={formatValidationErrors(formValidation.errors)}
                     />
                   </CardContent>
                 )}
@@ -918,6 +1008,10 @@ export default function Launchpad() {
                       decisionMakers={decisionMakers}
                       onUpdate={(id, field, value) => updatePerson(setDecisionMakers, id, field, value)}
                       onRemove={(id, personName) => handleDeletePerson(setDecisionMakers, id, personName)}
+                      errors={formatValidationErrors(formValidation.errors)}
+                      formErrors={formValidation.errors}
+                      formWarnings={formValidation.warnings}
+                      onValidateField={validateFieldRealTime}
                       readOnly={isReadOnly}
                     />
                   </CardContent>
@@ -987,6 +1081,10 @@ export default function Launchpad() {
                       influencers={influencers}
                       onUpdate={(id, field, value) => updatePerson(setInfluencers, id, field, value)}
                       onRemove={(id, personName) => handleDeletePerson(setInfluencers, id, personName)}
+                      errors={formatValidationErrors(formValidation.errors)}
+                      formErrors={formValidation.errors}
+                      formWarnings={formValidation.warnings}
+                      onValidateField={validateFieldRealTime}
                       readOnly={isReadOnly}
                     />
                   </CardContent>
@@ -1088,12 +1186,21 @@ export default function Launchpad() {
                 </CardHeader>
                 {!minimizedCards['team-reporting'] && (
                   <CardContent className="px-5 py-4 space-y-4">
+                  <SectionErrorSummary
+                    errors={formValidation.errors}
+                    warnings={formValidation.warnings}
+                    sectionName="team-reporting"
+                  />
                   <TeamReportingSection
                     title="Order Entry Team Reporting"
                     team={orderEntryTeam}
                     onAdd={() => addPerson(setOrderEntryTeam)}
                     onUpdate={(id, field, value) => updatePerson(setOrderEntryTeam, id, field, value)}
                     onRemove={(id, personName) => handleDeletePerson(setOrderEntryTeam, id, personName)}
+                    formErrors={formValidation.errors}
+                    formWarnings={formValidation.warnings}
+                    errors={formatValidationErrors(formValidation.errors)}
+                    onValidateField={validateFieldRealTime}
                     readOnly={isReadOnly}
                   />
                   <TeamReportingSection
@@ -1102,6 +1209,10 @@ export default function Launchpad() {
                     onAdd={() => addPerson(setSchedulingTeam)}
                     onUpdate={(id, field, value) => updatePerson(setSchedulingTeam, id, field, value)}
                     onRemove={(id, personName) => handleDeletePerson(setSchedulingTeam, id, personName)}
+                    formErrors={formValidation.errors}
+                    formWarnings={formValidation.warnings}
+                    errors={formatValidationErrors(formValidation.errors)}
+                    onValidateField={validateFieldRealTime}
                     readOnly={isReadOnly}
                   />
                   <TeamReportingSection
@@ -1110,6 +1221,10 @@ export default function Launchpad() {
                     onAdd={() => addPerson(setPatientIntakeTeam)}
                     onUpdate={(id, field, value) => updatePerson(setPatientIntakeTeam, id, field, value)}
                     onRemove={(id, personName) => handleDeletePerson(setPatientIntakeTeam, id, personName)}
+                    formErrors={formValidation.errors}
+                    formWarnings={formValidation.warnings}
+                    errors={formatValidationErrors(formValidation.errors)}
+                    onValidateField={validateFieldRealTime}
                     readOnly={isReadOnly}
                   />
                   <TeamReportingSection
@@ -1118,6 +1233,10 @@ export default function Launchpad() {
                     onAdd={() => addPerson(setRcmTeam)}
                     onUpdate={(id, field, value) => updatePerson(setRcmTeam, id, field, value)}
                     onRemove={(id, personName) => handleDeletePerson(setRcmTeam, id, personName)}
+                    formErrors={formValidation.errors}
+                    formWarnings={formValidation.warnings}
+                    errors={formatValidationErrors(formValidation.errors)}
+                    onValidateField={validateFieldRealTime}
                     readOnly={isReadOnly}
                   />
                   </CardContent>
@@ -1299,6 +1418,8 @@ export default function Launchpad() {
                       if (field === "additionalInfo") setAdditionalInfo(value);
                       if (field === "clinicalNotes") setClinicalNotes(value);
                     }}
+                    errors={formatValidationErrors(formValidation.errors)}
+                    onValidateField={validateFieldRealTime}
                     readOnly={isReadOnly}
                   />
                   </CardContent>

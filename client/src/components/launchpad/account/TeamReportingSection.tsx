@@ -2,6 +2,9 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { FieldError } from "@/components/ui/form-error";
+// Section-level summary is now rendered once in the parent for unified display
+import type { ValidationError } from "@/lib/launchpad.utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Trash2 } from "lucide-react";
 
@@ -19,6 +22,10 @@ interface TeamReportingSectionProps {
   onAdd: () => void;
   onUpdate: (id: string, field: keyof Person, value: string) => void;
   onRemove: (id: string, personName: string) => void;
+  formErrors?: ValidationError[];
+  formWarnings?: ValidationError[];
+  errors?: Record<string, string>;
+  onValidateField?: (fieldName: string, value: string, section: string) => void;
   readOnly?: boolean;
 }
 
@@ -28,6 +35,11 @@ export default function TeamReportingSection({
   onAdd,
   onUpdate,
   onRemove,
+  // Not used locally anymore; kept for prop-compatibility
+  formErrors = [],
+  formWarnings = [],
+  errors = {},
+  onValidateField,
   readOnly = false,
 }: TeamReportingSectionProps) {
   // Phone number formatting for display
@@ -52,6 +64,9 @@ export default function TeamReportingSection({
     // Format for display, but store only digits (no hyphens)
     const digitsOnly = rawValue.replace(/\D/g, '').slice(0, 10);
     onUpdate(id, 'phone', digitsOnly);
+
+    // Trigger real-time validation if available
+    onValidateField?.(`team-${id}-phone`, digitsOnly, 'team-reporting');
   };
 
   const handleTextOnlyChange = (id: string, field: 'title' | 'name', rawValue: string) => {
@@ -126,7 +141,6 @@ export default function TeamReportingSection({
           )}
         </div>
       </div>
-
       {/* Team Members Table */}
       <div className="space-y-2">
         {team.length > 0 ? (
@@ -156,14 +170,19 @@ export default function TeamReportingSection({
                       />
                     </TableCell>
                     <TableCell className="p-2">
-                      <Input
-                        className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
-                        placeholder="First name"
-                        value={getNameParts(member.name).firstName}
-                        onChange={readOnly ? undefined : (e) => handleFirstNameChange(member.id, e.target.value)}
-                        readOnly={readOnly}
-                        aria-label="First Name"
-                      />
+                      <div className="space-y-1">
+                        <Input
+                          className={`h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition ${
+                            errors[`team-${member.id}-firstName`] ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''
+                          }`}
+                          placeholder="First name"
+                          value={getNameParts(member.name).firstName}
+                          onChange={readOnly ? undefined : (e) => handleFirstNameChange(member.id, e.target.value)}
+                          readOnly={readOnly}
+                          aria-label="First Name"
+                        />
+                        <FieldError error={errors[`team-${member.id}-firstName`]} />
+                      </div>
                     </TableCell>
                     <TableCell className="p-2">
                       <Input
@@ -176,24 +195,34 @@ export default function TeamReportingSection({
                       />
                     </TableCell>
                     <TableCell className="p-2">
-                      <Input
-                        className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
-                        placeholder="email@practice.com"
-                        value={member.email}
-                        onChange={readOnly ? undefined : (e) => onUpdate(member.id, 'email', e.target.value)}
-                        readOnly={readOnly}
-                        aria-label="Email"
-                      />
+                      <div className="space-y-1">
+                        <Input
+                          className={`h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition ${
+                            errors[`team-${member.id}-email`] ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''
+                          }`}
+                          placeholder="email@practice.com"
+                          value={member.email}
+                          onChange={readOnly ? undefined : (e) => onUpdate(member.id, 'email', e.target.value)}
+                          readOnly={readOnly}
+                          aria-label="Email"
+                        />
+                        <FieldError error={errors[`team-${member.id}-email`]} />
+                      </div>
                     </TableCell>
                     <TableCell className="p-2">
-                      <Input
-                        className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
-                        placeholder="123-456-7890"
-                        value={formatPhoneNumber(member.phone)}
-                        onChange={readOnly ? undefined : (e) => handlePhoneChange(member.id, e.target.value)}
-                        readOnly={readOnly}
-                        aria-label="Phone"
-                      />
+                      <div className="space-y-1">
+                        <Input
+                          className={`h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition ${
+                            errors[`team-${member.id}-phone`] ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''
+                          }`}
+                          placeholder="123-456-7890"
+                          value={formatPhoneNumber(member.phone)}
+                          onChange={readOnly ? undefined : (e) => handlePhoneChange(member.id, e.target.value)}
+                          readOnly={readOnly}
+                          aria-label="Phone"
+                        />
+                        <FieldError error={errors[`team-${member.id}-phone`]} />
+                      </div>
                     </TableCell>
                     <TableCell className="p-2">
                       {!readOnly && (
