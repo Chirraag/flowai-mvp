@@ -89,6 +89,9 @@ export async function verifyPatient(
   });
 
   if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error('UNAUTHORIZED');
+    }
     throw new Error('Failed to verify patient');
   }
 

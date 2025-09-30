@@ -73,9 +73,13 @@ export default function VerificationPage({ organization }: VerificationPageProps
         });
       }
     } catch (error) {
+      const errorMessage = error instanceof Error && error.message === 'UNAUTHORIZED'
+        ? 'Incorrect Credentials or data'
+        : 'An error occurred during verification. Please try again.';
+
       toast({
-        title: 'Error',
-        description: 'An error occurred during verification. Please try again.',
+        title: 'Verification Failed',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
