@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { type IntakeOrganization, type IntakeForm, type FormField } from '@/lib/intake.api';
 import { FileText, Send } from 'lucide-react';
+import { useIntakeContext } from './index';
 
 interface IntakeFormPageProps {
   organization: IntakeOrganization;
@@ -15,9 +17,18 @@ interface IntakeFormPageProps {
 }
 
 export default function IntakeFormPage({ organization, intakeForm }: IntakeFormPageProps) {
+  const navigate = useNavigate();
+  const { hash } = useParams<{ hash: string }>();
   const { toast } = useToast();
+  const { isVerified } = useIntakeContext();
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!isVerified) {
+      navigate(`/intake/${hash}`);
+    }
+  }, [isVerified, navigate, hash]);
 
   const handleFieldChange = (fieldId: string, value: any) => {
     setFormData((prev) => ({
@@ -70,83 +81,85 @@ export default function IntakeFormPage({ organization, intakeForm }: IntakeFormP
       case 'text':
       case 'email':
         return (
-          <div key={field.id} className="space-y-2">
-            <Label htmlFor={field.id} className="text-sm font-normal text-gray-900">
+          <div key={field.id}>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               {field.label}
               {field.required && <span className="text-red-500 ml-1">*</span>}
-            </Label>
-            <Input
+            </label>
+            <input
               id={field.id}
               type={field.type}
               placeholder={field.placeholder}
               value={value}
               onChange={(e) => handleFieldChange(field.id, e.target.value)}
               required={field.required}
-              className="h-11 border-gray-300"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
         );
 
       case 'textarea':
         return (
-          <div key={field.id} className="space-y-2">
-            <Label htmlFor={field.id} className="text-sm font-normal text-gray-900">
+          <div key={field.id}>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               {field.label}
               {field.required && <span className="text-red-500 ml-1">*</span>}
-            </Label>
-            <Textarea
+            </label>
+            <textarea
               id={field.id}
               placeholder={field.placeholder}
               value={value}
               onChange={(e) => handleFieldChange(field.id, e.target.value)}
               required={field.required}
-              rows={field.rows || 4}
-              className="resize-none border-gray-300"
+              rows={field.rows || 3}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 resize-none"
             />
           </div>
         );
 
       case 'checkbox':
         return (
-          <div key={field.id} className="flex items-start space-x-3 py-2">
-            <Checkbox
+          <div key={field.id} className="flex items-center">
+            <input
+              type="checkbox"
               id={field.id}
               checked={value}
-              onCheckedChange={(checked) => handleFieldChange(field.id, checked)}
+              onChange={(e) => handleFieldChange(field.id, e.target.checked)}
               required={field.required}
-              className="mt-0.5"
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
             />
-            <Label htmlFor={field.id} className="cursor-pointer font-normal text-sm text-gray-700 leading-normal">
+            <label htmlFor={field.id} className="ml-2 text-sm text-gray-700">
               {field.label}
               {field.required && <span className="text-red-500 ml-1">*</span>}
-            </Label>
+            </label>
           </div>
         );
 
       case 'checkbox_group':
         return (
-          <div key={field.id} className="space-y-4">
-            <Label className="text-sm font-normal text-gray-900">
+          <div key={field.id}>
+            <label className="block text-sm font-medium text-gray-700 mb-3">
               {field.label}
               {field.required && <span className="text-red-500 ml-1">*</span>}
-            </Label>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3">
+            </label>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
               {field.options?.map((option) => (
-                <div key={option.value} className="flex items-start space-x-3">
-                  <Checkbox
+                <div key={option.value} className="flex items-center">
+                  <input
+                    type="checkbox"
                     id={`${field.id}-${option.value}`}
                     checked={formData[field.id]?.includes(option.value) || false}
-                    onCheckedChange={(checked) =>
-                      handleCheckboxGroupChange(field.id, option.value, checked as boolean)
+                    onChange={(e) =>
+                      handleCheckboxGroupChange(field.id, option.value, e.target.checked)
                     }
-                    className="mt-0.5"
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   />
-                  <Label
+                  <label
                     htmlFor={`${field.id}-${option.value}`}
-                    className="cursor-pointer font-normal text-sm text-gray-700 leading-normal"
+                    className="ml-2 text-sm text-gray-700"
                   >
                     {option.label}
-                  </Label>
+                  </label>
                 </div>
               ))}
             </div>
@@ -155,27 +168,24 @@ export default function IntakeFormPage({ organization, intakeForm }: IntakeFormP
 
       case 'select':
         return (
-          <div key={field.id} className="space-y-2">
-            <Label htmlFor={field.id} className="text-sm font-normal text-gray-900">
+          <div key={field.id}>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               {field.label}
               {field.required && <span className="text-red-500 ml-1">*</span>}
-            </Label>
-            <Select
-              value={value || undefined}
-              onValueChange={(val) => handleFieldChange(field.id, val)}
+            </label>
+            <select
+              value={value || ''}
+              onChange={(e) => handleFieldChange(field.id, e.target.value)}
               required={field.required}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
             >
-              <SelectTrigger className="h-11 border-gray-300">
-                <SelectValue placeholder={field.placeholder || 'Select an option'} />
-              </SelectTrigger>
-              <SelectContent>
-                {field.options?.filter(opt => opt.value).map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <option value="">{field.placeholder || 'Select an option'}</option>
+              {field.options?.filter(opt => opt.value).map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           </div>
         );
 
@@ -202,32 +212,32 @@ export default function IntakeFormPage({ organization, intakeForm }: IntakeFormP
          nextField.label.toLowerCase().includes('regarding'))
       ) {
         result.push(
-          <div key={field.id} className="grid grid-cols-1 lg:grid-cols-[1fr_1.5fr] gap-4 items-start">
-            <div className="space-y-2">
-              <Label htmlFor={field.id} className="text-sm font-normal text-gray-900">
+          <div key={field.id} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 {field.label}
                 {field.required && <span className="text-red-500 ml-1">*</span>}
-              </Label>
-              <Input
-                id={field.id}
+              </label>
+              <input
                 type={field.type}
                 placeholder={field.placeholder}
                 value={formData[field.id] || ''}
                 onChange={(e) => handleFieldChange(field.id, e.target.value)}
                 required={field.required}
-                className="h-11 border-gray-300"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
-            <div className="flex items-start space-x-3 lg:mt-9">
-              <Checkbox
+            <div className="flex items-center pt-6">
+              <input
+                type="checkbox"
                 id={nextField.id}
                 checked={formData[nextField.id] || false}
-                onCheckedChange={(checked) => handleFieldChange(nextField.id, checked)}
-                className="mt-0.5"
+                onChange={(e) => handleFieldChange(nextField.id, e.target.checked)}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
               />
-              <Label htmlFor={nextField.id} className="cursor-pointer font-normal text-sm text-gray-700 leading-normal">
+              <label htmlFor={nextField.id} className="ml-2 text-sm text-gray-700">
                 {nextField.label}
-              </Label>
+              </label>
             </div>
           </div>
         );
@@ -238,7 +248,7 @@ export default function IntakeFormPage({ organization, intakeForm }: IntakeFormP
         !field.label.toLowerCase().includes('address')
       ) {
         result.push(
-          <div key={`${field.id}-${nextField.id}`} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div key={`${field.id}-${nextField.id}`} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {renderField(field)}
             {renderField(nextField)}
           </div>
@@ -246,7 +256,7 @@ export default function IntakeFormPage({ organization, intakeForm }: IntakeFormP
         i += 2;
       } else if (field.type === 'select' && nextField?.type === 'select') {
         result.push(
-          <div key={`${field.id}-${nextField.id}`} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div key={`${field.id}-${nextField.id}`} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {renderField(field)}
             {renderField(nextField)}
           </div>
@@ -263,54 +273,60 @@ export default function IntakeFormPage({ organization, intakeForm }: IntakeFormP
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b border-gray-200 py-6 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-center">
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-4xl mx-auto px-4 py-4">
+          <div className="text-center">
             <img
               src={organization.logoUrl}
               alt={organization.orgName}
-              className="h-12 object-contain"
+              className="h-12 w-auto mx-auto mb-2"
             />
+            <h1 className="text-base font-medium text-gray-900">{organization.orgName}</h1>
           </div>
-          <h1 className="text-center text-xl font-bold text-gray-900 mt-2">{organization.orgName}</h1>
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-5 mb-8 flex items-start space-x-3">
-          <FileText className="h-6 w-6 text-blue-600 flex-shrink-0 mt-0.5" />
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">{intakeForm.formTitle}</h2>
-            <p className="text-sm text-gray-600 mt-1">Please complete all sections of this intake form</p>
-          </div>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {intakeForm.sections.map((section) => (
-            <div key={section.id} className="bg-white rounded-lg border border-gray-200 shadow-sm">
-              <div className="px-8 py-6 border-b border-gray-200">
-                <h2 className="text-xl font-bold text-gray-900">{section.title}</h2>
-                {section.description && (
-                  <p className="text-sm text-gray-600 mt-1">{section.description}</p>
-                )}
-              </div>
-              <div className="px-8 py-6 space-y-6">
-                {renderFieldsInGrid(section.fields)}
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center space-x-3">
+              <FileText className="h-5 w-5 text-blue-600" />
+              <div>
+                <h1 className="text-lg font-semibold text-gray-900">{intakeForm.formTitle}</h1>
+                <p className="text-sm text-gray-600 mt-1">
+                  Please complete all sections of this intake form
+                </p>
               </div>
             </div>
-          ))}
-
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-8">
-            <Button
-              type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 h-12 text-base font-medium"
-              disabled={isSubmitting}
-            >
-              <Send className="h-5 w-5 mr-2" />
-              {isSubmitting ? 'Submitting...' : 'Submit Healthcare Form'}
-            </Button>
           </div>
-        </form>
+
+          <form onSubmit={handleSubmit} className="p-6">
+            <div className="space-y-8">
+              {intakeForm.sections.map((section) => (
+                <section key={section.id}>
+                  <h2 className="text-base font-semibold text-gray-900 mb-4">{section.title}</h2>
+                  {section.description && (
+                    <p className="text-sm text-gray-600 mb-4">{section.description}</p>
+                  )}
+                  <div className="space-y-4">
+                    {renderFieldsInGrid(section.fields)}
+                  </div>
+                </section>
+              ))}
+            </div>
+
+            <div className="mt-8 pt-6 border-t border-gray-200">
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full bg-blue-600 text-white py-3 px-4 rounded-md text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Send className="h-4 w-4 mr-2" />
+                {isSubmitting ? 'Submitting...' : 'Submit Healthcare Form'}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );
