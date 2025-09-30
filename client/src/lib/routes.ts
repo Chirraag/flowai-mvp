@@ -17,12 +17,18 @@ const AnalyticsAgent = lazy(() => import("@/pages/analytics/analytics"));
 const MembersPage = lazy(() => import("@/pages/members"));
 const LoginPage = lazy(() => import("@/pages/login"));
 const NotFound = lazy(() => import("@/pages/not-found"));
+const IntakePage = lazy(() => import("@/pages/intake"));
 
 export const routes: RouteObject[] = [
     // Login route - accessible without authentication
     {
         path: "/login",
         element: React.createElement(LoginPage),
+    },
+    // Public intake route - accessible without authentication
+    {
+        path: "/intake/:hash/*",
+        element: React.createElement(IntakePage),
     },
     {
         path: "/:orgId",

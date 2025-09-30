@@ -22,23 +22,35 @@ function AppRoutes() {
   const { isAuthenticated, isLoading } = useAuth();
   const element = useRoutes(routes);
 
+  const isPublicRoute =
+    window.location.pathname.includes("/login") ||
+    window.location.pathname.includes("/intake/");
+
   // Handle navigation after authentication state changes
   useEffect(() => {
     if (
       !isLoading &&
       !isAuthenticated &&
-      !window.location.pathname.includes("/login")
+      !isPublicRoute
     ) {
       window.location.href = "/login";
     }
-  }, [isAuthenticated, isLoading]);
+  }, [isAuthenticated, isLoading, isPublicRoute]);
 
-  if (isLoading) {
+  if (isLoading && !isPublicRoute) {
     return <LoadingLogo />;
   }
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated && !isPublicRoute) {
     return <LoginForm />;
+  }
+
+  if (isPublicRoute) {
+    return (
+      <Suspense fallback={<LoadingLogo />}>
+        {element}
+      </Suspense>
+    );
   }
 
   return (
