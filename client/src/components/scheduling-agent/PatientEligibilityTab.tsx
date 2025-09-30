@@ -1,10 +1,20 @@
 import React, { useImperativeHandle, forwardRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { IOSSwitch } from "@/components/ui/ios-switch";
 import { Users, FileText, User, CreditCard, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import type { PatientEligibilityValues } from "@/types/schedulingAgent";
 
 /**
@@ -40,9 +50,9 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEli
   const [medicare, setMedicare] = React.useState(false);
   const [medicaid, setMedicaid] = React.useState(false);
 
-  // Referral Requirements state
-  const [servicesRequiringReferrals, setServicesRequiringReferrals] = React.useState("");
-  const [insurancePlansRequiringReferrals, setInsurancePlansRequiringReferrals] = React.useState("");
+  // Referral Requirements state (arrays for individual input fields)
+  const [servicesRequiringReferrals, setServicesRequiringReferrals] = React.useState<string[]>([]);
+  const [insurancePlansRequiringReferrals, setInsurancePlansRequiringReferrals] = React.useState<string[]>([]);
 
   // Track unsaved changes
   const [hasUnsavedChanges, setHasUnsavedChanges] = React.useState(false);
@@ -57,8 +67,19 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEli
       setPpo(initialValues.patientTypes.ppo);
       setMedicare(initialValues.patientTypes.medicare);
       setMedicaid(initialValues.patientTypes.medicaid);
-      setServicesRequiringReferrals(initialValues.referralRequirements.servicesRequiringReferrals);
-      setInsurancePlansRequiringReferrals(initialValues.referralRequirements.insurancePlansRequiringReferrals);
+
+      // Convert textarea strings to arrays for individual input fields
+      setServicesRequiringReferrals(
+        initialValues.referralRequirements.servicesRequiringReferrals
+          ? initialValues.referralRequirements.servicesRequiringReferrals.split('\n').filter(line => line.trim())
+          : []
+      );
+      setInsurancePlansRequiringReferrals(
+        initialValues.referralRequirements.insurancePlansRequiringReferrals
+          ? initialValues.referralRequirements.insurancePlansRequiringReferrals.split('\n').filter(line => line.trim())
+          : []
+      );
+
       setHasUnsavedChanges(false);
     }
   }, [initialValues]);
@@ -66,6 +87,70 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEli
   // Track changes
   const handleFieldChange = () => {
     setHasUnsavedChanges(true);
+  };
+
+  // Referral management handlers
+  const handleAddService = () => {
+    setServicesRequiringReferrals([...servicesRequiringReferrals, ""]);
+    handleFieldChange();
+  };
+
+  const handleAddInsurancePlan = () => {
+    setInsurancePlansRequiringReferrals([...insurancePlansRequiringReferrals, ""]);
+    handleFieldChange();
+  };
+
+  const handleUpdateService = (index: number, value: string) => {
+    const updated = [...servicesRequiringReferrals];
+    updated[index] = value;
+    setServicesRequiringReferrals(updated);
+    handleFieldChange();
+  };
+
+  const handleUpdateInsurancePlan = (index: number, value: string) => {
+    const updated = [...insurancePlansRequiringReferrals];
+    updated[index] = value;
+    setInsurancePlansRequiringReferrals(updated);
+    handleFieldChange();
+  };
+
+  // Delete confirmation dialog state
+  const [deleteDialog, setDeleteDialog] = React.useState<{
+    open: boolean;
+    type?: 'service' | 'insurance';
+    index?: number;
+    name?: string;
+  }>({ open: false });
+
+  // Delete handlers
+  const handleDeleteService = (index: number, serviceName: string) => {
+    setDeleteDialog({
+      open: true,
+      type: 'service',
+      index,
+      name: serviceName
+    });
+  };
+
+  const handleDeleteInsurancePlan = (index: number, planName: string) => {
+    setDeleteDialog({
+      open: true,
+      type: 'insurance',
+      index,
+      name: planName
+    });
+  };
+
+  const handleConfirmDelete = () => {
+    if (deleteDialog.type === 'service' && deleteDialog.index !== undefined) {
+      const updated = servicesRequiringReferrals.filter((_, i) => i !== deleteDialog.index);
+      setServicesRequiringReferrals(updated);
+    } else if (deleteDialog.type === 'insurance' && deleteDialog.index !== undefined) {
+      const updated = insurancePlansRequiringReferrals.filter((_, i) => i !== deleteDialog.index);
+      setInsurancePlansRequiringReferrals(updated);
+    }
+    setDeleteDialog({ open: false });
+    handleFieldChange();
   };
 
   // Save handler
@@ -93,8 +178,9 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEli
         medicaid,
       },
       referralRequirements: {
-        servicesRequiringReferrals,
-        insurancePlansRequiringReferrals,
+        // Convert arrays back to newline-separated strings for API compatibility
+        servicesRequiringReferrals: servicesRequiringReferrals.filter(item => item.trim()).join('\n'),
+        insurancePlansRequiringReferrals: insurancePlansRequiringReferrals.filter(item => item.trim()).join('\n'),
       },
     }),
     validate: () => {
@@ -302,42 +388,116 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEli
 
           {/* Enhanced Referral Requirements Sections */}
           <div className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="services-referrals" className="text-sm font-semibold text-[#1c275e]">Services Requiring Referrals</Label>
-              <Textarea
-                id="services-referrals"
-                placeholder="Enter services that require referrals (one per line)"
-                value={servicesRequiringReferrals}
-                onChange={(e) => {
-                  if (!readOnly) {
-                    setServicesRequiringReferrals(e.target.value);
-                    handleFieldChange();
-                  }
-                }}
-                readOnly={readOnly}
-                className="min-h-32 resize-none border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
-              />
+            {/* Services Requiring Referrals */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <Label className="text-sm font-semibold text-[#1c275e]">Services Requiring Referrals</Label>
+                {!readOnly && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleAddService}
+                    className="bg-[#f48024] hover:bg-[#f48024]/90 text-white"
+                  >
+                    Add Service
+                  </Button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {servicesRequiringReferrals.map((service, index) => (
+                  <div key={index} className="flex items-center gap-1 bg-muted px-3 py-1 rounded-full">
+                    <Input
+                      placeholder="Service name (e.g., MRI)"
+                      value={service}
+                      onChange={readOnly ? undefined : (e) => handleUpdateService(index, e.target.value)}
+                      readOnly={readOnly}
+                      className="border-none bg-transparent p-0 h-auto text-sm min-w-[150px]"
+                    />
+                    {!readOnly && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-4 w-4 p-0 text-red-600 hover:text-red-700"
+                        onClick={() => handleDeleteService(index, service)}
+                      >
+                        ×
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                {servicesRequiringReferrals.length === 0 && (
+                  <p className="text-sm text-muted-foreground">No services added yet.</p>
+                )}
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="insurance-referrals" className="text-sm font-semibold text-[#1c275e]">Insurance Plans Requiring Referrals</Label>
-              <Textarea
-                id="insurance-referrals"
-                placeholder="Enter insurance plans that require referrals (one per line)"
-                value={insurancePlansRequiringReferrals}
-                onChange={(e) => {
-                  if (!readOnly) {
-                    setInsurancePlansRequiringReferrals(e.target.value);
-                    handleFieldChange();
-                  }
-                }}
-                readOnly={readOnly}
-                className="min-h-32 resize-none border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
-              />
+            {/* Insurance Plans Requiring Referrals */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <Label className="text-sm font-semibold text-[#1c275e]">Insurance Plans Requiring Referrals</Label>
+                {!readOnly && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleAddInsurancePlan}
+                    className="bg-[#f48024] hover:bg-[#f48024]/90 text-white"
+                  >
+                    Add Plan
+                  </Button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {insurancePlansRequiringReferrals.map((plan, index) => (
+                  <div key={index} className="flex items-center gap-1 bg-muted px-3 py-1 rounded-full">
+                    <Input
+                      placeholder="Insurance plan name"
+                      value={plan}
+                      onChange={readOnly ? undefined : (e) => handleUpdateInsurancePlan(index, e.target.value)}
+                      readOnly={readOnly}
+                      className="border-none bg-transparent p-0 h-auto text-sm min-w-[150px]"
+                    />
+                    {!readOnly && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-4 w-4 p-0 text-red-600 hover:text-red-700"
+                        onClick={() => handleDeleteInsurancePlan(index, plan)}
+                      >
+                        ×
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                {insurancePlansRequiringReferrals.length === 0 && (
+                  <p className="text-sm text-muted-foreground">No insurance plans added yet.</p>
+                )}
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Deletion Confirmation Dialog */}
+      <AlertDialog open={deleteDialog.open} onOpenChange={() => setDeleteDialog({ open: false })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {deleteDialog.type === 'service' ? 'Service' : 'Insurance Plan'}</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{deleteDialog.name}"?
+              This change will be applied when you click Save.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 });

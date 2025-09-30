@@ -12,7 +12,6 @@ import type {
   PatientEligibilityValues,
   SchedulingPoliciesValues,
   ProviderPreferencesValues,
-  AgentConfigValues,
 } from "@/types/schedulingAgent";
 
 // Lazy-load tab sections so future heavy UIs don't bloat initial load.
@@ -21,7 +20,6 @@ const PatientEligibilityTab = lazy(() => import("@/components/scheduling-agent/P
 const SchedulingPoliciesTab = lazy(() => import("@/components/scheduling-agent/SchedulingPoliciesTab"));
 const ProviderPreferencesTab = lazy(() => import("@/components/scheduling-agent/ProviderPreferencesTab"));
 const WorkflowsTab = lazy(() => import("@/components/scheduling-agent/WorkflowsTab"));
-const AgentConfigTab = lazy(() => import("@/components/scheduling-agent/AgentConfigTab"));
 
 export default function SchedulingAgent() {
   const { toast } = useToast();
@@ -45,7 +43,6 @@ export default function SchedulingAgent() {
   const schedulingPoliciesRef = React.useRef<any>(null);
   const providerPreferencesRef = React.useRef<any>(null);
   const workflowsRef = React.useRef<any>(null);
-  const agentConfigRef = React.useRef<any>(null);
 
   // Retry utility with exponential backoff
   const retryWithBackoff = async <T,>(
@@ -123,7 +120,6 @@ export default function SchedulingAgent() {
         schedulingPoliciesRef.current?.validate?.(),
         providerPreferencesRef.current?.validate?.(),
         workflowsRef.current?.validate?.(),
-        agentConfigRef.current?.validate?.(),
       ]);
 
       // Check if any validation failed
@@ -145,7 +141,6 @@ export default function SchedulingAgent() {
         patientEligibility: patientEligibilityRef.current?.getValues?.(),
         schedulingPolicies: schedulingPoliciesRef.current?.getValues?.(),
         providerPreferences: providerPreferencesRef.current?.getValues?.(),
-        agentConfig: agentConfigRef.current?.getValues?.(),
       };
 
       // Build update tasks with metadata
@@ -183,13 +178,6 @@ export default function SchedulingAgent() {
           apiFn: () => schedulingAgentApi.updateProviderPreferences(String(user.org_id), uiToApi.providerPreferences(tabValues.providerPreferences)),
           currentValues: apiToUi.providerPreferences(agentData),
           newValues: tabValues.providerPreferences,
-        },
-        {
-          key: 'agentConfig',
-          name: 'Agent Config',
-          apiFn: () => schedulingAgentApi.updateAgentConfig(String(user.org_id), uiToApi.agentConfig(tabValues.agentConfig)),
-          currentValues: apiToUi.agentConfig(agentData),
-          newValues: tabValues.agentConfig,
         },
       ];
 
@@ -313,14 +301,6 @@ export default function SchedulingAgent() {
     await refetchAgentData();
   };
 
-  const handleSaveAgentConfig = async (values: AgentConfigValues) => {
-    if (!agentData || !user?.org_id) return;
-    await schedulingAgentApi.updateAgentConfig(String(user.org_id), uiToApi.agentConfig(values));
-    toast({ title: "Success", description: "Agent configuration saved successfully." });
-    await refetchAgentData();
-  };
-
-
   // Function to refetch agent data after save
   const refetchAgentData = async () => {
     if (!user?.org_id) return;
@@ -343,7 +323,6 @@ export default function SchedulingAgent() {
     patientEligibility: apiToUi.patientEligibility(agentData),
     schedulingPolicies: apiToUi.schedulingPolicies(agentData),
     providerPreferences: apiToUi.providerPreferences(agentData),
-    agentConfig: apiToUi.agentConfig(agentData),
   } : null;
 
 
@@ -408,12 +387,6 @@ export default function SchedulingAgent() {
           >
             Workflows
           </TabsTrigger>
-          <TabsTrigger
-            value="agent-config"
-            className="flex-1 first:rounded-l-3xl last:rounded-r-3xl data-[state=active]:bg-[#1c275e] data-[state=active]:text-white transition-all duration-300 font-medium text-center h-full flex items-center justify-center px-1 py-0 text-xs sm:text-sm border-0 leading-none"
-          >
-            Agent Config
-          </TabsTrigger>
         </TabsList>
 
         {/* Appointment Setup tab */}
@@ -472,19 +445,6 @@ export default function SchedulingAgent() {
         <TabsContent value="workflows">
           <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
             <WorkflowsTab ref={workflowsRef} readOnly={isReadOnly} />
-          </Suspense>
-        </TabsContent>
-
-        {/* Agent Config tab */}
-        <TabsContent value="agent-config">
-          <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
-            <AgentConfigTab
-              ref={agentConfigRef}
-              initialValues={initialValues?.agentConfig}
-              onSave={handleSaveAgentConfig}
-              isSaving={isSaving}
-              readOnly={isReadOnly}
-            />
           </Suspense>
         </TabsContent>
       </Tabs>

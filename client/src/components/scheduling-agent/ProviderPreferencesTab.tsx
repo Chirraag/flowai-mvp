@@ -1,9 +1,21 @@
 import React, { useImperativeHandle, forwardRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Users, Calendar, Settings, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import type { ProviderPreferencesValues } from "@/types/schedulingAgent";
 
 /**
@@ -31,9 +43,9 @@ export type ProviderPreferencesTabHandle = {
 
 const ProviderPreferencesTab = forwardRef<ProviderPreferencesTabHandle, ProviderPreferencesTabProps>(({ initialValues, onSave, isSaving = false, readOnly = false }, ref) => {
   // Provider Preferences state
-  const [providerBlackoutDates, setProviderBlackoutDates] = React.useState("");
+  const [providerBlackoutDates, setProviderBlackoutDates] = React.useState<string[]>([]);
   const [establishedPatientsOnlyDays, setEstablishedPatientsOnlyDays] = React.useState("");
-  const [customSchedulingRules, setCustomSchedulingRules] = React.useState("");
+  const [customSchedulingRules, setCustomSchedulingRules] = React.useState<string[]>([]);
 
   // Track unsaved changes
   const [hasUnsavedChanges, setHasUnsavedChanges] = React.useState(false);
@@ -41,9 +53,19 @@ const ProviderPreferencesTab = forwardRef<ProviderPreferencesTabHandle, Provider
   // Set initial values when props change
   useEffect(() => {
     if (initialValues) {
-      setProviderBlackoutDates(initialValues.providerBlackoutDates);
+      // Convert textarea string to array for individual date inputs
+      setProviderBlackoutDates(
+        initialValues.providerBlackoutDates
+          ? initialValues.providerBlackoutDates.split('\n').filter(date => date.trim())
+          : []
+      );
       setEstablishedPatientsOnlyDays(initialValues.establishedPatientsOnlyDays);
-      setCustomSchedulingRules(initialValues.customSchedulingRules);
+      // Convert textarea string to array for individual rule inputs
+      setCustomSchedulingRules(
+        initialValues.customSchedulingRules
+          ? initialValues.customSchedulingRules.split('\n').filter(rule => rule.trim())
+          : []
+      );
       setHasUnsavedChanges(false);
     }
   }, [initialValues]);
@@ -51,6 +73,79 @@ const ProviderPreferencesTab = forwardRef<ProviderPreferencesTabHandle, Provider
   // Track changes
   const handleFieldChange = () => {
     setHasUnsavedChanges(true);
+  };
+
+  // Blackout dates management handlers
+  const handleAddBlackoutDate = () => {
+    setProviderBlackoutDates([...providerBlackoutDates, ""]);
+    handleFieldChange();
+  };
+
+  const handleUpdateBlackoutDate = (index: number, value: string) => {
+    const updated = [...providerBlackoutDates];
+    updated[index] = value;
+    setProviderBlackoutDates(updated);
+    handleFieldChange();
+  };
+
+  // Delete confirmation dialog state
+  const [deleteDialog, setDeleteDialog] = React.useState<{
+    open: boolean;
+    index?: number;
+    date?: string;
+  }>({ open: false });
+
+  // Rule delete confirmation dialog state
+  const [ruleDeleteDialog, setRuleDeleteDialog] = React.useState<{
+    open: boolean;
+    index?: number;
+  }>({ open: false });
+
+  // Delete handlers
+  const handleDeleteBlackoutDate = (index: number, date: string) => {
+    setDeleteDialog({
+      open: true,
+      index,
+      date
+    });
+  };
+
+  const handleConfirmDelete = () => {
+    if (deleteDialog.index !== undefined) {
+      const updated = providerBlackoutDates.filter((_, i) => i !== deleteDialog.index);
+      setProviderBlackoutDates(updated);
+      handleFieldChange();
+    }
+    setDeleteDialog({ open: false });
+  };
+
+  // Custom scheduling rules management handlers
+  const handleAddRule = () => {
+    setCustomSchedulingRules([...customSchedulingRules, ""]);
+    handleFieldChange();
+  };
+
+  const handleUpdateRule = (index: number, value: string) => {
+    const updated = [...customSchedulingRules];
+    updated[index] = value;
+    setCustomSchedulingRules(updated);
+    handleFieldChange();
+  };
+
+  const handleDeleteRule = (index: number) => {
+    setRuleDeleteDialog({
+      open: true,
+      index
+    });
+  };
+
+  const handleConfirmRuleDelete = () => {
+    if (ruleDeleteDialog.index !== undefined) {
+      const updated = customSchedulingRules.filter((_, i) => i !== ruleDeleteDialog.index);
+      setCustomSchedulingRules(updated);
+      handleFieldChange();
+    }
+    setRuleDeleteDialog({ open: false });
   };
 
   // Save handler
@@ -68,9 +163,11 @@ const ProviderPreferencesTab = forwardRef<ProviderPreferencesTabHandle, Provider
   // Expose values and validation to parent page
   useImperativeHandle(ref, () => ({
     getValues: () => ({
-      providerBlackoutDates,
+      // Convert array back to newline-separated string for API compatibility
+      providerBlackoutDates: providerBlackoutDates.filter(date => date.trim()).join('\n'),
       establishedPatientsOnlyDays,
-      customSchedulingRules,
+      // Convert array back to newline-separated string for API compatibility
+      customSchedulingRules: customSchedulingRules.filter(rule => rule.trim()).join('\n'),
     }),
     validate: () => {
       const errors: string[] = [];
@@ -122,24 +219,49 @@ const ProviderPreferencesTab = forwardRef<ProviderPreferencesTabHandle, Provider
                 <div className="w-8 h-8 bg-[#f48024]/20 rounded-lg flex items-center justify-center">
                   <Calendar className="h-4 w-4 text-[#f48024]" />
                 </div>
-                <Label htmlFor="blackout-dates" className="text-sm font-semibold text-[#1c275e]">Provider Blackout Dates</Label>
+                <div className="flex items-center justify-between w-full">
+                  <Label className="text-sm font-semibold text-[#1c275e]">Provider Blackout Dates (DD-MM-YYYY) </Label>
+                  {!readOnly && (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={handleAddBlackoutDate}
+                      className="bg-[#f48024] hover:bg-[#f48024]/90 text-white"
+                    >
+                      Add Date
+                    </Button>
+                  )}
+                </div>
               </div>
-              <Textarea
-                id="blackout-dates"
-                placeholder="Enter dates when the provider is unavailable (one per line)"
-                value={providerBlackoutDates}
-                onChange={(e) => {
-                  if (!readOnly) {
-                    setProviderBlackoutDates(e.target.value);
-                    handleFieldChange();
-                  }
-                }}
-                readOnly={readOnly}
-                className="min-h-32 resize-none border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
-              />
+              <div className="flex flex-wrap gap-2">
+                {providerBlackoutDates.map((date, index) => (
+                  <div key={index} className="flex items-center gap-1 bg-muted px-3 py-1 rounded-full">
+                    <Input
+                      type="date"
+                      value={date}
+                      onChange={readOnly ? undefined : (e) => handleUpdateBlackoutDate(index, e.target.value)}
+                      readOnly={readOnly}
+                      className="border-none bg-transparent p-0 h-auto text-sm min-w-[140px]"
+                    />
+                    {!readOnly && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-4 w-4 p-0 text-red-600 hover:text-red-700"
+                        onClick={() => handleDeleteBlackoutDate(index, date)}
+                      >
+                        ×
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                {providerBlackoutDates.length === 0 && (
+                  <p className="text-sm text-muted-foreground">No blackout dates added yet.</p>
+                )}
+              </div>
             </div>
 
-            <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
+            {/* <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-8 h-8 bg-[#1c275e]/20 rounded-lg flex items-center justify-center">
                   <Users className="h-4 w-4 text-[#1c275e]" />
@@ -159,32 +281,100 @@ const ProviderPreferencesTab = forwardRef<ProviderPreferencesTabHandle, Provider
                 readOnly={readOnly}
                 className="min-h-32 resize-none border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
               />
-            </div>
+            </div> */}
 
             <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-8 h-8 bg-[#2a3570]/20 rounded-lg flex items-center justify-center">
-                  <Settings className="h-4 w-4 text-[#2a3570]" />
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-[#2a3570]/20 rounded-lg flex items-center justify-center">
+                    <Settings className="h-4 w-4 text-[#2a3570]" />
+                  </div>
+                  <Label className="text-sm font-semibold text-[#1c275e]">Custom Scheduling Rules</Label>
                 </div>
-                <Label htmlFor="custom-rules" className="text-sm font-semibold text-[#1c275e]">Custom Scheduling Rules</Label>
+                {!readOnly && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleAddRule}
+                    className="bg-[#f48024] hover:bg-[#f48024]/90 text-white"
+                  >
+                    Add Rule
+                  </Button>
+                )}
               </div>
-              <Textarea
-                id="custom-rules"
-                placeholder="Enter custom scheduling rules and restrictions (one per line)"
-                value={customSchedulingRules}
-                onChange={(e) => {
-                  if (!readOnly) {
-                    setCustomSchedulingRules(e.target.value);
-                    handleFieldChange();
-                  }
-                }}
-                readOnly={readOnly}
-                className="min-h-32 resize-none border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
-              />
+              <div className="space-y-2">
+                {customSchedulingRules.map((rule, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <Input
+                      placeholder="Enter custom scheduling rule (e.g., No new patients on Mondays before noon)"
+                      value={rule}
+                      onChange={readOnly ? undefined : (e) => handleUpdateRule(index, e.target.value)}
+                      readOnly={readOnly}
+                      className="flex-1 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
+                    />
+                    {!readOnly && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-9 w-9 p-0 text-red-600 hover:text-red-700"
+                        onClick={() => handleDeleteRule(index)}
+                      >
+                        ×
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                {customSchedulingRules.length === 0 && (
+                  <p className="text-sm text-muted-foreground">No custom rules added yet.</p>
+                )}
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Deletion Confirmation Dialog */}
+      <AlertDialog open={deleteDialog.open} onOpenChange={() => setDeleteDialog({ open: false })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Blackout Date</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the blackout date "{deleteDialog.date}"?
+              This change will be applied when you click Save.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Rule Deletion Confirmation Dialog */}
+      <AlertDialog open={ruleDeleteDialog.open} onOpenChange={() => setRuleDeleteDialog({ open: false })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Scheduling Rule</AlertDialogTitle>
+            <AlertDialogDescription>
+              This rule will be deleted. This change will be applied when you click Save.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmRuleDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 });

@@ -9,6 +9,28 @@ export interface ApiResponse<T> {
   data?: T;
 }
 
+// Shared domain types for common structures
+export interface AppointmentTypeFlags {
+  newPatient: boolean;
+  followUp: boolean;
+  procedure: boolean;
+}
+
+export interface PatientTypeFlags {
+  newPatients: boolean;
+  existingPatients: boolean;
+  selfPay: boolean;
+  hmo: boolean;
+  ppo: boolean;
+  medicare: boolean;
+  medicaid: boolean;
+}
+
+export interface ReferralRequirements {
+  servicesRequiringReferrals: string[];
+  insurancePlansRequiringReferrals: string[];
+}
+
 // GET /scheduling-agent/:id response
 export interface SchedulingAgent {
   id: string;
@@ -65,11 +87,7 @@ export interface SchedulingAgent {
 // PUT payloads for each endpoint
 
 export interface UpdateAppointmentSetupPayload {
-  appointment_types: {
-    new_patient: boolean;
-    follow_up: boolean;
-    procedure: boolean;
-  };
+  appointment_types: AppointmentTypeFlags;
   new_patient_duration: string;
   followup_duration: string;
   procedure_specific: string;
@@ -79,19 +97,8 @@ export interface UpdateAppointmentSetupPayload {
 }
 
 export interface UpdatePatientEligibilityPayload {
-  patient_types_accepted: {
-    new_patients: boolean;
-    existing_patients: boolean;
-    self_pay: boolean;
-    hmo: boolean;
-    ppo: boolean;
-    medicare: boolean;
-    medicaid: boolean;
-  };
-  referral_requirements: {
-    services_requiring_referrals: string[];
-    insurance_plans_requiring_referrals: string[];
-  };
+  patient_types_accepted: PatientTypeFlags;
+  referral_requirements: ReferralRequirements;
 }
 
 export interface UpdateSchedulingPoliciesPayload {
@@ -138,23 +145,11 @@ export interface AppointmentSetupValues {
   procedureDuration: string;
   maxNewPatients: string;
   maxFollowUps: string;
-  appointmentTypes: {
-    newPatient: boolean;
-    followUp: boolean;
-    procedure: boolean;
-  };
+  appointmentTypes: AppointmentTypeFlags;
 }
 
 export interface PatientEligibilityValues {
-  patientTypes: {
-    newPatients: boolean;
-    existingPatients: boolean;
-    selfPay: boolean;
-    hmo: boolean;
-    ppo: boolean;
-    medicare: boolean;
-    medicaid: boolean;
-  };
+  patientTypes: PatientTypeFlags;
   referralRequirements: {
     servicesRequiringReferrals: string;
     insurancePlansRequiringReferrals: string;

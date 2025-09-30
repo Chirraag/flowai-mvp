@@ -47,6 +47,10 @@ const FrequentlyAskedQuestionsTab = forwardRef<FrequentlyAskedQuestionsTabHandle
   const [dialogQuestion, setDialogQuestion] = useState('');
   const [dialogAnswer, setDialogAnswer] = useState('');
 
+  // Delete confirmation dialog state
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deletingFAQIndex, setDeletingFAQIndex] = useState<number | null>(null);
+
   // Sync local state with API data
   React.useEffect(() => {
     if (agentData?.faqs) {
@@ -70,8 +74,17 @@ const FrequentlyAskedQuestionsTab = forwardRef<FrequentlyAskedQuestionsTabHandle
     setIsDialogOpen(true);
   };
 
-  // Handle deleting FAQ
-  const handleDeleteFAQ = (index: number) => {
+  // Handle showing delete confirmation dialog
+  const handleShowDeleteConfirmation = (index: number) => {
+    setDeletingFAQIndex(index);
+    setIsDeleteDialogOpen(true);
+  };
+
+  // Handle deleting FAQ (called after confirmation)
+  const handleDeleteFAQ = () => {
+    if (deletingFAQIndex === null) return;
+
+    const index = deletingFAQIndex;
     const updatedFaqs = faqs.filter((_, i) => i !== index);
     setFaqs(updatedFaqs);
     updateFAQsMutation.mutate(updatedFaqs, {
@@ -80,6 +93,8 @@ const FrequentlyAskedQuestionsTab = forwardRef<FrequentlyAskedQuestionsTabHandle
           title: "FAQ deleted",
           description: "The FAQ has been removed successfully.",
         });
+        setIsDeleteDialogOpen(false);
+        setDeletingFAQIndex(null);
       },
       onError: (error) => {
         toast({
@@ -89,6 +104,8 @@ const FrequentlyAskedQuestionsTab = forwardRef<FrequentlyAskedQuestionsTabHandle
         });
         // Revert local state on error
         setFaqs(agentData?.faqs || []);
+        setIsDeleteDialogOpen(false);
+        setDeletingFAQIndex(null);
       },
     });
   };
@@ -208,15 +225,28 @@ const FrequentlyAskedQuestionsTab = forwardRef<FrequentlyAskedQuestionsTabHandle
     <div className="space-y-6">
       {/* Enhanced FAQ Management Section */}
       <Card className="border border-gray-200 rounded-xl shadow-lg overflow-hidden">
-        <CardHeader className="bg-gradient-to-r from-[#1c275e] to-[#2a3570] text-white p-2">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#f48024]/20 rounded-lg flex items-center justify-center">
-              <HelpCircle className="h-5 w-5 text-[#f48024]" />
+        <CardHeader className="bg-gradient-to-r from-[#1c275e] to-[#2a3570] text-white p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-[#f48024]/20 rounded-lg flex items-center justify-center">
+                <HelpCircle className="h-5 w-5 text-[#f48024]" />
+              </div>
+              <div>
+                <CardTitle className="text-xl font-semibold text-white">FAQ Management</CardTitle>
+                <p className="text-gray-200 text-sm mt-1">Manage frequently asked questions for the customer support agent</p>
+              </div>
             </div>
-            <div>
-              <CardTitle className="text-xl font-semibold text-white">FAQ Management</CardTitle>
-              <p className="text-gray-200 text-sm mt-1">Manage frequently asked questions for the customer support agent</p>
-            </div>
+            {/* Add New FAQ Button - Hidden for read-only users */}
+            {!readOnly && (
+              <Button
+                onClick={handleAddNewFAQ}
+                disabled={updateFAQsMutation.isPending}
+                className="flex items-center gap-2 bg-[#f48024] hover:bg-[#e66f20] text-white px-4 py-2 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 text-sm disabled:opacity-50"
+              >
+                <Plus className="h-4 w-4" />
+                Add New FAQ
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent className="p-6">
@@ -263,7 +293,7 @@ const FrequentlyAskedQuestionsTab = forwardRef<FrequentlyAskedQuestionsTabHandle
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleDeleteFAQ(index)}
+                          onClick={() => handleShowDeleteConfirmation(index)}
                           disabled={updateFAQsMutation.isPending}
                           className="flex items-center gap-1 h-8 px-3 text-xs text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400"
                         >
@@ -292,20 +322,6 @@ const FrequentlyAskedQuestionsTab = forwardRef<FrequentlyAskedQuestionsTabHandle
               </Card>
             )}
           </div>
-
-          {/* Add New FAQ Button - Hidden for read-only users */}
-          {!readOnly && (
-            <div className="pt-6">
-              <Button
-                onClick={handleAddNewFAQ}
-                disabled={updateFAQsMutation.isPending}
-                className="flex items-center gap-2 bg-[#f48024] hover:bg-[#e66f20] text-white px-4 py-2 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 text-sm disabled:opacity-50"
-              >
-                <Plus className="h-4 w-4" />
-                Add New FAQ
-              </Button>
-            </div>
-          )}
         </CardContent>
       </Card>
 
@@ -399,6 +415,61 @@ const FrequentlyAskedQuestionsTab = forwardRef<FrequentlyAskedQuestionsTabHandle
                 </>
               ) : (
                 editingFAQ ? 'Update FAQ' : 'Add FAQ'
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="text-[#1c275e] flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-red-600" />
+              Delete FAQ
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <p className="text-gray-700">
+              Are you sure you want to delete this FAQ? This action cannot be undone.
+            </p>
+            {deletingFAQIndex !== null && faqs[deletingFAQIndex] && (
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <p className="font-medium text-gray-900 text-sm mb-1">Question:</p>
+                <p className="text-sm text-gray-700 italic">"{faqs[deletingFAQIndex].question}"</p>
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsDeleteDialogOpen(false);
+                setDeletingFAQIndex(null);
+              }}
+              disabled={updateFAQsMutation.isPending}
+              className="hover:bg-gray-50"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleDeleteFAQ}
+              disabled={updateFAQsMutation.isPending}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {updateFAQsMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete FAQ
+                </>
               )}
             </Button>
           </div>
