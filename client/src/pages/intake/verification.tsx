@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,19 +23,42 @@ export default function VerificationPage({ organization }: VerificationPageProps
   const [lastName, setLastName] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const dateInputRef = useRef<HTMLInputElement>(null);
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value.replace(/\D/g, '');
+    const inputType = e.target.type;
 
-    if (value.length >= 2) {
-      value = value.slice(0, 2) + '/' + value.slice(2);
-    }
-    if (value.length >= 5) {
-      value = value.slice(0, 5) + '/' + value.slice(5);
-    }
+    if (inputType === 'date') {
+      const dateValue = e.target.value;
+      if (dateValue) {
+        const [year, month, day] = dateValue.split('-');
+        setDateOfBirth(`${month}/${day}/${year}`);
+      }
+    } else {
+      let value = e.target.value.replace(/\D/g, '');
 
-    value = value.slice(0, 10);
-    setDateOfBirth(value);
+      if (value.length >= 2) {
+        value = value.slice(0, 2) + '/' + value.slice(2);
+      }
+      if (value.length >= 5) {
+        value = value.slice(0, 5) + '/' + value.slice(5);
+      }
+
+      value = value.slice(0, 10);
+      setDateOfBirth(value);
+    }
+  };
+
+  const handleCalendarClick = () => {
+    if (dateInputRef.current) {
+      dateInputRef.current.type = 'date';
+      dateInputRef.current.showPicker();
+      dateInputRef.current.addEventListener('blur', () => {
+        if (dateInputRef.current) {
+          dateInputRef.current.type = 'text';
+        }
+      }, { once: true });
+    }
   };
 
   const handleVerify = async (e: React.FormEvent) => {
@@ -139,8 +162,12 @@ export default function VerificationPage({ organization }: VerificationPageProps
             <div className="space-y-2">
               <Label htmlFor="dateOfBirth">Date of Birth</Label>
               <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <Calendar
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 cursor-pointer hover:text-blue-600 transition-colors z-10"
+                  onClick={handleCalendarClick}
+                />
                 <Input
+                  ref={dateInputRef}
                   id="dateOfBirth"
                   type="text"
                   placeholder="MM/DD/YYYY"
