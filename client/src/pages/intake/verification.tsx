@@ -24,10 +24,34 @@ export default function VerificationPage({ organization }: VerificationPageProps
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value.replace(/\D/g, '');
+
+    if (value.length >= 2) {
+      value = value.slice(0, 2) + '/' + value.slice(2);
+    }
+    if (value.length >= 5) {
+      value = value.slice(0, 5) + '/' + value.slice(5);
+    }
+
+    value = value.slice(0, 10);
+    setDateOfBirth(value);
+  };
+
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!hash) return;
+
+    const datePattern = /^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/\d{4}$/;
+    if (!datePattern.test(dateOfBirth)) {
+      toast({
+        title: 'Invalid Date',
+        description: 'Please enter a valid date in MM/DD/YYYY format.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     setIsLoading(true);
 
@@ -121,10 +145,11 @@ export default function VerificationPage({ organization }: VerificationPageProps
                   type="text"
                   placeholder="MM/DD/YYYY"
                   value={dateOfBirth}
-                  onChange={(e) => setDateOfBirth(e.target.value)}
+                  onChange={handleDateChange}
                   required
                   className="pl-10"
                   maxLength={10}
+                  inputMode="numeric"
                 />
               </div>
             </div>
