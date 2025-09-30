@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { verifyPatient, type IntakeOrganization } from '@/lib/intake.api';
 import { User, Calendar } from 'lucide-react';
+import { useIntakeContext } from './index';
 
 interface VerificationPageProps {
   organization: IntakeOrganization;
@@ -16,6 +17,7 @@ export default function VerificationPage({ organization }: VerificationPageProps
   const { hash } = useParams<{ hash: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { setIsVerified } = useIntakeContext();
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -37,6 +39,7 @@ export default function VerificationPage({ organization }: VerificationPageProps
       });
 
       if (response.verified) {
+        setIsVerified(true);
         navigate(`/intake/${hash}/form`);
       } else {
         toast({

@@ -1,14 +1,30 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, createContext, useContext } from 'react';
 import { useParams, Routes, Route, Navigate } from 'react-router-dom';
 import { fetchIntakeData, type IntakeData } from '@/lib/intake.api';
 import VerificationPage from './verification';
 import IntakeFormPage from './form';
+
+interface IntakeContextType {
+  isVerified: boolean;
+  setIsVerified: (verified: boolean) => void;
+}
+
+const IntakeContext = createContext<IntakeContextType | null>(null);
+
+export const useIntakeContext = () => {
+  const context = useContext(IntakeContext);
+  if (!context) {
+    throw new Error('useIntakeContext must be used within IntakePage');
+  }
+  return context;
+};
 
 export default function IntakePage() {
   const { hash } = useParams<{ hash: string }>();
   const [intakeData, setIntakeData] = useState<IntakeData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isVerified, setIsVerified] = useState(false);
 
   useEffect(() => {
     if (!hash) return;
@@ -72,18 +88,24 @@ export default function IntakePage() {
   }
 
   return (
-    <Routes>
-      <Route path="/" element={<VerificationPage organization={intakeData.organization} />} />
-      <Route
-        path="/form"
-        element={
-          <IntakeFormPage
-            organization={intakeData.organization}
-            intakeForm={intakeData.intakeForm}
-          />
-        }
-      />
-      <Route path="*" element={<Navigate to={`/intake/${hash}`} replace />} />
-    </Routes>
+    <IntakeContext.Provider value={{ isVerified, setIsVerified }}>
+      <Routes>
+        <Route path="/" element={<VerificationPage organization={intakeData.organization} />} />
+        <Route
+          path="/form"
+          element={
+            isVerified ? (
+              <IntakeFormPage
+                organization={intakeData.organization}
+                intakeForm={intakeData.intakeForm}
+              />
+            ) : (
+              <Navigate to={`/intake/${hash}`} replace />
+            )
+          }
+        />
+        <Route path="*" element={<Navigate to={`/intake/${hash}`} replace />} />
+      </Routes>
+    </IntakeContext.Provider>
   );
 }
