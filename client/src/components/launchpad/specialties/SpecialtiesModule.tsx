@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Check, X } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { usePermissions } from "@/context/AuthContext";
 import { OrgSpecialityService, SpecialtyServiceEntry, OrgLocation } from "@/components/launchpad/types";
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -49,8 +50,10 @@ export default function SpecialtiesModule({
   onRemove,
   onSave,
   isSaving = false,
-  readOnly = false,
+  readOnly: readOnlyProp,
 }: SpecialtiesModuleProps) {
+  const { canEditSpecialties } = usePermissions();
+  const readOnly = readOnlyProp ?? !canEditSpecialties;
   const [locationSearchTerm, setLocationSearchTerm] = React.useState('');
   const [searchTerm, setSearchTerm] = React.useState('');
   const specialtyRefs = React.useRef<SpecialtyRefs>({});

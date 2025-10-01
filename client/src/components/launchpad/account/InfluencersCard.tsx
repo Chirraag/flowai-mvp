@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { FieldError } from "@/components/ui/form-error";
 import { SectionErrorSummary } from "@/components/ui/validation-components";
+import { usePermissions } from "@/context/AuthContext";
 import type { ValidationError } from "@/lib/launchpad.utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Trash2 } from "lucide-react";
@@ -37,8 +38,10 @@ export default function InfluencersCard({
   formErrors = [],
   formWarnings = [],
   onValidateField,
-  readOnly = false,
+  readOnly: readOnlyProp,
 }: InfluencersCardProps) {
+  const { canEditAccountDetails } = usePermissions();
+  const readOnly = readOnlyProp ?? !canEditAccountDetails;
   // Phone number formatting for display
   const formatPhoneNumber = (value: string): string => {
     // Remove all non-digits

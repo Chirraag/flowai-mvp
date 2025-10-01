@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { IOSSwitch } from "@/components/ui/ios-switch";
 import { Button } from "@/components/ui/button";
 import { Calendar, Users } from "lucide-react";
+import { usePermissions } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import type { AppointmentSetupValues } from "@/types/schedulingAgent";
 
@@ -32,7 +33,9 @@ export type AppointmentSetupTabHandle = {
   validate: () => { valid: boolean; errors: string[] };
 };
 
-const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSetupTabProps>(({ initialValues, onSave, isSaving = false, readOnly = false }, ref) => {
+const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSetupTabProps>(({ initialValues, onSave, isSaving = false, readOnly: readOnlyProp }, ref) => {
+  const { canEditSchedulingAgent } = usePermissions();
+  const readOnly = readOnlyProp ?? !canEditSchedulingAgent;
   const { toast } = useToast();
   const [newPatientDuration, setNewPatientDuration] = React.useState("");
   const [followUpDuration, setFollowUpDuration] = React.useState("");

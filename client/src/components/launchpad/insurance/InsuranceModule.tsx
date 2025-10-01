@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
+import { usePermissions } from "@/context/AuthContext";
 import { OrgInsurance } from "@/components/launchpad/types";
 
 interface InsuranceModuleProps {
@@ -19,7 +20,9 @@ const getSelectedValue = (source: string | null | undefined): string => {
   return source || "";
 };
 
-export default function InsuranceModule({ insurance, onChange, readOnly = false }: InsuranceModuleProps) {
+export default function InsuranceModule({ insurance, onChange, readOnly: readOnlyProp }: InsuranceModuleProps) {
+  const { canEditInsurance } = usePermissions();
+  const readOnly = readOnlyProp ?? !canEditInsurance;
   return (
     <Card className="border-0 shadow-lg bg-white rounded-xl overflow-hidden">
       <CardContent className="p-4 space-y-4">

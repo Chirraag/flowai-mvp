@@ -14,6 +14,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { usePermissions } from "@/context/AuthContext";
 import { useCreateCuratedKB, useDeleteCuratedKB } from "@/lib/launchpad.api";
 import { Download, Trash2, FileText, Loader2, Eye, AlertCircle, CheckCircle, Circle, XCircle } from "lucide-react";
 import { CuratedKBEntry } from "@/lib/launchpad.types";
@@ -34,7 +35,9 @@ interface GenerationStep {
   status: GenerationStepStatus;
 }
 
-export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount, readOnly = false }: KnowledgeModuleProps) {
+export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount, readOnly: readOnlyProp }: KnowledgeModuleProps) {
+  const { canEditKnowledgeBase } = usePermissions();
+  const readOnly = readOnlyProp ?? !canEditKnowledgeBase;
   const { toast } = useToast();
   const [viewingDocument, setViewingDocument] = useState<CuratedKBEntry | null>(null);
   const [searchTerm, setSearchTerm] = useState('');

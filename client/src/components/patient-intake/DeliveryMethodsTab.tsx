@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { IOSSwitch } from "@/components/ui/ios-switch";
 import { Send, FileSignature, Save, Loader2 } from "lucide-react";
+import { usePermissions } from "@/context/AuthContext";
 
 /**
  * DeliveryMethodsTab
@@ -49,7 +50,9 @@ export type DeliveryMethodsTabHandle = {
   validate: () => { valid: boolean; errors: string[] };
 };
 
-const DeliveryMethodsTab = forwardRef<DeliveryMethodsTabHandle, DeliveryMethodsTabProps>(({ initialData, onSave, isSaving = false, readOnly = false }, ref) => {
+const DeliveryMethodsTab = forwardRef<DeliveryMethodsTabHandle, DeliveryMethodsTabProps>(({ initialData, onSave, isSaving = false, readOnly: readOnlyProp }, ref) => {
+  const { canEditPatientIntakeAgent } = usePermissions();
+  const readOnly = readOnlyProp ?? !canEditPatientIntakeAgent;
   // Format Preferences state (default values, overridden by initialData if provided)
   const [textMessageLink, setTextMessageLink] = useState(true);
   const [voiceCall, setVoiceCall] = useState(false);

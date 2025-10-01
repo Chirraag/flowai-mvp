@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { IOSSwitch } from "@/components/ui/ios-switch";
 import { FileText, MessageSquare, Shield, Edit, Plus, Save, Loader2, Clock } from "lucide-react";
+import { usePermissions } from "@/context/AuthContext";
 
 /**
  * FormsQuestionnairesTab
@@ -47,7 +48,9 @@ export type FormsQuestionnairesTabHandle = {
   validate: () => { valid: boolean; errors: string[] };
 };
 
-const FormsQuestionnairesTab = forwardRef<FormsQuestionnairesTabHandle, FormsQuestionnairesTabProps>(({ initialValues, onSave, isSaving = false, readOnly = false }, ref) => {
+const FormsQuestionnairesTab = forwardRef<FormsQuestionnairesTabHandle, FormsQuestionnairesTabProps>(({ initialValues, onSave, isSaving = false, readOnly: readOnlyProp }, ref) => {
+  const { canEditPatientIntakeAgent } = usePermissions();
+  const readOnly = readOnlyProp ?? !canEditPatientIntakeAgent;
   // Intake Forms state
   const [adaptiveIntakeQuestionnaire, setAdaptiveIntakeQuestionnaire] = useState(true);
   const [consentForms, setConsentForms] = useState(true);

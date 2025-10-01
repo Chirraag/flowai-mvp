@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Shield, FileCheck, Save, Loader2 } from "lucide-react";
+import { usePermissions } from "@/context/AuthContext";
 
 /**
  * FieldContentRulesTab
@@ -47,7 +48,9 @@ export type FieldContentRulesTabHandle = {
   validate: () => { valid: boolean; errors: string[] };
 };
 
-const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle, FieldContentRulesTabProps>(({ initialData, onSave, isSaving = false, readOnly = false }, ref) => {
+const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle, FieldContentRulesTabProps>(({ initialData, onSave, isSaving = false, readOnly: readOnlyProp }, ref) => {
+  const { canEditPatientIntakeAgent } = usePermissions();
+  const readOnly = readOnlyProp ?? !canEditPatientIntakeAgent;
   // Field Requirements state (default values, overridden by initialData if provided)
   const [patientName, setPatientName] = useState("required");
   const [dateOfBirth, setDateOfBirth] = useState("required");

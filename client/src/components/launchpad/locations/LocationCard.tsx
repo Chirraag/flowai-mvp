@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { usePermissions } from "@/context/AuthContext";
 import { OrgLocation } from "@/components/launchpad/types";
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -26,8 +27,10 @@ export default function LocationCard({
   onDelete,
   isMinimized = false,
   onToggleMinimize,
-  readOnly = false,
+  readOnly: readOnlyProp,
 }: LocationCardProps) {
+  const { canEditLocations } = usePermissions();
+  const readOnly = readOnlyProp ?? !canEditLocations;
 
   return (
     <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]" data-location-card>

@@ -13,11 +13,10 @@ const CustomerSupportWorkflowsTab = lazy(() => import("@/components/customer-sup
 
 export default function CustomerSupportAgent() {
   const { toast } = useToast();
-  const { user, hasWriteAccess, isReadOnlyFor } = useAuth();
+  const { user, hasWriteAccess } = useAuth();
   
-  // RBAC Permission checks
+  // RBAC Permission check for save button visibility
   const canWriteAgents = hasWriteAccess("ai-agents");
-  const isReadOnly = isReadOnlyFor("ai-agents");
 
   // Loading and data state
   const [isLoading, setIsLoading] = useState(true);
@@ -161,14 +160,14 @@ export default function CustomerSupportAgent() {
         {/* Frequently Asked Questions tab */}
         <TabsContent value="frequently-asked-questions">
           <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
-            <FrequentlyAskedQuestionsTab ref={faqRef} readOnly={isReadOnly} />
+            <FrequentlyAskedQuestionsTab ref={faqRef} />
           </Suspense>
         </TabsContent>
 
         {/* Workflows tab */}
         <TabsContent value="workflows">
           <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
-            <CustomerSupportWorkflowsTab ref={workflowsRef} readOnly={isReadOnly} />
+            <CustomerSupportWorkflowsTab ref={workflowsRef} />
           </Suspense>
         </TabsContent>
       </Tabs>

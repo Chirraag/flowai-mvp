@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { IOSSwitch } from "@/components/ui/ios-switch";
 import { Users, FileText, User, CreditCard, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { usePermissions } from "@/context/AuthContext";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,7 +41,9 @@ export type PatientEligibilityTabHandle = {
   validate: () => { valid: boolean; errors: string[] };
 };
 
-const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEligibilityTabProps>(({ initialValues, onSave, isSaving = false, readOnly = false }, ref) => {
+const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEligibilityTabProps>(({ initialValues, onSave, isSaving = false, readOnly: readOnlyProp }, ref) => {
+  const { canEditSchedulingAgent } = usePermissions();
+  const readOnly = readOnlyProp ?? !canEditSchedulingAgent;
   // Patient Types state
   const [newPatients, setNewPatients] = React.useState(false);
   const [existingPatients, setExistingPatients] = React.useState(false);

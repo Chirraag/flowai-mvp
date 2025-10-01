@@ -5,6 +5,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { FieldError } from "@/components/ui/form-error";
+import { SectionErrorSummary } from "@/components/ui/validation-components";
+import { usePermissions } from "@/context/AuthContext";
 import type { ValidationError } from "@/lib/launchpad.utils";
 import {
   AlertDialog,
@@ -39,6 +41,8 @@ interface SystemsIntegrationCardProps {
     value: string
   ) => void;
   errors?: Record<string, string>;
+  formErrors?: ValidationError[];
+  formWarnings?: ValidationError[];
   onValidateField?: (fieldName: string, value: string, section: string) => void;
   readOnly?: boolean;
 }
@@ -62,9 +66,13 @@ export default function SystemsIntegrationCard({
   onRemoveSchedulingPhone,
   onChangeField,
   errors = {},
+  formErrors = [],
+  formWarnings = [],
   onValidateField,
-  readOnly = false,
+  readOnly: readOnlyProp,
 }: SystemsIntegrationCardProps) {
+  const { canEditAccountDetails } = usePermissions();
+  const readOnly = readOnlyProp ?? !canEditAccountDetails;
   // Deletion confirmation dialog state
   const [deleteDialog, setDeleteDialog] = React.useState<{
     open: boolean;
@@ -121,6 +129,11 @@ export default function SystemsIntegrationCard({
         <CardTitle>Systems Integration</CardTitle>
       </CardHeader>
       <CardContent className="p-4 space-y-4">
+        <SectionErrorSummary
+          errors={formErrors}
+          warnings={formWarnings}
+          sectionName="systems-integration"
+        />
         <div>
           <div className="flex items-center justify-between mb-4">
             <Label className="text-md">EMR/RIS Systems</Label>

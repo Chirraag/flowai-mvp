@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { usePermissions } from "@/context/AuthContext";
 
 interface OrgStructureCardProps {
   schedulingStructure: string;
@@ -20,8 +21,10 @@ export default function OrgStructureCard({
   schedulingStructure,
   rcmStructure,
   onChange,
-  readOnly = false,
+  readOnly: readOnlyProp,
 }: OrgStructureCardProps) {
+  const { canEditAccountDetails } = usePermissions();
+  const readOnly = readOnlyProp ?? !canEditAccountDetails;
   return (
     <div className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

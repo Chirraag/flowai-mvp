@@ -29,11 +29,10 @@ const PatientWorkflowsTab = lazy(() => import("@/components/patient-intake/Patie
 
 export default function PatientIntakeAgent() {
   const { toast } = useToast();
-  const { user, hasWriteAccess, isReadOnlyFor } = useAuth();
+  const { user, hasWriteAccess } = useAuth();
   
-  // RBAC Permission checks
+  // RBAC Permission check for save button visibility
   const canWriteAgents = hasWriteAccess("ai-agents");
-  const isReadOnly = isReadOnlyFor("ai-agents");
 
   // Loading and data state
   const [isLoading, setIsLoading] = useState(true);
@@ -261,46 +260,6 @@ export default function PatientIntakeAgent() {
     }
   };
 
-  // Individual save handlers for each tab
-  const handleSaveFieldRequirements = async () => {
-    if (!agentData || !user?.org_id) return;
-    const validation = rulesRef.current?.validate?.();
-    if (validation && !validation.valid) {
-      toast({
-        title: "Validation Error",
-        description: validation.errors[0],
-        variant: "destructive",
-      });
-      return;
-    }
-    const tabData = rulesRef.current?.getValues?.();
-    if (tabData) {
-      await api.put(`/api/v1/patient-intake-agent/${user.org_id}/field-requirements`,
-        { ...mapFieldContentRulesToApi(tabData), current_version: agentData.current_version });
-      toast({ title: "Success", description: "Field requirements saved successfully." });
-      await refetchAgentData();
-    }
-  };
-
-  const handleSaveDeliveryMethods = async () => {
-    if (!agentData || !user?.org_id) return;
-    const validation = deliveryRef.current?.validate?.();
-    if (validation && !validation.valid) {
-      toast({
-        title: "Validation Error",
-        description: validation.errors[0],
-        variant: "destructive",
-      });
-      return;
-    }
-    const tabData = deliveryRef.current?.getValues?.();
-    if (tabData) {
-      await api.put(`/api/v1/patient-intake-agent/${user.org_id}/delivery-methods`,
-        { ...mapDeliveryMethodsToApi(tabData), current_version: agentData.current_version });
-      toast({ title: "Success", description: "Delivery methods saved successfully." });
-      await refetchAgentData();
-    }
-  };
 
   // Function to refetch agent data after save
   const refetchAgentData = async () => {
@@ -391,7 +350,6 @@ export default function PatientIntakeAgent() {
               initialValues={initialValues?.forms}
               onSave={undefined} // API not implemented yet
               isSaving={false} // Not applicable for forms tab
-              readOnly={isReadOnly}
             />
           </Suspense>
         </TabsContent>
@@ -402,9 +360,7 @@ export default function PatientIntakeAgent() {
             <FieldContentRulesTab
               ref={rulesRef}
               initialData={initialValues?.rules}
-              onSave={handleSaveFieldRequirements}
               isSaving={isSaving}
-              readOnly={isReadOnly}
             />
           </Suspense>
         </TabsContent>
@@ -415,9 +371,7 @@ export default function PatientIntakeAgent() {
             <DeliveryMethodsTab
               ref={deliveryRef}
               initialData={initialValues?.delivery}
-              onSave={handleSaveDeliveryMethods}
               isSaving={isSaving}
-              readOnly={isReadOnly}
             />
           </Suspense>
         </TabsContent>
@@ -425,7 +379,7 @@ export default function PatientIntakeAgent() {
         {/* Workflows tab */}
         <TabsContent value="workflows">
           <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
-            <PatientWorkflowsTab ref={workflowsRef} readOnly={isReadOnly} />
+            <PatientWorkflowsTab ref={workflowsRef} />
           </Suspense>
         </TabsContent>
       </Tabs>

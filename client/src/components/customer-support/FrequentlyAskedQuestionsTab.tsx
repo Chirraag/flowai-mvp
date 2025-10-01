@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { HelpCircle, Pencil, Trash2, Plus, Loader2 } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
+import { usePermissions } from "@/context/AuthContext";
 import { useCustomerSupportAgent, useUpdateFAQs, useUploadDocument, useDeleteDocument } from "@/lib/customer-support.queries";
 import { useToast } from "@/hooks/use-toast";
 import type { FAQ, UploadedDocument } from "@/lib/customer-support.types";
@@ -25,8 +25,10 @@ interface FrequentlyAskedQuestionsTabProps {
   readOnly?: boolean;
 }
 
-const FrequentlyAskedQuestionsTab = forwardRef<FrequentlyAskedQuestionsTabHandle, FrequentlyAskedQuestionsTabProps>(({ readOnly = false }, ref) => {
-  const { user } = useAuth();
+const FrequentlyAskedQuestionsTab = forwardRef<FrequentlyAskedQuestionsTabHandle, FrequentlyAskedQuestionsTabProps>(({ readOnly: readOnlyProp }, ref) => {
+  const { user } = usePermissions();
+  const { canEditCustomerSupportAgent } = usePermissions();
+  const readOnly = readOnlyProp ?? !canEditCustomerSupportAgent;
   const { toast } = useToast();
 
   // Extract orgId from user data

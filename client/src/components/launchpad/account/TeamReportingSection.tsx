@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { FieldError } from "@/components/ui/form-error";
+import { usePermissions } from "@/context/AuthContext";
 // Section-level summary is now rendered once in the parent for unified display
 import type { ValidationError } from "@/lib/launchpad.utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -40,8 +41,10 @@ export default function TeamReportingSection({
   formWarnings = [],
   errors = {},
   onValidateField,
-  readOnly = false,
+  readOnly: readOnlyProp,
 }: TeamReportingSectionProps) {
+  const { canAddTeamMember } = usePermissions();
+  const readOnly = readOnlyProp ?? !canAddTeamMember;
   // Phone number formatting for display
   const formatPhoneNumber = (value: string): string => {
     // Remove all non-digits

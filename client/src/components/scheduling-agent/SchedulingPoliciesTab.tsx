@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { IOSSwitch } from "@/components/ui/ios-switch";
 import { Clock, Users, Calendar, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { usePermissions } from "@/context/AuthContext";
 import type { SchedulingPoliciesValues } from "@/types/schedulingAgent";
 
 /**
@@ -30,7 +31,9 @@ export type SchedulingPoliciesTabHandle = {
   validate: () => { valid: boolean; errors: string[] };
 };
 
-const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, SchedulingPoliciesTabProps>(({ initialValues, onSave, isSaving = false, readOnly = false }, ref) => {
+const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, SchedulingPoliciesTabProps>(({ initialValues, onSave, isSaving = false, readOnly: readOnlyProp }, ref) => {
+  const { canEditSchedulingAgent } = usePermissions();
+  const readOnly = readOnlyProp ?? !canEditSchedulingAgent;
   // Walk-in Policy state
   const [acceptWalkIns, setAcceptWalkIns] = React.useState(true);
   const [allowSameDayAppointments, setAllowSameDayAppointments] = React.useState(true);

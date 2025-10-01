@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Users, Calendar, Settings, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
+import { usePermissions } from "@/context/AuthContext";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,7 +42,9 @@ export type ProviderPreferencesTabHandle = {
   validate: () => { valid: boolean; errors: string[] };
 };
 
-const ProviderPreferencesTab = forwardRef<ProviderPreferencesTabHandle, ProviderPreferencesTabProps>(({ initialValues, onSave, isSaving = false, readOnly = false }, ref) => {
+const ProviderPreferencesTab = forwardRef<ProviderPreferencesTabHandle, ProviderPreferencesTabProps>(({ initialValues, onSave, isSaving = false, readOnly: readOnlyProp }, ref) => {
+  const { canEditSchedulingAgent } = usePermissions();
+  const readOnly = readOnlyProp ?? !canEditSchedulingAgent;
   // Provider Preferences state
   const [providerBlackoutDates, setProviderBlackoutDates] = React.useState<string[]>([]);
   const [establishedPatientsOnlyDays, setEstablishedPatientsOnlyDays] = React.useState("");

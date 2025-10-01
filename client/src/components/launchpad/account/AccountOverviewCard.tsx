@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { FieldError } from "@/components/ui/form-error";
 import { ValidationInput } from "@/components/ui/validation-components";
+import { usePermissions } from "@/context/AuthContext";
 import type { ValidationError } from "@/lib/launchpad.utils";
 
 interface AccountOverviewCardProps {
@@ -21,10 +22,12 @@ export default function AccountOverviewCard({
   websiteAddress,
   headquartersAddress,
   onChange,
-  readOnly = false,
+  readOnly: readOnlyProp,
   fieldErrors = {},
   errors = {},
 }: AccountOverviewCardProps) {
+  const { canEditAccountDetails } = usePermissions();
+  const readOnly = readOnlyProp ?? !canEditAccountDetails;
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

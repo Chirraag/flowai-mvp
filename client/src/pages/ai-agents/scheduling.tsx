@@ -23,11 +23,10 @@ const WorkflowsTab = lazy(() => import("@/components/scheduling-agent/WorkflowsT
 
 export default function SchedulingAgent() {
   const { toast } = useToast();
-  const { user, hasWriteAccess, isReadOnlyFor } = useAuth();
+  const { user, hasWriteAccess } = useAuth();
   
-  // RBAC Permission checks
+  // RBAC Permission check for save button visibility
   const canWriteAgents = hasWriteAccess("ai-agents");
-  const isReadOnly = isReadOnlyFor("ai-agents");
 
   // Loading and data state
   const [isLoading, setIsLoading] = useState(true);
@@ -397,7 +396,6 @@ export default function SchedulingAgent() {
               initialValues={initialValues?.appointmentSetup}
               onSave={handleSaveAppointmentSetup}
               isSaving={isSaving}
-              readOnly={isReadOnly}
             />
           </Suspense>
         </TabsContent>
@@ -410,7 +408,6 @@ export default function SchedulingAgent() {
               initialValues={initialValues?.patientEligibility}
               onSave={handleSavePatientEligibility}
               isSaving={isSaving}
-              readOnly={isReadOnly}
             />
           </Suspense>
         </TabsContent>
@@ -423,7 +420,6 @@ export default function SchedulingAgent() {
               initialValues={initialValues?.schedulingPolicies}
               onSave={handleSaveSchedulingPolicies}
               isSaving={isSaving}
-              readOnly={isReadOnly}
             />
           </Suspense>
         </TabsContent>
@@ -436,7 +432,6 @@ export default function SchedulingAgent() {
               initialValues={initialValues?.providerPreferences}
               onSave={handleSaveProviderPreferences}
               isSaving={isSaving}
-              readOnly={isReadOnly}
             />
           </Suspense>
         </TabsContent>
@@ -444,7 +439,7 @@ export default function SchedulingAgent() {
         {/* Workflows tab */}
         <TabsContent value="workflows">
           <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
-            <WorkflowsTab ref={workflowsRef} readOnly={isReadOnly} />
+            <WorkflowsTab ref={workflowsRef} />
           </Suspense>
         </TabsContent>
       </Tabs>
