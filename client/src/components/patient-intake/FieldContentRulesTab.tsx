@@ -65,9 +65,6 @@ const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle, FieldContent
   const [noInsuranceInstructions, setNoInsuranceInstructions] = useState("");
   const [languageBarrierInstructions, setLanguageBarrierInstructions] = useState("");
 
-  // Change tracking
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-
   // Populate state from initialData if provided
   useEffect(() => {
     if (initialData) {
@@ -82,14 +79,8 @@ const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle, FieldContent
       setMenoresInstructions(initialData.specialInstructions.menoresInstructions || "");
       setNoInsuranceInstructions(initialData.specialInstructions.noInsuranceInstructions || "");
       setLanguageBarrierInstructions(initialData.specialInstructions.languageBarrierInstructions || "");
-      setHasUnsavedChanges(false);
     }
   }, [initialData]);
-
-  // Track changes
-  const handleFieldChange = () => {
-    setHasUnsavedChanges(true);
-  };
 
   // Save handler
   const handleSave = async () => {
@@ -105,7 +96,6 @@ const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle, FieldContent
     const currentValues = currentRef?.getValues();
     if (currentValues) {
       await onSave(currentValues);
-      setHasUnsavedChanges(false);
     }
   };
 
@@ -127,9 +117,8 @@ const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle, FieldContent
       },
     }),
     validate: () => {
-      const errors: string[] = [];
-      // Basic validation can be added here if needed
-      return { valid: errors.length === 0, errors };
+      // Validation is now handled at page level
+      return { valid: true, errors: [] };
     },
   }));
 
@@ -149,31 +138,23 @@ const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle, FieldContent
               </div>
             </div>
             {onSave && (
-              <div className="flex items-center gap-3">
-                {hasUnsavedChanges && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <div className="w-2 h-2 bg-[#f48024] rounded-full animate-pulse"></div>
-                    <span className="text-gray-200">Unsaved changes</span>
-                  </div>
+              <Button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="bg-white hover:bg-slate-400 active:bg-slate-500 text-[#1c275e] border-[#1c275e] px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save
+                  </>
                 )}
-                <Button
-                  onClick={handleSave}
-                  disabled={isSaving || !hasUnsavedChanges}
-                  className="bg-white hover:bg-slate-400 active:bg-slate-500 text-[#1c275e] border-[#1c275e] px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="mr-2 h-4 w-4" />
-                      Save
-                    </>
-                  )}
-                </Button>
-              </div>
+              </Button>
             )}
           </div>
         </CardHeader>
@@ -183,7 +164,7 @@ const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle, FieldContent
               <Label htmlFor="patient-name" className="text-[#1c275e] font-medium">Patient Name</Label>
               <Select value={patientName} onValueChange={readOnly ? undefined : (value) => {
                 setPatientName(value);
-                handleFieldChange();
+                
               }} disabled={readOnly}>
                 <SelectTrigger className="w-32 h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]">
                   <SelectValue placeholder="Select" />
@@ -199,7 +180,7 @@ const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle, FieldContent
               <Label htmlFor="date-of-birth" className="text-[#1c275e] font-medium">Date of Birth</Label>
               <Select value={dateOfBirth} onValueChange={readOnly ? undefined : (value) => {
                 setDateOfBirth(value);
-                handleFieldChange();
+                
               }} disabled={readOnly}>
                 <SelectTrigger className="w-32 h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]">
                   <SelectValue placeholder="Select" />
@@ -215,7 +196,7 @@ const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle, FieldContent
               <Label htmlFor="phone-number" className="text-[#1c275e] font-medium">Phone Number</Label>
               <Select value={phoneNumber} onValueChange={readOnly ? undefined : (value) => {
                 setPhoneNumber(value);
-                handleFieldChange();
+                
               }} disabled={readOnly}>
                 <SelectTrigger className="w-32 h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]">
                   <SelectValue placeholder="Select" />
@@ -231,7 +212,7 @@ const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle, FieldContent
               <Label htmlFor="email" className="text-[#1c275e] font-medium">Email</Label>
               <Select value={email} onValueChange={readOnly ? undefined : (value) => {
                 setEmail(value);
-                handleFieldChange();
+                
               }} disabled={readOnly}>
                 <SelectTrigger className="w-32 h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]">
                   <SelectValue placeholder="Select" />
@@ -247,7 +228,7 @@ const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle, FieldContent
               <Label htmlFor="insurance-id" className="text-[#1c275e] font-medium">Insurance ID</Label>
               <Select value={insuranceId} onValueChange={readOnly ? undefined : (value) => {
                 setInsuranceId(value);
-                handleFieldChange();
+                
               }} disabled={readOnly}>
                 <SelectTrigger className="w-32 h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]">
                   <SelectValue placeholder="Select" />
@@ -263,7 +244,7 @@ const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle, FieldContent
               <Label htmlFor="emergency-contact" className="text-[#1c275e] font-medium">Emergency Contact</Label>
               <Select value={emergencyContact} onValueChange={readOnly ? undefined : (value) => {
                 setEmergencyContact(value);
-                handleFieldChange();
+                
               }} disabled={readOnly}>
                 <SelectTrigger className="w-32 h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]">
                   <SelectValue placeholder="Select" />
@@ -279,7 +260,7 @@ const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle, FieldContent
               <Label htmlFor="preferred-language" className="text-[#1c275e] font-medium">Preferred Language</Label>
               <Select value={preferredLanguage} onValueChange={readOnly ? undefined : (value) => {
                 setPreferredLanguage(value);
-                handleFieldChange();
+                
               }} disabled={readOnly}>
                 <SelectTrigger className="w-32 h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]">
                   <SelectValue placeholder="Select" />
@@ -317,7 +298,7 @@ const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle, FieldContent
                 value={menoresInstructions}
                 onChange={readOnly ? undefined : (e) => {
                   setMenoresInstructions(e.target.value);
-                  handleFieldChange();
+                  
                 }}
                 readOnly={readOnly}
                 className="min-h-24 resize-none border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
@@ -332,7 +313,7 @@ const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle, FieldContent
                 value={noInsuranceInstructions}
                 onChange={readOnly ? undefined : (e) => {
                   setNoInsuranceInstructions(e.target.value);
-                  handleFieldChange();
+                  
                 }}
                 readOnly={readOnly}
                 className="min-h-24 resize-none border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
@@ -347,7 +328,7 @@ const FieldContentRulesTab = forwardRef<FieldContentRulesTabHandle, FieldContent
                 value={languageBarrierInstructions}
                 onChange={readOnly ? undefined : (e) => {
                   setLanguageBarrierInstructions(e.target.value);
-                  handleFieldChange();
+                  
                 }}
                 readOnly={readOnly}
                 className="min-h-24 resize-none border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"

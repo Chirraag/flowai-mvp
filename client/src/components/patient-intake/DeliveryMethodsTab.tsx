@@ -65,9 +65,6 @@ const DeliveryMethodsTab = forwardRef<DeliveryMethodsTabHandle, DeliveryMethodsT
   const [verbalConsentRecording, setVerbalConsentRecording] = useState(false);
   const [consentLanguage, setConsentLanguage] = useState("");
 
-  // Change tracking
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-
   // Populate state from initialData if provided
   useEffect(() => {
     if (initialData) {
@@ -80,14 +77,8 @@ const DeliveryMethodsTab = forwardRef<DeliveryMethodsTabHandle, DeliveryMethodsT
       setDigitalSignature(initialData.consentMethods.digitalSignature ?? true);
       setVerbalConsentRecording(initialData.consentMethods.verbalConsentRecording ?? false);
       setConsentLanguage(initialData.consentMethods.consentLanguage ?? "");
-      setHasUnsavedChanges(false);
     }
   }, [initialData]);
-
-  // Track changes
-  const handleFieldChange = () => {
-    setHasUnsavedChanges(true);
-  };
 
   // Save handler
   const handleSave = async () => {
@@ -103,7 +94,6 @@ const DeliveryMethodsTab = forwardRef<DeliveryMethodsTabHandle, DeliveryMethodsT
     const currentValues = currentRef?.getValues();
     if (currentValues) {
       await onSave(currentValues);
-      setHasUnsavedChanges(false);
     }
   };
 
@@ -123,9 +113,8 @@ const DeliveryMethodsTab = forwardRef<DeliveryMethodsTabHandle, DeliveryMethodsT
       },
     }),
     validate: () => {
-      const errors: string[] = [];
-      // Basic validation can be added here if needed
-      return { valid: errors.length === 0, errors };
+      // Validation is now handled at page level
+      return { valid: true, errors: [] };
     },
   }));
 
@@ -145,31 +134,23 @@ const DeliveryMethodsTab = forwardRef<DeliveryMethodsTabHandle, DeliveryMethodsT
               </div>
             </div>
             {onSave && (
-              <div className="flex items-center gap-3">
-                {hasUnsavedChanges && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <div className="w-2 h-2 bg-[#f48024] rounded-full animate-pulse"></div>
-                    <span className="text-gray-200">Unsaved changes</span>
-                  </div>
+              <Button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="bg-white hover:bg-slate-400 active:bg-slate-500 text-[#1c275e] border-[#1c275e] px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save
+                  </>
                 )}
-                <Button
-                  onClick={handleSave}
-                  disabled={isSaving || !hasUnsavedChanges}
-                  className="bg-white hover:bg-slate-400 active:bg-slate-500 text-[#1c275e] border-[#1c275e] px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="mr-2 h-4 w-4" />
-                      Save
-                    </>
-                  )}
-                </Button>
-              </div>
+              </Button>
             )}
           </div>
         </CardHeader>
@@ -183,7 +164,7 @@ const DeliveryMethodsTab = forwardRef<DeliveryMethodsTabHandle, DeliveryMethodsT
                 onCheckedChange={(checked) => {
                   if (!readOnly) {
                     setTextMessageLink(checked);
-                    handleFieldChange();
+                    
                   }
                 }}
                 disabled={readOnly}
@@ -198,7 +179,7 @@ const DeliveryMethodsTab = forwardRef<DeliveryMethodsTabHandle, DeliveryMethodsT
                 onCheckedChange={(checked) => {
                   if (!readOnly) {
                     setVoiceCall(checked);
-                    handleFieldChange();
+                    
                   }
                 }}
                 disabled={readOnly}
@@ -213,7 +194,7 @@ const DeliveryMethodsTab = forwardRef<DeliveryMethodsTabHandle, DeliveryMethodsT
                 onCheckedChange={(checked) => {
                   if (!readOnly) {
                     setQrCode(checked);
-                    handleFieldChange();
+                    
                   }
                 }}
                 disabled={readOnly}
@@ -228,7 +209,7 @@ const DeliveryMethodsTab = forwardRef<DeliveryMethodsTabHandle, DeliveryMethodsT
                 onCheckedChange={(checked) => {
                   if (!readOnly) {
                     setEmailLink(checked);
-                    handleFieldChange();
+                    
                   }
                 }}
                 disabled={readOnly}
@@ -243,7 +224,7 @@ const DeliveryMethodsTab = forwardRef<DeliveryMethodsTabHandle, DeliveryMethodsT
                 onCheckedChange={(checked) => {
                   if (!readOnly) {
                     setInPersonTablet(checked);
-                    handleFieldChange();
+                    
                   }
                 }}
                 disabled={readOnly}
@@ -276,7 +257,7 @@ const DeliveryMethodsTab = forwardRef<DeliveryMethodsTabHandle, DeliveryMethodsT
                 onCheckedChange={(checked) => {
                   if (!readOnly) {
                     setDigitalSignature(checked);
-                    handleFieldChange();
+                    
                   }
                 }}
                 disabled={readOnly}
@@ -291,7 +272,7 @@ const DeliveryMethodsTab = forwardRef<DeliveryMethodsTabHandle, DeliveryMethodsT
                 onCheckedChange={(checked) => {
                   if (!readOnly) {
                     setVerbalConsentRecording(checked);
-                    handleFieldChange();
+                    
                   }
                 }}
                 disabled={readOnly}
@@ -306,7 +287,7 @@ const DeliveryMethodsTab = forwardRef<DeliveryMethodsTabHandle, DeliveryMethodsT
                 value={consentLanguage}
                 onChange={readOnly ? undefined : (e) => {
                   setConsentLanguage(e.target.value);
-                  handleFieldChange();
+                  
                 }}
                 readOnly={readOnly}
                 className="min-h-24 resize-none border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"

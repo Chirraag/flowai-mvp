@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { IOSSwitch } from "@/components/ui/ios-switch";
 import { Button } from "@/components/ui/button";
-import { Calendar, Users } from "lucide-react";
+import { Calendar, Users, Save, Loader2 } from "lucide-react";
 import { usePermissions } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import type { AppointmentSetupValues } from "@/types/schedulingAgent";
@@ -49,9 +49,6 @@ const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSet
   const [followUpEnabled, setFollowUpEnabled] = React.useState(false);
   const [procedureEnabled, setProcedureEnabled] = React.useState(false);
 
-  // Track unsaved changes
-  const [hasUnsavedChanges, setHasUnsavedChanges] = React.useState(false);
-
   // Set initial values when props change
   useEffect(() => {
     if (initialValues) {
@@ -64,35 +61,17 @@ const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSet
       setNewPatientEnabled(initialValues.appointmentTypes.newPatient);
       setFollowUpEnabled(initialValues.appointmentTypes.followUp);
       setProcedureEnabled(initialValues.appointmentTypes.procedure);
-      setHasUnsavedChanges(false);
     }
   }, [initialValues]);
 
-  // Track changes
-  const handleFieldChange = () => {
-    setHasUnsavedChanges(true);
-  };
-
-  // Save handler
+  // Save handler - validation is now handled at page level
   const handleSave = async () => {
     if (!onSave) return;
 
     const currentRef = (ref as React.MutableRefObject<AppointmentSetupTabHandle | null>).current;
-    const validation = currentRef?.validate();
-    if (validation && !validation.valid) {
-      // Show validation errors to user
-      toast({
-        title: "Validation Error",
-        description: validation.errors[0],
-        variant: "destructive",
-      });
-      return;
-    }
-
     const currentValues = currentRef?.getValues();
     if (currentValues) {
       await onSave(currentValues);
-      setHasUnsavedChanges(false);
     }
   };
 
@@ -111,22 +90,10 @@ const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSet
         procedure: procedureEnabled,
       },
     }),
+    // Note: Validation is now handled at page level in scheduling.tsx
+    // This method is kept for backward compatibility but not used
     validate: () => {
-      const errors: string[] = [];
-
-      if (!maxNewPatients || maxNewPatients.trim() === "") {
-        errors.push("Max new patients per day is required");
-      } else if (parseInt(maxNewPatients) <= 0) {
-        errors.push("Max new patients must be a positive number");
-      }
-
-      if (!maxFollowUps || maxFollowUps.trim() === "") {
-        errors.push("Max follow-ups per day is required");
-      } else if (parseInt(maxFollowUps) <= 0) {
-        errors.push("Max follow-ups must be a positive number");
-      }
-
-      return { valid: errors.length === 0, errors };
+      return { valid: true, errors: [] };
     },
   }));
 
@@ -146,21 +113,23 @@ const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSet
               </div>
             </div>
             {onSave && !readOnly && (
-              <div className="flex items-center gap-3">
-                {hasUnsavedChanges && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <div className="w-2 h-2 bg-[#f48024] rounded-full animate-pulse"></div>
-                    <span className="text-gray-200">Unsaved changes</span>
-                  </div>
-                )}
                 <Button
                   onClick={handleSave}
-                  disabled={isSaving || !hasUnsavedChanges}
+                  disabled={isSaving}
                   className="bg-white hover:bg-slate-400 active:bg-slate-500 text-[#1c275e] border-[#1c275e] px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
                 >
-                  {isSaving ? "Saving..." : "Save"}
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      Save
+                    </>
+                  )}
                 </Button>
-              </div>
             )}
           </div>
         </CardHeader>
@@ -181,7 +150,6 @@ const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSet
                 onCheckedChange={(checked) => {
                   if (!readOnly) {
                     setNewPatientEnabled(checked);
-                    handleFieldChange();
                   }
                 }}
                 disabled={readOnly}
@@ -201,7 +169,6 @@ const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSet
                 onCheckedChange={(checked) => {
                   if (!readOnly) {
                     setFollowUpEnabled(checked);
-                    handleFieldChange();
                   }
                 }}
                 disabled={readOnly}
@@ -221,7 +188,6 @@ const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSet
                 onCheckedChange={(checked) => {
                   if (!readOnly) {
                     setProcedureEnabled(checked);
-                    handleFieldChange();
                   }
                 }}
                 disabled={readOnly}
@@ -239,7 +205,6 @@ const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSet
                 <Select value={newPatientDuration} onValueChange={(value) => {
                   if (!readOnly) {
                     setNewPatientDuration(value);
-                    handleFieldChange();
                   }
                 }} disabled={readOnly}>
                   <SelectTrigger className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]">
@@ -257,7 +222,6 @@ const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSet
                 <Select value={followUpDuration} onValueChange={(value) => {
                   if (!readOnly) {
                     setFollowUpDuration(value);
-                    handleFieldChange();
                   }
                 }} disabled={readOnly}>
                   <SelectTrigger className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]">
@@ -281,7 +245,6 @@ const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSet
                   onChange={(e) => {
                     if (!readOnly) {
                       setProcedureSpecific(e.target.value);
-                      handleFieldChange();
                     }
                   }}
                   readOnly={readOnly}
@@ -293,7 +256,6 @@ const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSet
                 <Select value={procedureDuration} onValueChange={(value) => {
                   if (!readOnly) {
                     setProcedureDuration(value);
-                    handleFieldChange();
                   }
                 }} disabled={readOnly}>
                   <SelectTrigger className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]">
@@ -342,7 +304,6 @@ const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSet
                       // Only allow numeric input
                       const numericValue = e.target.value.replace(/[^0-9]/g, '');
                       setMaxNewPatients(numericValue);
-                      handleFieldChange();
                     }
                   }}
                   readOnly={readOnly}
@@ -361,7 +322,6 @@ const AppointmentSetupTab = forwardRef<AppointmentSetupTabHandle, AppointmentSet
                       // Only allow numeric input
                       const numericValue = e.target.value.replace(/[^0-9]/g, '');
                       setMaxFollowUps(numericValue);
-                      handleFieldChange();
                     }
                   }}
                   readOnly={readOnly}

@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useState, useEffect } from "react";
+import React, { Suspense, lazy, useState, useEffect, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -6,6 +6,14 @@ import { handleApiError } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import { schedulingAgentApi } from "@/api/schedulingAgent";
 import { apiToUi, uiToApi } from "@/lib/schedulingAgent.mappers";
+import {
+  validateAppointmentSetup,
+  validatePatientEligibility,
+  validateSchedulingPolicies,
+  validateProviderPreferences,
+  type ValidationResult,
+  type ValidationError,
+} from "@/lib/scheduling-validation.utils";
 import type {
   SchedulingAgent,
   AppointmentSetupValues,
@@ -35,6 +43,16 @@ export default function SchedulingAgent() {
   const [retryCount, setRetryCount] = useState(0);
   const [dirtyTabs, setDirtyTabs] = useState<Set<string>>(new Set());
   const [savingTabs, setSavingTabs] = useState<Set<string>>(new Set());
+
+  // Validation state
+  const [formValidation, setFormValidation] = useState<ValidationResult>({
+    isValid: true,
+    errors: [],
+    warnings: [],
+    hasErrors: false,
+    hasWarnings: false,
+  });
+  const [fieldValidations, setFieldValidations] = useState<Record<string, ValidationError | null>>({});
 
   // Refs used to call validation on Save Configuration
   const appointmentSetupRef = React.useRef<any>(null);
@@ -112,28 +130,6 @@ export default function SchedulingAgent() {
     setSavingTabs(new Set());
 
     try {
-      // Validate all tabs
-      const validations = await Promise.all([
-        appointmentSetupRef.current?.validate?.(),
-        patientEligibilityRef.current?.validate?.(),
-        schedulingPoliciesRef.current?.validate?.(),
-        providerPreferencesRef.current?.validate?.(),
-        workflowsRef.current?.validate?.(),
-      ]);
-
-      // Check if any validation failed
-      const failedValidations = validations.filter(v => v && !v.valid);
-      if (failedValidations.length > 0) {
-        const firstError = failedValidations[0];
-        toast({
-          title: "Validation Error",
-          description: firstError.errors[0],
-          variant: "destructive",
-        });
-        setIsSaving(false);
-        return;
-      }
-
       // Get values from all tabs
       const tabValues = {
         appointmentSetup: appointmentSetupRef.current?.getValues?.(),
@@ -141,6 +137,47 @@ export default function SchedulingAgent() {
         schedulingPolicies: schedulingPoliciesRef.current?.getValues?.(),
         providerPreferences: providerPreferencesRef.current?.getValues?.(),
       };
+
+      // Validate all tabs at page level
+      const validations = [
+        validateAppointmentSetup(tabValues.appointmentSetup),
+        validatePatientEligibility(tabValues.patientEligibility),
+        validateSchedulingPolicies(tabValues.schedulingPolicies),
+        validateProviderPreferences(tabValues.providerPreferences),
+      ];
+
+      // Check if any validation failed
+      const failedValidations = validations.filter(v => !v.isValid);
+      if (failedValidations.length > 0) {
+        // Aggregate all errors
+        const allErrors = failedValidations.flatMap(v => v.errors);
+        const allWarnings = failedValidations.flatMap(v => v.warnings);
+        
+        setFormValidation({
+          isValid: false,
+          errors: allErrors,
+          warnings: allWarnings,
+          hasErrors: true,
+          hasWarnings: allWarnings.length > 0,
+        });
+
+        toast({
+          title: "Validation Errors Found",
+          description: `Please fix ${allErrors.length} error(s) before saving.`,
+          variant: "destructive",
+        });
+        setIsSaving(false);
+        return; // Prevent all API calls
+      }
+
+      // Clear validation state on success
+      setFormValidation({
+        isValid: true,
+        errors: [],
+        warnings: [],
+        hasErrors: false,
+        hasWarnings: false,
+      });
 
       // Build update tasks with metadata
       const updateTasks: Array<{
@@ -271,33 +308,157 @@ export default function SchedulingAgent() {
     }
   };
 
-  // Individual save handlers for each tab
+  // Individual save handlers for each tab with validation
   const handleSaveAppointmentSetup = async (values: AppointmentSetupValues) => {
     if (!agentData || !user?.org_id) return;
-    await schedulingAgentApi.updateAppointmentSetup(String(user.org_id), uiToApi.appointmentSetup(values));
-    toast({ title: "Success", description: "Appointment setup saved successfully." });
-    await refetchAgentData();
+
+    try {
+      // Validate before API call
+      const validation = validateAppointmentSetup(values);
+      setFormValidation(validation);
+
+      if (!validation.isValid) {
+        toast({
+          title: "Validation Error",
+          description: validation.errors[0]?.message || "Please fix validation errors before saving.",
+          variant: "destructive",
+        });
+        // Return early - validation error is already shown to the user
+        return;
+      }
+
+      // Clear validation state
+      setFormValidation({
+        isValid: true,
+        errors: [],
+        warnings: [],
+        hasErrors: false,
+        hasWarnings: false,
+      });
+      setFieldValidations({});
+
+      await schedulingAgentApi.updateAppointmentSetup(String(user.org_id), uiToApi.appointmentSetup(values));
+      toast({ title: "Success", description: "Appointment setup saved successfully." });
+      await refetchAgentData();
+    } catch (error) {
+      console.error('Failed to save appointment setup:', error);
+      const errorToast = handleApiError(error, { action: "save appointment setup" });
+      toast(errorToast);
+    }
   };
 
   const handleSavePatientEligibility = async (values: PatientEligibilityValues) => {
     if (!agentData || !user?.org_id) return;
-    await schedulingAgentApi.updatePatientEligibility(String(user.org_id), uiToApi.patientEligibility(values));
-    toast({ title: "Success", description: "Patient eligibility settings saved successfully." });
-    await refetchAgentData();
+
+    try {
+      // Validate before API call
+      const validation = validatePatientEligibility(values);
+      setFormValidation(validation);
+
+      if (!validation.isValid) {
+        toast({
+          title: "Validation Error",
+          description: validation.errors[0]?.message || "Please fix validation errors before saving.",
+          variant: "destructive",
+        });
+        // Return early - validation error is already shown to the user
+        return;
+      }
+
+      // Clear validation state
+      setFormValidation({
+        isValid: true,
+        errors: [],
+        warnings: [],
+        hasErrors: false,
+        hasWarnings: false,
+      });
+      setFieldValidations({});
+
+      await schedulingAgentApi.updatePatientEligibility(String(user.org_id), uiToApi.patientEligibility(values));
+      toast({ title: "Success", description: "Patient eligibility settings saved successfully." });
+      await refetchAgentData();
+    } catch (error) {
+      console.error('Failed to save patient eligibility:', error);
+      const errorToast = handleApiError(error, { action: "save patient eligibility" });
+      toast(errorToast);
+    }
   };
 
   const handleSaveSchedulingPolicies = async (values: SchedulingPoliciesValues) => {
     if (!agentData || !user?.org_id) return;
-    await schedulingAgentApi.updateSchedulingPolicies(String(user.org_id), uiToApi.schedulingPolicies(values));
-    toast({ title: "Success", description: "Scheduling policies saved successfully." });
-    await refetchAgentData();
+
+    try {
+      // Validate before API call
+      const validation = validateSchedulingPolicies(values);
+      setFormValidation(validation);
+
+      if (!validation.isValid) {
+        toast({
+          title: "Validation Error",
+          description: validation.errors[0]?.message || "Please fix validation errors before saving.",
+          variant: "destructive",
+        });
+        // Return early - validation error is already shown to the user
+        return;
+      }
+
+      // Clear validation state
+      setFormValidation({
+        isValid: true,
+        errors: [],
+        warnings: [],
+        hasErrors: false,
+        hasWarnings: false,
+      });
+      setFieldValidations({});
+
+      await schedulingAgentApi.updateSchedulingPolicies(String(user.org_id), uiToApi.schedulingPolicies(values));
+      toast({ title: "Success", description: "Scheduling policies saved successfully." });
+      await refetchAgentData();
+    } catch (error) {
+      console.error('Failed to save scheduling policies:', error);
+      const errorToast = handleApiError(error, { action: "save scheduling policies" });
+      toast(errorToast);
+    }
   };
 
   const handleSaveProviderPreferences = async (values: ProviderPreferencesValues) => {
     if (!agentData || !user?.org_id) return;
-    await schedulingAgentApi.updateProviderPreferences(String(user.org_id), uiToApi.providerPreferences(values));
-    toast({ title: "Success", description: "Provider preferences saved successfully." });
-    await refetchAgentData();
+
+    try {
+      // Validate before API call
+      const validation = validateProviderPreferences(values);
+      setFormValidation(validation);
+
+      if (!validation.isValid) {
+        toast({
+          title: "Validation Error",
+          description: validation.errors[0]?.message || "Please fix validation errors before saving.",
+          variant: "destructive",
+        });
+        // Return early - validation error is already shown to the user
+        return;
+      }
+
+      // Clear validation state
+      setFormValidation({
+        isValid: true,
+        errors: [],
+        warnings: [],
+        hasErrors: false,
+        hasWarnings: false,
+      });
+      setFieldValidations({});
+
+      await schedulingAgentApi.updateProviderPreferences(String(user.org_id), uiToApi.providerPreferences(values));
+      toast({ title: "Success", description: "Provider preferences saved successfully." });
+      await refetchAgentData();
+    } catch (error) {
+      console.error('Failed to save provider preferences:', error);
+      const errorToast = handleApiError(error, { action: "save provider preferences" });
+      toast(errorToast);
+    }
   };
 
   // Function to refetch agent data after save
@@ -317,12 +478,15 @@ export default function SchedulingAgent() {
   };
 
   // Prepare initial values for tabs
-  const initialValues = agentData ? {
-    appointmentSetup: apiToUi.appointmentSetup(agentData),
-    patientEligibility: apiToUi.patientEligibility(agentData),
-    schedulingPolicies: apiToUi.schedulingPolicies(agentData),
-    providerPreferences: apiToUi.providerPreferences(agentData),
-  } : null;
+  const initialValues = useMemo(() => {
+    if (!agentData) return null;
+    return {
+      appointmentSetup: apiToUi.appointmentSetup(agentData),
+      patientEligibility: apiToUi.patientEligibility(agentData),
+      schedulingPolicies: apiToUi.schedulingPolicies(agentData),
+      providerPreferences: apiToUi.providerPreferences(agentData),
+    };
+  }, [agentData]);
 
 
   // Show loading state

@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Users, Calendar, Settings, FileText } from "lucide-react";
+import { Users, Calendar, Settings, FileText, Save, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { usePermissions } from "@/context/AuthContext";
@@ -50,9 +50,6 @@ const ProviderPreferencesTab = forwardRef<ProviderPreferencesTabHandle, Provider
   const [establishedPatientsOnlyDays, setEstablishedPatientsOnlyDays] = React.useState("");
   const [customSchedulingRules, setCustomSchedulingRules] = React.useState<string[]>([]);
 
-  // Track unsaved changes
-  const [hasUnsavedChanges, setHasUnsavedChanges] = React.useState(false);
-
   // Set initial values when props change
   useEffect(() => {
     if (initialValues) {
@@ -69,26 +66,20 @@ const ProviderPreferencesTab = forwardRef<ProviderPreferencesTabHandle, Provider
           ? initialValues.customSchedulingRules.split('\n').filter(rule => rule.trim())
           : []
       );
-      setHasUnsavedChanges(false);
     }
   }, [initialValues]);
-
-  // Track changes
-  const handleFieldChange = () => {
-    setHasUnsavedChanges(true);
-  };
 
   // Blackout dates management handlers
   const handleAddBlackoutDate = () => {
     setProviderBlackoutDates([...providerBlackoutDates, ""]);
-    handleFieldChange();
+    
   };
 
   const handleUpdateBlackoutDate = (index: number, value: string) => {
     const updated = [...providerBlackoutDates];
     updated[index] = value;
     setProviderBlackoutDates(updated);
-    handleFieldChange();
+    
   };
 
   // Delete confirmation dialog state
@@ -117,7 +108,7 @@ const ProviderPreferencesTab = forwardRef<ProviderPreferencesTabHandle, Provider
     if (deleteDialog.index !== undefined) {
       const updated = providerBlackoutDates.filter((_, i) => i !== deleteDialog.index);
       setProviderBlackoutDates(updated);
-      handleFieldChange();
+      
     }
     setDeleteDialog({ open: false });
   };
@@ -125,14 +116,14 @@ const ProviderPreferencesTab = forwardRef<ProviderPreferencesTabHandle, Provider
   // Custom scheduling rules management handlers
   const handleAddRule = () => {
     setCustomSchedulingRules([...customSchedulingRules, ""]);
-    handleFieldChange();
+    
   };
 
   const handleUpdateRule = (index: number, value: string) => {
     const updated = [...customSchedulingRules];
     updated[index] = value;
     setCustomSchedulingRules(updated);
-    handleFieldChange();
+    
   };
 
   const handleDeleteRule = (index: number) => {
@@ -146,7 +137,7 @@ const ProviderPreferencesTab = forwardRef<ProviderPreferencesTabHandle, Provider
     if (ruleDeleteDialog.index !== undefined) {
       const updated = customSchedulingRules.filter((_, i) => i !== ruleDeleteDialog.index);
       setCustomSchedulingRules(updated);
-      handleFieldChange();
+      
     }
     setRuleDeleteDialog({ open: false });
   };
@@ -159,7 +150,6 @@ const ProviderPreferencesTab = forwardRef<ProviderPreferencesTabHandle, Provider
     const currentValues = currentRef?.getValues();
     if (currentValues) {
       await onSave(currentValues);
-      setHasUnsavedChanges(false);
     }
   };
 
@@ -195,21 +185,23 @@ const ProviderPreferencesTab = forwardRef<ProviderPreferencesTabHandle, Provider
               </div>
             </div>
             {onSave && !readOnly && (
-              <div className="flex items-center gap-3">
-                {hasUnsavedChanges && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <div className="w-2 h-2 bg-[#f48024] rounded-full animate-pulse"></div>
-                    <span className="text-gray-200">Unsaved changes</span>
-                  </div>
+              <Button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="bg-white hover:bg-slate-400 active:bg-slate-500 text-[#1c275e] border-[#1c275e] px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save
+                  </>
                 )}
-                <Button
-                  onClick={handleSave}
-                  disabled={isSaving || !hasUnsavedChanges}
-                  className="bg-white hover:bg-slate-400 active:bg-slate-500 text-[#1c275e] border-[#1c275e] px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
-                >
-                  {isSaving ? "Saving..." : "Save"}
-                </Button>
-              </div>
+              </Button>
             )}
           </div>
         </CardHeader>
@@ -278,7 +270,7 @@ const ProviderPreferencesTab = forwardRef<ProviderPreferencesTabHandle, Provider
                 onChange={(e) => {
                   if (!readOnly) {
                     setEstablishedPatientsOnlyDays(e.target.value);
-                    handleFieldChange();
+                    
                   }
                 }}
                 readOnly={readOnly}

@@ -32,6 +32,7 @@ interface InfluencersCardProps {
 
 export default function InfluencersCard({
   influencers,
+  onAdd,
   onUpdate,
   onRemove,
   errors = {},
@@ -40,8 +41,8 @@ export default function InfluencersCard({
   onValidateField,
   readOnly: readOnlyProp,
 }: InfluencersCardProps) {
-  const { canEditAccountDetails } = usePermissions();
-  const readOnly = readOnlyProp ?? !canEditAccountDetails;
+  const { canAddTeamMember } = usePermissions();
+  const readOnly = readOnlyProp ?? !canAddTeamMember;
   // Phone number formatting for display
   const formatPhoneNumber = (value: string): string => {
     // Remove all non-digits
@@ -129,6 +130,23 @@ export default function InfluencersCard({
         warnings={formWarnings}
         sectionName="influencers"
       />
+
+      {/* Add Person Button */}
+      {!readOnly && onAdd && (
+        <div className="flex justify-end">
+          <Button
+            variant="default"
+            size="sm"
+            onClick={onAdd}
+            className="bg-[#F48024] hover:bg-[#F48024]/90 text-white px-4 py-2 rounded-lg shadow-sm"
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+            </svg>
+            Add Person
+          </Button>
+        </div>
+      )}
 
       <div className="overflow-x-auto">
       <Table className="min-w-[800px]">

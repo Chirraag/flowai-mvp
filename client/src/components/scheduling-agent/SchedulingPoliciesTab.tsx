@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { IOSSwitch } from "@/components/ui/ios-switch";
-import { Clock, Users, Calendar, AlertCircle } from "lucide-react";
+import { Clock, Users, Calendar, AlertCircle, Save, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePermissions } from "@/context/AuthContext";
 import type { SchedulingPoliciesValues } from "@/types/schedulingAgent";
@@ -43,9 +43,6 @@ const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, Scheduling
   const [minimumCancellationNotice, setMinimumCancellationNotice] = React.useState("24");
   const [noShowFee, setNoShowFee] = React.useState("50");
 
-  // Track unsaved changes
-  const [hasUnsavedChanges, setHasUnsavedChanges] = React.useState(false);
-
   // Set initial values when props change
   useEffect(() => {
     if (initialValues) {
@@ -54,14 +51,8 @@ const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, Scheduling
       setSameDayCutoffTime(initialValues.walkInPolicy.sameDayCutoffTime);
       setMinimumCancellationNotice(initialValues.cancellationPolicy.minimumCancellationNotice);
       setNoShowFee(initialValues.cancellationPolicy.noShowFee);
-      setHasUnsavedChanges(false);
     }
   }, [initialValues]);
-
-  // Track changes
-  const handleFieldChange = () => {
-    setHasUnsavedChanges(true);
-  };
 
   // Save handler
   const handleSave = async () => {
@@ -71,7 +62,6 @@ const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, Scheduling
     const currentValues = currentRef?.getValues();
     if (currentValues) {
       await onSave(currentValues);
-      setHasUnsavedChanges(false);
     }
   };
 
@@ -124,21 +114,23 @@ const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, Scheduling
               </div>
             </div>
             {onSave && !readOnly && (
-              <div className="flex items-center gap-3">
-                {hasUnsavedChanges && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <div className="w-2 h-2 bg-[#f48024] rounded-full animate-pulse"></div>
-                    <span className="text-gray-200">Unsaved changes</span>
-                  </div>
+              <Button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="bg-white hover:bg-slate-400 active:bg-slate-500 text-[#1c275e] border-[#1c275e] px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save
+                  </>
                 )}
-                <Button
-                  onClick={handleSave}
-                  disabled={isSaving || !hasUnsavedChanges}
-                  className="bg-white hover:bg-slate-400 active:bg-slate-500 text-[#1c275e] border-[#1c275e] px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
-                >
-                  {isSaving ? "Saving..." : "Save"}
-                </Button>
-              </div>
+              </Button>
             )}
           </div>
         </CardHeader>
@@ -159,7 +151,7 @@ const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, Scheduling
                 onCheckedChange={(checked) => {
                   if (!readOnly) {
                     setAcceptWalkIns(checked);
-                    handleFieldChange();
+                    
                   }
                 }}
                 disabled={readOnly}
@@ -179,7 +171,7 @@ const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, Scheduling
                 onCheckedChange={(checked) => {
                   if (!readOnly) {
                     setAllowSameDayAppointments(checked);
-                    handleFieldChange();
+                    
                   }
                 }}
                 disabled={readOnly}
@@ -197,7 +189,7 @@ const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, Scheduling
                   onChange={(e) => {
                     if (!readOnly) {
                       setSameDayCutoffTime(e.target.value);
-                      handleFieldChange();
+                      
                     }
                   }}
                   readOnly={readOnly}
@@ -239,7 +231,7 @@ const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, Scheduling
                   onChange={(e) => {
                     if (!readOnly) {
                       setMinimumCancellationNotice(e.target.value);
-                      handleFieldChange();
+                      
                     }
                   }}
                   readOnly={readOnly}
@@ -261,7 +253,7 @@ const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, Scheduling
                     onChange={(e) => {
                       if (!readOnly) {
                         setNoShowFee(e.target.value);
-                        handleFieldChange();
+                        
                       }
                     }}
                     readOnly={readOnly}

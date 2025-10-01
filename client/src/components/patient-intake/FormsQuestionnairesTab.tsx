@@ -60,9 +60,6 @@ const FormsQuestionnairesTab = forwardRef<FormsQuestionnairesTabHandle, FormsQue
   const [urologySymptomSurvey, setUrologySymptomSurvey] = useState(false);
   const [preProcedureInstructions, setPreProcedureInstructions] = useState(false);
 
-  // Change tracking
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-
   // Populate state from initialValues if provided
   useEffect(() => {
     if (initialValues) {
@@ -71,14 +68,8 @@ const FormsQuestionnairesTab = forwardRef<FormsQuestionnairesTabHandle, FormsQue
       setMriSafetyQuestionnaire(initialValues.modalityForms.mriSafetyQuestionnaire ?? false);
       setUrologySymptomSurvey(initialValues.modalityForms.urologySymptomSurvey ?? false);
       setPreProcedureInstructions(initialValues.modalityForms.preProcedureInstructions ?? false);
-      setHasUnsavedChanges(false);
     }
   }, [initialValues]);
-
-  // Track changes
-  const handleFieldChange = () => {
-    setHasUnsavedChanges(true);
-  };
 
   // Save handler - API not implemented yet
   const handleSave = async () => {
@@ -118,23 +109,15 @@ const FormsQuestionnairesTab = forwardRef<FormsQuestionnairesTabHandle, FormsQue
               </div>
             </div>
             {onSave && (
-              <div className="flex items-center gap-3">
-                {hasUnsavedChanges && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <div className="w-2 h-2 bg-[#f48024] rounded-full animate-pulse"></div>
-                    <span className="text-gray-200">Unsaved changes</span>
-                  </div>
-                )}
-                <Button
-                  onClick={handleSave}
-                  disabled={true} // API not implemented yet
-                  className="bg-gray-500 text-white px-4 py-2 rounded-lg shadow-md cursor-not-allowed opacity-75"
-                  title="Forms/Questionnaires API will be implemented later"
-                >
-                  <Clock className="mr-2 h-4 w-4" />
-                  Coming Soon
-                </Button>
-              </div>
+              <Button
+                onClick={handleSave}
+                disabled={true} // API not implemented yet
+                className="bg-gray-500 text-white px-4 py-2 rounded-lg shadow-md cursor-not-allowed opacity-75"
+                title="Forms/Questionnaires API will be implemented later"
+              >
+                <Clock className="mr-2 h-4 w-4" />
+                Coming Soon
+              </Button>
             )}
           </div>
         </CardHeader>
@@ -160,7 +143,7 @@ const FormsQuestionnairesTab = forwardRef<FormsQuestionnairesTabHandle, FormsQue
                       onCheckedChange={(checked) => {
                         if (!readOnly) {
                           setAdaptiveIntakeQuestionnaire(checked);
-                          handleFieldChange();
+                          
                         }
                       }}
                       disabled={readOnly}
@@ -190,7 +173,7 @@ const FormsQuestionnairesTab = forwardRef<FormsQuestionnairesTabHandle, FormsQue
                       onCheckedChange={(checked) => {
                         if (!readOnly) {
                           setConsentForms(checked);
-                          handleFieldChange();
+                          
                         }
                       }}
                       disabled={readOnly}
@@ -247,7 +230,7 @@ const FormsQuestionnairesTab = forwardRef<FormsQuestionnairesTabHandle, FormsQue
                       onCheckedChange={(checked) => {
                         if (!readOnly) {
                           setMriSafetyQuestionnaire(checked);
-                          handleFieldChange();
+                          
                         }
                       }}
                       disabled={readOnly}
@@ -277,7 +260,7 @@ const FormsQuestionnairesTab = forwardRef<FormsQuestionnairesTabHandle, FormsQue
                       onCheckedChange={(checked) => {
                         if (!readOnly) {
                           setUrologySymptomSurvey(checked);
-                          handleFieldChange();
+                          
                         }
                       }}
                       disabled={readOnly}
@@ -307,7 +290,7 @@ const FormsQuestionnairesTab = forwardRef<FormsQuestionnairesTabHandle, FormsQue
                       onCheckedChange={(checked) => {
                         if (!readOnly) {
                           setPreProcedureInstructions(checked);
-                          handleFieldChange();
+                          
                         }
                       }}
                       disabled={readOnly}

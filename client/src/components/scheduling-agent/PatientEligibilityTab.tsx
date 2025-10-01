@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { IOSSwitch } from "@/components/ui/ios-switch";
-import { Users, FileText, User, CreditCard, Shield } from "lucide-react";
+import { Users, FileText, User, CreditCard, Shield, Save, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePermissions } from "@/context/AuthContext";
 import {
@@ -57,9 +57,6 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEli
   const [servicesRequiringReferrals, setServicesRequiringReferrals] = React.useState<string[]>([]);
   const [insurancePlansRequiringReferrals, setInsurancePlansRequiringReferrals] = React.useState<string[]>([]);
 
-  // Track unsaved changes
-  const [hasUnsavedChanges, setHasUnsavedChanges] = React.useState(false);
-
   // Set initial values when props change
   useEffect(() => {
     if (initialValues) {
@@ -82,39 +79,28 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEli
           ? initialValues.referralRequirements.insurancePlansRequiringReferrals.split('\n').filter(line => line.trim())
           : []
       );
-
-      setHasUnsavedChanges(false);
     }
   }, [initialValues]);
-
-  // Track changes
-  const handleFieldChange = () => {
-    setHasUnsavedChanges(true);
-  };
 
   // Referral management handlers
   const handleAddService = () => {
     setServicesRequiringReferrals([...servicesRequiringReferrals, ""]);
-    handleFieldChange();
   };
 
   const handleAddInsurancePlan = () => {
     setInsurancePlansRequiringReferrals([...insurancePlansRequiringReferrals, ""]);
-    handleFieldChange();
   };
 
   const handleUpdateService = (index: number, value: string) => {
     const updated = [...servicesRequiringReferrals];
     updated[index] = value;
     setServicesRequiringReferrals(updated);
-    handleFieldChange();
   };
 
   const handleUpdateInsurancePlan = (index: number, value: string) => {
     const updated = [...insurancePlansRequiringReferrals];
     updated[index] = value;
     setInsurancePlansRequiringReferrals(updated);
-    handleFieldChange();
   };
 
   // Delete confirmation dialog state
@@ -153,7 +139,6 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEli
       setInsurancePlansRequiringReferrals(updated);
     }
     setDeleteDialog({ open: false });
-    handleFieldChange();
   };
 
   // Save handler
@@ -164,7 +149,6 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEli
     const currentValues = currentRef?.getValues();
     if (currentValues) {
       await onSave(currentValues);
-      setHasUnsavedChanges(false);
     }
   };
 
@@ -209,21 +193,23 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEli
               </div>
             </div>
             {onSave && !readOnly && (
-              <div className="flex items-center gap-3">
-                {hasUnsavedChanges && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <div className="w-2 h-2 bg-[#f48024] rounded-full animate-pulse"></div>
-                    <span className="text-gray-200">Unsaved changes</span>
-                  </div>
+              <Button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="bg-white hover:bg-slate-400 active:bg-slate-500 text-[#1c275e] border-[#1c275e] px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save
+                  </>
                 )}
-                <Button
-                  onClick={handleSave}
-                  disabled={isSaving || !hasUnsavedChanges}
-                  className="bg-white hover:bg-slate-400 active:bg-slate-500 text-[#1c275e] border-[#1c275e] px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
-                >
-                  {isSaving ? "Saving..." : "Save"}
-                </Button>
-              </div>
+              </Button>
             )}
           </div>
         </CardHeader>
@@ -244,7 +230,6 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEli
                 onCheckedChange={(checked) => {
                   if (!readOnly) {
                     setNewPatients(checked);
-                    handleFieldChange();
                   }
                 }}
                 disabled={readOnly}
@@ -264,7 +249,6 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEli
                 onCheckedChange={(checked) => {
                   if (!readOnly) {
                     setExistingPatients(checked);
-                    handleFieldChange();
                   }
                 }}
                 disabled={readOnly}
@@ -284,7 +268,7 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEli
                 onCheckedChange={(checked) => {
                   if (!readOnly) {
                     setSelfPay(checked);
-                    handleFieldChange();
+                    
                   }
                 }}
                 disabled={readOnly}
@@ -304,7 +288,7 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEli
                 onCheckedChange={(checked) => {
                   if (!readOnly) {
                     setHmo(checked);
-                    handleFieldChange();
+                    
                   }
                 }}
                 disabled={readOnly}
@@ -324,7 +308,7 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEli
                 onCheckedChange={(checked) => {
                   if (!readOnly) {
                     setPpo(checked);
-                    handleFieldChange();
+                    
                   }
                 }}
                 disabled={readOnly}
@@ -344,7 +328,7 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEli
                 onCheckedChange={(checked) => {
                   if (!readOnly) {
                     setMedicare(checked);
-                    handleFieldChange();
+                    
                   }
                 }}
                 disabled={readOnly}
@@ -364,7 +348,7 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEli
                 onCheckedChange={(checked) => {
                   if (!readOnly) {
                     setMedicaid(checked);
-                    handleFieldChange();
+                    
                   }
                 }}
                 disabled={readOnly}

@@ -4,7 +4,6 @@ import type {
   PatientEligibilityValues,
   SchedulingPoliciesValues,
   ProviderPreferencesValues,
-  AgentConfigValues,
 } from '@/types/schedulingAgent';
 
 /**
@@ -157,18 +156,6 @@ export const apiToUi = {
     };
   },
 
-  /**
-   * Map agent config from API to UI
-   */
-  agentConfig(api: SchedulingAgent): AgentConfigValues {
-    return {
-      agentName: api.agent_name || '',
-      language: api.language || '',
-      voice: api.voice || '',
-      agentInstructions: api.agent_instructions || '',
-      humanTransferCriteria: api.human_transfer_criteria || '',
-    };
-  },
 };
 
 /**
@@ -181,8 +168,8 @@ export const uiToApi = {
   appointmentSetup(values: AppointmentSetupValues) {
     return {
       appointment_types: {
-        newPatient: values.appointmentTypes.newPatient,
-        followUp: values.appointmentTypes.followUp,
+        new_patient: values.appointmentTypes.newPatient,
+        follow_up: values.appointmentTypes.followUp,
         procedure: values.appointmentTypes.procedure,
       },
       new_patient_duration: durationHelpers.uiDurationToApi(values.newPatientDuration),
@@ -200,19 +187,19 @@ export const uiToApi = {
   patientEligibility(values: PatientEligibilityValues) {
     return {
       patient_types_accepted: {
-        newPatients: values.patientTypes.newPatients,
-        existingPatients: values.patientTypes.existingPatients,
-        selfPay: values.patientTypes.selfPay,
+        new_patients: values.patientTypes.newPatients,
+        existing_patients: values.patientTypes.existingPatients,
+        self_pay: values.patientTypes.selfPay,
         hmo: values.patientTypes.hmo,
         ppo: values.patientTypes.ppo,
         medicare: values.patientTypes.medicare,
         medicaid: values.patientTypes.medicaid,
       },
       referral_requirements: {
-        servicesRequiringReferrals: textareaHelpers.textareaToArray(
+        services_requiring_referrals: textareaHelpers.textareaToArray(
           values.referralRequirements.servicesRequiringReferrals
         ),
-        insurancePlansRequiringReferrals: textareaHelpers.textareaToArray(
+        insurance_plans_requiring_referrals: textareaHelpers.textareaToArray(
           values.referralRequirements.insurancePlansRequiringReferrals
         ),
       },
@@ -251,16 +238,4 @@ export const uiToApi = {
     };
   },
 
-  /**
-   * Map agent config from UI to API
-   */
-  agentConfig(values: AgentConfigValues) {
-    return {
-      agent_name: values.agentName,
-      language: values.language,
-      voice: values.voice,
-      agent_instructions: values.agentInstructions,
-      human_transfer_criteria: values.humanTransferCriteria,
-    };
-  },
 };

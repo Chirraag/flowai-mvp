@@ -991,6 +991,7 @@ export default function Launchpad() {
                   <CardContent className="px-5 py-4">
                     <DecisionMakersCard
                       decisionMakers={decisionMakers}
+                      onAdd={() => addPerson(setDecisionMakers)}
                       onUpdate={(id, field, value) => updatePerson(setDecisionMakers, id, field, value)}
                       onRemove={(id, personName) => handleDeletePerson(setDecisionMakers, id, personName)}
                       errors={formatValidationErrors(formValidation.errors)}
@@ -1050,6 +1051,7 @@ export default function Launchpad() {
                   <CardContent className="px-5 py-4">
                     <InfluencersCard
                       influencers={influencers}
+                      onAdd={() => addPerson(setInfluencers)}
                       onUpdate={(id, field, value) => updatePerson(setInfluencers, id, field, value)}
                       onRemove={(id, personName) => handleDeletePerson(setInfluencers, id, personName)}
                       errors={formatValidationErrors(formValidation.errors)}
@@ -1399,6 +1401,7 @@ export default function Launchpad() {
                   onDelete={deleteAccountDocument.mutateAsync}
                   isUploading={uploadAccountDocument.isPending}
                   isDeleting={deleteAccountDocument.isPending}
+                  readOnly={!canWriteLaunchpad}
                 />
               </div>
 
@@ -1443,6 +1446,7 @@ export default function Launchpad() {
               onDelete={deleteLocationsDocument.mutateAsync}
               isUploading={uploadLocationsDocument.isPending}
               isDeleting={deleteLocationsDocument.isPending}
+              readOnly={!canWriteLaunchpad}
             />
           </div>
 
@@ -1503,6 +1507,7 @@ export default function Launchpad() {
               onDelete={deleteSpecialtiesDocument.mutateAsync}
               isUploading={uploadSpecialtiesDocument.isPending}
               isDeleting={deleteSpecialtiesDocument.isPending}
+              readOnly={!canWriteLaunchpad}
             />
           </div>
 
@@ -1569,6 +1574,7 @@ export default function Launchpad() {
               onDelete={deleteInsuranceDocument.mutateAsync}
               isUploading={uploadInsuranceDocument.isPending}
               isDeleting={deleteInsuranceDocument.isPending}
+              readOnly={!canWriteLaunchpad}
             />
           </div>
 

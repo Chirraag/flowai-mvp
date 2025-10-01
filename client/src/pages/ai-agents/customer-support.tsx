@@ -1,9 +1,8 @@
-import React, { Suspense, lazy, useEffect, useState } from "react";
+import React, { Suspense, lazy, useEffect, useState, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { handleApiError } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
-import { apiToUi } from "@/lib/customer-support.mappers";
 import { customerSupportApi } from "@/lib/customer-support";
 import type { CustomerSupportAgentData } from "@/lib/customer-support.types";
 
@@ -110,7 +109,10 @@ export default function CustomerSupportAgent() {
   };
 
   // Prepare initial values for tabs
-  const initialValues = agentData ? {} : null;
+  const initialValues = useMemo(() => {
+    if (!agentData) return null;
+    return {};
+  }, [agentData]);
 
   // Show loading state
   if (isLoading) {

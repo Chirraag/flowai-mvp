@@ -13,6 +13,13 @@ import {
   mapFieldContentRulesToApi,
   mapDeliveryMethodsToApi
 } from "@/lib/patient-intake.mappers";
+import {
+  validateFieldContentRules,
+  validateDeliveryMethods,
+  formatValidationErrors,
+  ValidationResult,
+  ValidationError
+} from "@/lib/patient-intake-validation.utils";
 
 // Import types for better type safety
 import type {
@@ -41,6 +48,10 @@ export default function PatientIntakeAgent() {
   const [retryCount, setRetryCount] = useState(0);
   const [dirtyTabs, setDirtyTabs] = useState<Set<string>>(new Set());
   const [savingTabs, setSavingTabs] = useState<Set<string>>(new Set());
+  
+  // Validation state
+  const [formValidation, setFormValidation] = useState<ValidationResult | null>(null);
+  const [fieldValidations, setFieldValidations] = useState<Record<string, string>>({});
 
   // Refs used to call validation on Save Configuration
   const formsRef = React.useRef<any>(null);
@@ -117,31 +128,45 @@ export default function PatientIntakeAgent() {
     setSavingTabs(new Set());
 
     try {
-      // Validate all tabs (excluding forms which doesn't have API yet)
-      const validations = await Promise.all([
-        rulesRef.current?.validate?.(),
-        deliveryRef.current?.validate?.(),
-        // Note: Forms tab validation skipped as API is not implemented yet
-      ]);
+      // Get values from all tabs (excluding forms which doesn't have API yet)
+      const tabValues = {
+        rules: rulesRef.current?.getValues?.(),
+        delivery: deliveryRef.current?.getValues?.(),
+      };
 
-      // Check if any validation failed
-      const failedValidations = validations.filter(v => v && !v.valid);
-      if (failedValidations.length > 0) {
-        const firstError = failedValidations[0];
+      // Perform page-level validation before making any API calls
+      const rulesValidation = validateFieldContentRules(tabValues.rules);
+      const deliveryValidation = validateDeliveryMethods(tabValues.delivery);
+
+      const allErrors: ValidationError[] = [
+        ...rulesValidation.errors,
+        ...deliveryValidation.errors
+      ];
+      const allWarnings: ValidationError[] = [
+        ...rulesValidation.warnings,
+        ...deliveryValidation.warnings
+      ];
+
+      // If validation fails, show errors and prevent API calls
+      if (allErrors.length > 0) {
+        setFormValidation({
+          valid: false,
+          errors: allErrors,
+          warnings: allWarnings
+        });
+
         toast({
-          title: "Validation Error",
-          description: firstError.errors[0],
+          title: "Validation Failed",
+          description: formatValidationErrors(allErrors),
           variant: "destructive",
         });
         setIsSaving(false);
         return;
       }
 
-      // Get values from all tabs (excluding forms which doesn't have API yet)
-      const tabValues = {
-        rules: rulesRef.current?.getValues?.(),
-        delivery: deliveryRef.current?.getValues?.(),
-      };
+      // Clear validation state on success
+      setFormValidation(null);
+      setFieldValidations({});
 
       // Build update tasks with metadata (excluding forms which doesn't have API yet)
       const updateTasks: Array<{
@@ -277,6 +302,93 @@ export default function PatientIntakeAgent() {
     }
   };
 
+  // Individual save handlers for each tab
+  const handleSaveFieldRules = async (values: FieldContentRulesTabData) => {
+    if (!agentData || !user?.org_id) return;
+
+    // Validate before saving
+    const validation = validateFieldContentRules(values);
+    if (!validation.valid) {
+      setFormValidation(validation);
+      toast({
+        title: "Validation Failed",
+        description: formatValidationErrors(validation.errors),
+        variant: "destructive",
+      });
+      // Return early - validation error is already shown to the user
+      return;
+    }
+
+    // Clear validation on success
+    setFormValidation(null);
+    setFieldValidations({});
+
+    try {
+      await retryWithBackoff(
+        () => api.put(`/api/v1/patient-intake-agent/${user.org_id}/field-requirements`, {
+          ...mapFieldContentRulesToApi(values),
+          current_version: agentData.current_version
+        }),
+        1,
+        500
+      );
+
+      toast({
+        title: "Success",
+        description: "Field & Content Rules saved successfully",
+      });
+
+      await refetchAgentData();
+    } catch (error) {
+      console.error('Failed to save field rules:', error);
+      const errorToast = handleApiError(error, { action: "save field & content rules" });
+      toast(errorToast);
+    }
+  };
+
+  const handleSaveDeliveryMethods = async (values: DeliveryMethodsTabData) => {
+    if (!agentData || !user?.org_id) return;
+
+    // Validate before saving
+    const validation = validateDeliveryMethods(values);
+    if (!validation.valid) {
+      setFormValidation(validation);
+      toast({
+        title: "Validation Failed",
+        description: formatValidationErrors(validation.errors),
+        variant: "destructive",
+      });
+      // Return early - validation error is already shown to the user
+      return;
+    }
+
+    // Clear validation on success
+    setFormValidation(null);
+    setFieldValidations({});
+
+    try {
+      await retryWithBackoff(
+        () => api.put(`/api/v1/patient-intake-agent/${user.org_id}/delivery-methods`, {
+          ...mapDeliveryMethodsToApi(values),
+          current_version: agentData.current_version
+        }),
+        1,
+        500
+      );
+
+      toast({
+        title: "Success",
+        description: "Delivery Methods saved successfully",
+      });
+
+      await refetchAgentData();
+    } catch (error) {
+      console.error('Failed to save delivery methods:', error);
+      const errorToast = handleApiError(error, { action: "save delivery methods" });
+      toast(errorToast);
+    }
+  };
+
   // Prepare initial values for tabs
   const initialValues = agentData ? {
     rules: mapApiToFieldContentRules(agentData),
@@ -361,6 +473,8 @@ export default function PatientIntakeAgent() {
               ref={rulesRef}
               initialData={initialValues?.rules}
               isSaving={isSaving}
+              readOnly={!canWriteAgents}
+              onSave={canWriteAgents ? handleSaveFieldRules : undefined}
             />
           </Suspense>
         </TabsContent>
@@ -372,6 +486,8 @@ export default function PatientIntakeAgent() {
               ref={deliveryRef}
               initialData={initialValues?.delivery}
               isSaving={isSaving}
+              readOnly={!canWriteAgents}
+              onSave={canWriteAgents ? handleSaveDeliveryMethods : undefined}
             />
           </Suspense>
         </TabsContent>
