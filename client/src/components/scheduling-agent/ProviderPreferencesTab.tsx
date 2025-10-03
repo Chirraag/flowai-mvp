@@ -1,4 +1,4 @@
-import React, { useImperativeHandle, forwardRef, useEffect } from "react";
+import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -23,63 +23,44 @@ import type { ProviderPreferencesValues } from "@/types/schedulingAgent";
  * ProviderPreferencesTab
  * - Provider preferences and scheduling restrictions
  * - Mirrors the launchpad tab styling and structure
+ * - Controlled component: receives values and onChange handler
  */
 export type ProviderPreferencesTabProps = {
-  initialValues?: ProviderPreferencesValues;
-  onSave?: (values: ProviderPreferencesValues) => Promise<void>;
+  values: ProviderPreferencesValues;
+  onChange: (values: ProviderPreferencesValues) => void;
+  onSave?: () => Promise<void>;
   isSaving?: boolean;
   readOnly?: boolean;
 };
 
-export type ProviderPreferencesTabHandle = {
-  /**
-   * Returns the current values held by the tab.
-   */
-  getValues: () => ProviderPreferencesValues;
-  /**
-   * Lightweight validation for the tab.
-   */
-  validate: () => { valid: boolean; errors: string[] };
-};
-
-const ProviderPreferencesTab = forwardRef<ProviderPreferencesTabHandle, ProviderPreferencesTabProps>(({ initialValues, onSave, isSaving = false, readOnly: readOnlyProp }, ref) => {
+const ProviderPreferencesTab = ({ values, onChange, onSave, isSaving = false, readOnly: readOnlyProp }: ProviderPreferencesTabProps) => {
   const { canEditSchedulingAgent } = usePermissions();
   const readOnly = readOnlyProp ?? !canEditSchedulingAgent;
-  // Provider Preferences state
-  const [providerBlackoutDates, setProviderBlackoutDates] = React.useState<string[]>([]);
-  const [establishedPatientsOnlyDays, setEstablishedPatientsOnlyDays] = React.useState("");
-  const [customSchedulingRules, setCustomSchedulingRules] = React.useState<string[]>([]);
 
-  // Set initial values when props change
-  useEffect(() => {
-    if (initialValues) {
-      // Convert textarea string to array for individual date inputs
-      setProviderBlackoutDates(
-        initialValues.providerBlackoutDates
-          ? initialValues.providerBlackoutDates.split('\n').filter(date => date.trim())
-          : []
-      );
-      setEstablishedPatientsOnlyDays(initialValues.establishedPatientsOnlyDays);
-      // Convert textarea string to array for individual rule inputs
-      setCustomSchedulingRules(
-        initialValues.customSchedulingRules
-          ? initialValues.customSchedulingRules.split('\n').filter(rule => rule.trim())
-          : []
-      );
-    }
-  }, [initialValues]);
+  // Helper functions for working with provider preferences
+  const blackoutDatesArray = values.providerBlackoutDates
+    ? values.providerBlackoutDates.split('\n')
+    : [];
+  const schedulingRulesArray = values.customSchedulingRules
+    ? values.customSchedulingRules.split('\n')
+    : [];
 
   // Blackout dates management handlers
   const handleAddBlackoutDate = () => {
-    setProviderBlackoutDates([...providerBlackoutDates, ""]);
-    
+    const newDates = [...blackoutDatesArray, ""];
+    onChange({
+      ...values,
+      providerBlackoutDates: newDates.join('\n')
+    });
   };
 
   const handleUpdateBlackoutDate = (index: number, value: string) => {
-    const updated = [...providerBlackoutDates];
+    const updated = [...blackoutDatesArray];
     updated[index] = value;
-    setProviderBlackoutDates(updated);
-    
+    onChange({
+      ...values,
+      providerBlackoutDates: updated.join('\n')
+    });
   };
 
   // Delete confirmation dialog state
@@ -106,24 +87,31 @@ const ProviderPreferencesTab = forwardRef<ProviderPreferencesTabHandle, Provider
 
   const handleConfirmDelete = () => {
     if (deleteDialog.index !== undefined) {
-      const updated = providerBlackoutDates.filter((_, i) => i !== deleteDialog.index);
-      setProviderBlackoutDates(updated);
-      
+      const updated = blackoutDatesArray.filter((_, i) => i !== deleteDialog.index);
+      onChange({
+        ...values,
+        providerBlackoutDates: updated.join('\n')
+      });
     }
     setDeleteDialog({ open: false });
   };
 
   // Custom scheduling rules management handlers
   const handleAddRule = () => {
-    setCustomSchedulingRules([...customSchedulingRules, ""]);
-    
+    const newRules = [...schedulingRulesArray, ""];
+    onChange({
+      ...values,
+      customSchedulingRules: newRules.join('\n')
+    });
   };
 
   const handleUpdateRule = (index: number, value: string) => {
-    const updated = [...customSchedulingRules];
+    const updated = [...schedulingRulesArray];
     updated[index] = value;
-    setCustomSchedulingRules(updated);
-    
+    onChange({
+      ...values,
+      customSchedulingRules: updated.join('\n')
+    });
   };
 
   const handleDeleteRule = (index: number) => {
@@ -135,9 +123,11 @@ const ProviderPreferencesTab = forwardRef<ProviderPreferencesTabHandle, Provider
 
   const handleConfirmRuleDelete = () => {
     if (ruleDeleteDialog.index !== undefined) {
-      const updated = customSchedulingRules.filter((_, i) => i !== ruleDeleteDialog.index);
-      setCustomSchedulingRules(updated);
-      
+      const updated = schedulingRulesArray.filter((_, i) => i !== ruleDeleteDialog.index);
+      onChange({
+        ...values,
+        customSchedulingRules: updated.join('\n')
+      });
     }
     setRuleDeleteDialog({ open: false });
   };
@@ -145,29 +135,8 @@ const ProviderPreferencesTab = forwardRef<ProviderPreferencesTabHandle, Provider
   // Save handler
   const handleSave = async () => {
     if (!onSave) return;
-
-    const currentRef = (ref as React.MutableRefObject<ProviderPreferencesTabHandle | null>).current;
-    const currentValues = currentRef?.getValues();
-    if (currentValues) {
-      await onSave(currentValues);
-    }
+    await onSave();
   };
-
-  // Expose values and validation to parent page
-  useImperativeHandle(ref, () => ({
-    getValues: () => ({
-      // Convert array back to newline-separated string for API compatibility
-      providerBlackoutDates: providerBlackoutDates.filter(date => date.trim()).join('\n'),
-      establishedPatientsOnlyDays,
-      // Convert array back to newline-separated string for API compatibility
-      customSchedulingRules: customSchedulingRules.filter(rule => rule.trim()).join('\n'),
-    }),
-    validate: () => {
-      const errors: string[] = [];
-      // Basic validation can be added here if needed
-      return { valid: errors.length === 0, errors };
-    },
-  }));
 
   return (
     <div className="space-y-6">
@@ -229,7 +198,7 @@ const ProviderPreferencesTab = forwardRef<ProviderPreferencesTabHandle, Provider
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
-                {providerBlackoutDates.map((date, index) => (
+                {blackoutDatesArray.map((date, index) => (
                   <div key={index} className="flex items-center gap-1 bg-muted px-3 py-1 rounded-full">
                     <Input
                       type="date"
@@ -250,7 +219,7 @@ const ProviderPreferencesTab = forwardRef<ProviderPreferencesTabHandle, Provider
                     )}
                   </div>
                 ))}
-                {providerBlackoutDates.length === 0 && (
+                {blackoutDatesArray.length === 0 && (
                   <p className="text-sm text-muted-foreground">No blackout dates added yet.</p>
                 )}
               </div>
@@ -266,11 +235,14 @@ const ProviderPreferencesTab = forwardRef<ProviderPreferencesTabHandle, Provider
               <Textarea
                 id="established-only"
                 placeholder="Enter days when only established patients can be scheduled (one per line)"
-                value={establishedPatientsOnlyDays}
+                value={values.establishedPatientsOnlyDays}
                 onChange={(e) => {
                   if (!readOnly) {
-                    setEstablishedPatientsOnlyDays(e.target.value);
-                    
+                    onChange({
+                      ...values,
+                      establishedPatientsOnlyDays: e.target.value
+                    });
+
                   }
                 }}
                 readOnly={readOnly}
@@ -298,7 +270,7 @@ const ProviderPreferencesTab = forwardRef<ProviderPreferencesTabHandle, Provider
                 )}
               </div>
               <div className="space-y-2">
-                {customSchedulingRules.map((rule, index) => (
+                {schedulingRulesArray.map((rule, index) => (
                   <div key={index} className="flex items-center gap-2">
                     <Input
                       placeholder="Enter custom scheduling rule (e.g., No new patients on Mondays before noon)"
@@ -319,7 +291,7 @@ const ProviderPreferencesTab = forwardRef<ProviderPreferencesTabHandle, Provider
                     )}
                   </div>
                 ))}
-                {customSchedulingRules.length === 0 && (
+                {schedulingRulesArray.length === 0 && (
                   <p className="text-sm text-muted-foreground">No custom rules added yet.</p>
                 )}
               </div>
@@ -372,6 +344,6 @@ const ProviderPreferencesTab = forwardRef<ProviderPreferencesTabHandle, Provider
       </AlertDialog>
     </div>
   );
-});
+};
 
 export default ProviderPreferencesTab;

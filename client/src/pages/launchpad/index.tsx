@@ -204,6 +204,8 @@ export default function Launchpad() {
 
   // Tab management
   const [activeTab, setActiveTab] = useState("account");
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [pendingTabChange, setPendingTabChange] = useState<string | null>(null);
 
   // Minimize state for cards
   const [minimizedCards, setMinimizedCards] = useState<Record<string, boolean>>({});
@@ -218,6 +220,12 @@ export default function Launchpad() {
     personName?: string;
     setter?: React.Dispatch<React.SetStateAction<Person[]>>;
   }>({ open: false });
+
+  // Unsaved changes dialog state
+  const [unsavedChangesDialog, setUnsavedChangesDialog] = useState<{
+    open: boolean;
+  }>({ open: false });
+
   const previousOrgIdRef = useRef<number | undefined>(undefined);
 
   const resetLaunchpadState = () => {
@@ -259,9 +267,371 @@ export default function Launchpad() {
     setFieldValidations({});
     setSpecialties([]);
     setInsurance({ is_active: true });
+    setHasUnsavedChanges(false);
     originalLocationsRef.current = [];
     originalSpecialtiesRef.current = [];
   };
+
+  // Function to detect if there are unsaved changes
+  const checkForUnsavedChanges = useCallback(() => {
+    if (!typedData) return false;
+
+    const ad = typedData.account_details;
+
+    // Check account details
+    if (ad) {
+      if (accountName !== (ad.account_name ?? "")) return true;
+      if (websiteAddress !== (ad.website_address ?? "")) return true;
+      if (headquartersAddress !== (ad.headquarters_address ?? "")) return true;
+      if (schedulingStructure !== (ad.scheduling_structure ?? "")) return true;
+      if (rcmStructure !== (ad.rcm_structure ?? "")) return true;
+      if (orderEntryTeamSize !== (ad.order_entry_team_size ?? undefined)) return true;
+      if (schedulingTeamSize !== (ad.scheduling_team_size ?? undefined)) return true;
+      if (patientIntakeTeamSize !== (ad.patient_intake_team_size ?? undefined)) return true;
+      if (rcmTeamSize !== (ad.rcm_team_size ?? undefined)) return true;
+
+      // Check opportunity sizing
+      const currentOpp = {
+        monthly_orders_count: opportunitySizing.monthly_orders_count,
+        monthly_patients_scheduled: opportunitySizing.monthly_patients_scheduled,
+        monthly_patients_checked_in: opportunitySizing.monthly_patients_checked_in,
+      };
+      const originalOpp = {
+        monthly_orders_count: ad.monthly_orders_count,
+        monthly_patients_scheduled: ad.monthly_patients_scheduled,
+        monthly_patients_checked_in: ad.monthly_patients_checked_in,
+      };
+      if (JSON.stringify(currentOpp) !== JSON.stringify(originalOpp)) return true;
+
+      // Check arrays
+      if (JSON.stringify(emrSystems) !== JSON.stringify(ad.emr_ris_systems || [])) return true;
+      if (JSON.stringify(telephonySystems) !== JSON.stringify(ad.telephony_ccas_systems || [])) return true;
+      if (JSON.stringify(schedulingPhoneNumbers) !== JSON.stringify(ad.scheduling_phone_numbers || [])) return true;
+      if (insuranceVerificationSystem !== (ad.insurance_verification_system ?? "")) return true;
+      if (insuranceVerificationDetails !== (ad.insurance_verification_details ?? "")) return true;
+      if (additionalInfo !== (ad.additional_info ?? "")) return true;
+      if (clinicalNotes !== (ad.clinical_notes ?? "")) return true;
+
+      // Check people arrays
+      const peopleArrays = [
+        { current: decisionMakers, original: ad.decision_makers },
+        { current: influencers, original: ad.influencers },
+        { current: orderEntryTeam, original: ad.order_entry_team },
+        { current: schedulingTeam, original: ad.scheduling_team },
+        { current: patientIntakeTeam, original: ad.patient_intake_team },
+        { current: rcmTeam, original: ad.rcm_team },
+      ];
+
+      for (const { current, original } of peopleArrays) {
+        if (current.length !== (original || []).length) return true;
+        for (let i = 0; i < current.length; i++) {
+          const curr = current[i];
+          const orig = (original || [])[i];
+          if (!orig) return true;
+          if (curr.title !== (orig.title || "")) return true;
+          if (curr.name !== (orig.name || "")) return true;
+          if (curr.email !== (orig.email || "")) return true;
+          if (curr.phone !== (orig.phone || "")) return true;
+        }
+      }
+    }
+
+    // Check locations
+    if (locations.length !== (typedData.locations || []).length) return true;
+    for (let i = 0; i < locations.length; i++) {
+      const curr = locations[i];
+      const orig = typedData.locations?.[i];
+      if (!orig) return true;
+      if (curr.name !== orig.name) return true;
+      if (curr.location_id !== orig.location_id) return true;
+      if (curr.address_line1 !== (orig.address_line1 ?? "")) return true;
+      if (curr.address_line2 !== orig.address_line2) return true;
+      if (curr.city !== (orig.city ?? "")) return true;
+      if (curr.state !== (orig.state ?? "")) return true;
+      if (curr.zip_code !== (orig.zip_code ?? "")) return true;
+      if (curr.weekday_hours !== (orig.weekday_hours ?? "")) return true;
+      if (curr.weekend_hours !== (orig.weekend_hours ?? "")) return true;
+      if (curr.parking_directions !== (orig.parking_directions ?? "")) return true;
+      if (curr.is_active !== !!orig.is_active) return true;
+    }
+
+    // Check specialties
+    if (specialties.length !== (typedData.speciality_services || []).length) return true;
+    for (let i = 0; i < specialties.length; i++) {
+      const curr = specialties[i];
+      const orig = typedData.speciality_services?.[i];
+      if (!orig) return true;
+      if (curr.specialty_name !== (orig.specialty_name ?? "")) return true;
+      if (JSON.stringify(curr.location_ids.sort()) !== JSON.stringify((orig.location_ids || []).sort())) return true;
+      if (curr.physician_names_source_type !== (orig.physician_names_source_type ?? null)) return true;
+      if (curr.physician_names_source_name !== (orig.physician_names_source_name ?? null)) return true;
+      if (curr.new_patients_source_type !== (orig.new_patients_source_type ?? null)) return true;
+      if (curr.new_patients_source_name !== (orig.new_patients_source_name ?? null)) return true;
+      if (curr.physician_locations_source_type !== (orig.physician_locations_source_type ?? null)) return true;
+      if (curr.physician_locations_source_name !== (orig.physician_locations_source_name ?? null)) return true;
+      if (curr.physician_credentials_source_type !== (orig.physician_credentials_source_type ?? null)) return true;
+      if (curr.physician_credentials_source_name !== (orig.physician_credentials_source_name ?? null)) return true;
+      if (curr.services_offered_source_type !== (orig.services_offered_source_type ?? null)) return true;
+      if (curr.services_offered_source_name !== (orig.services_offered_source_name ?? null)) return true;
+      if (curr.patient_prep_source_type !== (orig.patient_prep_source_type ?? null)) return true;
+      if (curr.patient_prep_source_name !== (orig.patient_prep_source_name ?? null)) return true;
+      if (curr.patient_faqs_source_type !== (orig.patient_faqs_source_type ?? null)) return true;
+      if (curr.patient_faqs_source_name !== (orig.patient_faqs_source_name ?? null)) return true;
+      if (curr.is_active !== !!orig.is_active) return true;
+
+      // Check services array
+      if (curr.services.length !== (orig.services || []).length) return true;
+      for (let j = 0; j < curr.services.length; j++) {
+        const currSvc = curr.services[j];
+        const origSvc = orig.services?.[j];
+        if (!origSvc) return true;
+        if (currSvc.name !== (origSvc.name ?? "")) return true;
+        if (currSvc.patient_prep_requirements !== (origSvc.patient_prep_requirements ?? "")) return true;
+        if (currSvc.faq !== (origSvc.faq ?? "")) return true;
+        if (currSvc.service_information_name !== (origSvc.service_information_name ?? null)) return true;
+        if (currSvc.service_information_source !== (origSvc.service_information_source ?? null)) return true;
+      }
+    }
+
+    // Check insurance
+    if (typedData.insurance) {
+      if (insurance.accepted_payers_source !== (typedData.insurance.accepted_payers_source ?? "")) return true;
+      if (insurance.accepted_payers_source_details !== (typedData.insurance.accepted_payers_source_details ?? "")) return true;
+      if (insurance.insurance_verification_source !== (typedData.insurance.insurance_verification_source ?? "")) return true;
+      if (insurance.insurance_verification_source_details !== (typedData.insurance.insurance_verification_source_details ?? "")) return true;
+      if (insurance.patient_copay_source !== (typedData.insurance.patient_copay_source ?? "")) return true;
+      if (insurance.patient_copay_source_details !== (typedData.insurance.patient_copay_source_details ?? "")) return true;
+      if (insurance.is_active !== !!typedData.insurance.is_active) return true;
+    }
+
+    return false;
+  }, [
+    typedData,
+    accountName,
+    websiteAddress,
+    headquartersAddress,
+    schedulingStructure,
+    rcmStructure,
+    orderEntryTeamSize,
+    schedulingTeamSize,
+    patientIntakeTeamSize,
+    rcmTeamSize,
+    opportunitySizing,
+    emrSystems,
+    telephonySystems,
+    schedulingPhoneNumbers,
+    insuranceVerificationSystem,
+    insuranceVerificationDetails,
+    additionalInfo,
+    clinicalNotes,
+    decisionMakers,
+    influencers,
+    orderEntryTeam,
+    schedulingTeam,
+    patientIntakeTeam,
+    rcmTeam,
+    locations,
+    specialties,
+    insurance,
+  ]);
+
+  // Function to get which tabs have unsaved changes
+  const getUnsavedChangesTabs = useCallback(() => {
+    if (!typedData) return [];
+
+    const tabsWithChanges = [];
+    const ad = typedData.account_details;
+
+    // Check account tab
+    let accountHasChanges = false;
+    if (ad) {
+      if (accountName !== (ad.account_name ?? "")) accountHasChanges = true;
+      if (websiteAddress !== (ad.website_address ?? "")) accountHasChanges = true;
+      if (headquartersAddress !== (ad.headquarters_address ?? "")) accountHasChanges = true;
+      if (schedulingStructure !== (ad.scheduling_structure ?? "")) accountHasChanges = true;
+      if (rcmStructure !== (ad.rcm_structure ?? "")) accountHasChanges = true;
+      if (orderEntryTeamSize !== (ad.order_entry_team_size ?? undefined)) accountHasChanges = true;
+      if (schedulingTeamSize !== (ad.scheduling_team_size ?? undefined)) accountHasChanges = true;
+      if (patientIntakeTeamSize !== (ad.patient_intake_team_size ?? undefined)) accountHasChanges = true;
+      if (rcmTeamSize !== (ad.rcm_team_size ?? undefined)) accountHasChanges = true;
+
+      // Check opportunity sizing
+      const currentOpp = {
+        monthly_orders_count: opportunitySizing.monthly_orders_count,
+        monthly_patients_scheduled: opportunitySizing.monthly_patients_scheduled,
+        monthly_patients_checked_in: opportunitySizing.monthly_patients_checked_in,
+      };
+      const originalOpp = {
+        monthly_orders_count: ad.monthly_orders_count,
+        monthly_patients_scheduled: ad.monthly_patients_scheduled,
+        monthly_patients_checked_in: ad.monthly_patients_checked_in,
+      };
+      if (JSON.stringify(currentOpp) !== JSON.stringify(originalOpp)) accountHasChanges = true;
+
+      // Check arrays
+      if (JSON.stringify(emrSystems) !== JSON.stringify(ad.emr_ris_systems || [])) accountHasChanges = true;
+      if (JSON.stringify(telephonySystems) !== JSON.stringify(ad.telephony_ccas_systems || [])) accountHasChanges = true;
+      if (JSON.stringify(schedulingPhoneNumbers) !== JSON.stringify(ad.scheduling_phone_numbers || [])) accountHasChanges = true;
+      if (insuranceVerificationSystem !== (ad.insurance_verification_system ?? "")) accountHasChanges = true;
+      if (insuranceVerificationDetails !== (ad.insurance_verification_details ?? "")) accountHasChanges = true;
+      if (additionalInfo !== (ad.additional_info ?? "")) accountHasChanges = true;
+      if (clinicalNotes !== (ad.clinical_notes ?? "")) accountHasChanges = true;
+
+      // Check people arrays
+      const peopleArrays = [
+        { current: decisionMakers, original: ad.decision_makers },
+        { current: influencers, original: ad.influencers },
+        { current: orderEntryTeam, original: ad.order_entry_team },
+        { current: schedulingTeam, original: ad.scheduling_team },
+        { current: patientIntakeTeam, original: ad.patient_intake_team },
+        { current: rcmTeam, original: ad.rcm_team },
+      ];
+
+      for (const { current, original } of peopleArrays) {
+        if (current.length !== (original || []).length) {
+          accountHasChanges = true;
+          break;
+        }
+        for (let i = 0; i < current.length; i++) {
+          const curr = current[i];
+          const orig = (original || [])[i];
+          if (!orig) {
+            accountHasChanges = true;
+            break;
+          }
+          if (curr.title !== (orig.title || "")) accountHasChanges = true;
+          if (curr.name !== (orig.name || "")) accountHasChanges = true;
+          if (curr.email !== (orig.email || "")) accountHasChanges = true;
+          if (curr.phone !== (orig.phone || "")) accountHasChanges = true;
+          if (accountHasChanges) break;
+        }
+        if (accountHasChanges) break;
+      }
+    }
+    if (accountHasChanges) tabsWithChanges.push("Account");
+
+    // Check locations tab
+    let locationsHasChanges = false;
+    if (locations.length !== (typedData.locations || []).length) locationsHasChanges = true;
+    else {
+      for (let i = 0; i < locations.length; i++) {
+        const curr = locations[i];
+        const orig = typedData.locations?.[i];
+        if (!orig) {
+          locationsHasChanges = true;
+          break;
+        }
+        if (curr.name !== orig.name) locationsHasChanges = true;
+        if (curr.location_id !== orig.location_id) locationsHasChanges = true;
+        if (curr.address_line1 !== (orig.address_line1 ?? "")) locationsHasChanges = true;
+        if (curr.address_line2 !== orig.address_line2) locationsHasChanges = true;
+        if (curr.city !== (orig.city ?? "")) locationsHasChanges = true;
+        if (curr.state !== (orig.state ?? "")) locationsHasChanges = true;
+        if (curr.zip_code !== (orig.zip_code ?? "")) locationsHasChanges = true;
+        if (curr.weekday_hours !== (orig.weekday_hours ?? "")) locationsHasChanges = true;
+        if (curr.weekend_hours !== (orig.weekend_hours ?? "")) locationsHasChanges = true;
+        if (curr.parking_directions !== (orig.parking_directions ?? "")) locationsHasChanges = true;
+        if (curr.is_active !== !!orig.is_active) locationsHasChanges = true;
+        if (locationsHasChanges) break;
+      }
+    }
+    if (locationsHasChanges) tabsWithChanges.push("Locations");
+
+    // Check specialties tab
+    let specialtiesHasChanges = false;
+    if (specialties.length !== (typedData.speciality_services || []).length) specialtiesHasChanges = true;
+    else {
+      for (let i = 0; i < specialties.length; i++) {
+        const curr = specialties[i];
+        const orig = typedData.speciality_services?.[i];
+        if (!orig) {
+          specialtiesHasChanges = true;
+          break;
+        }
+        if (curr.specialty_name !== (orig.specialty_name ?? "")) specialtiesHasChanges = true;
+        if (JSON.stringify(curr.location_ids.sort()) !== JSON.stringify((orig.location_ids || []).sort())) specialtiesHasChanges = true;
+        if (curr.physician_names_source_type !== (orig.physician_names_source_type ?? null)) specialtiesHasChanges = true;
+        if (curr.physician_names_source_name !== (orig.physician_names_source_name ?? null)) specialtiesHasChanges = true;
+        if (curr.new_patients_source_type !== (orig.new_patients_source_type ?? null)) specialtiesHasChanges = true;
+        if (curr.new_patients_source_name !== (orig.new_patients_source_name ?? null)) specialtiesHasChanges = true;
+        if (curr.physician_locations_source_type !== (orig.physician_locations_source_type ?? null)) specialtiesHasChanges = true;
+        if (curr.physician_locations_source_name !== (orig.physician_locations_source_name ?? null)) specialtiesHasChanges = true;
+        if (curr.physician_credentials_source_type !== (orig.physician_credentials_source_type ?? null)) specialtiesHasChanges = true;
+        if (curr.physician_credentials_source_name !== (orig.physician_credentials_source_name ?? null)) specialtiesHasChanges = true;
+        if (curr.services_offered_source_type !== (orig.services_offered_source_type ?? null)) specialtiesHasChanges = true;
+        if (curr.services_offered_source_name !== (orig.services_offered_source_name ?? null)) specialtiesHasChanges = true;
+        if (curr.patient_prep_source_type !== (orig.patient_prep_source_type ?? null)) specialtiesHasChanges = true;
+        if (curr.patient_prep_source_name !== (orig.patient_prep_source_name ?? null)) specialtiesHasChanges = true;
+        if (curr.patient_faqs_source_type !== (orig.patient_faqs_source_type ?? null)) specialtiesHasChanges = true;
+        if (curr.patient_faqs_source_name !== (orig.patient_faqs_source_name ?? null)) specialtiesHasChanges = true;
+        if (curr.is_active !== !!orig.is_active) specialtiesHasChanges = true;
+
+        // Check services array
+        if (curr.services.length !== (orig.services || []).length) specialtiesHasChanges = true;
+        else {
+          for (let j = 0; j < curr.services.length; j++) {
+            const currSvc = curr.services[j];
+            const origSvc = orig.services?.[j];
+            if (!origSvc) {
+              specialtiesHasChanges = true;
+              break;
+            }
+            if (currSvc.name !== (origSvc.name ?? "")) specialtiesHasChanges = true;
+            if (currSvc.patient_prep_requirements !== (origSvc.patient_prep_requirements ?? "")) specialtiesHasChanges = true;
+            if (currSvc.faq !== (origSvc.faq ?? "")) specialtiesHasChanges = true;
+            if (currSvc.service_information_name !== (origSvc.service_information_name ?? null)) specialtiesHasChanges = true;
+            if (currSvc.service_information_source !== (origSvc.service_information_source ?? null)) specialtiesHasChanges = true;
+            if (specialtiesHasChanges) break;
+          }
+        }
+        if (specialtiesHasChanges) break;
+      }
+    }
+    if (specialtiesHasChanges) tabsWithChanges.push("Specialties");
+
+    // Check insurance tab
+    let insuranceHasChanges = false;
+    if (typedData.insurance) {
+      if (insurance.accepted_payers_source !== (typedData.insurance.accepted_payers_source ?? "")) insuranceHasChanges = true;
+      if (insurance.accepted_payers_source_details !== (typedData.insurance.accepted_payers_source_details ?? "")) insuranceHasChanges = true;
+      if (insurance.insurance_verification_source !== (typedData.insurance.insurance_verification_source ?? "")) insuranceHasChanges = true;
+      if (insurance.insurance_verification_source_details !== (typedData.insurance.insurance_verification_source_details ?? "")) insuranceHasChanges = true;
+      if (insurance.patient_copay_source !== (typedData.insurance.patient_copay_source ?? "")) insuranceHasChanges = true;
+      if (insurance.patient_copay_source_details !== (typedData.insurance.patient_copay_source_details ?? "")) insuranceHasChanges = true;
+      if (insurance.is_active !== !!typedData.insurance.is_active) insuranceHasChanges = true;
+    }
+    if (insuranceHasChanges) tabsWithChanges.push("Insurance");
+
+    return tabsWithChanges;
+  }, [
+    typedData,
+    accountName,
+    websiteAddress,
+    headquartersAddress,
+    schedulingStructure,
+    rcmStructure,
+    orderEntryTeamSize,
+    schedulingTeamSize,
+    patientIntakeTeamSize,
+    rcmTeamSize,
+    opportunitySizing,
+    emrSystems,
+    telephonySystems,
+    schedulingPhoneNumbers,
+    insuranceVerificationSystem,
+    insuranceVerificationDetails,
+    additionalInfo,
+    clinicalNotes,
+    decisionMakers,
+    influencers,
+    orderEntryTeam,
+    schedulingTeam,
+    patientIntakeTeam,
+    rcmTeam,
+    locations,
+    specialties,
+    insurance,
+  ]);
 
   useEffect(() => {
     if (!orgId) return;
@@ -444,6 +814,22 @@ export default function Launchpad() {
     }
   }, [typedData]);
 
+  // Update unsaved changes state whenever form data changes
+  useEffect(() => {
+    const hasChanges = checkForUnsavedChanges();
+    setHasUnsavedChanges(hasChanges);
+  }, [checkForUnsavedChanges]);
+
+  // Handle tab changes with unsaved changes warning
+  const handleTabChange = (newTab: string) => {
+    if (hasUnsavedChanges) {
+      setPendingTabChange(newTab);
+      setUnsavedChangesDialog({ open: true });
+    } else {
+      setActiveTab(newTab);
+    }
+  };
+
   const addPerson = (setter: React.Dispatch<React.SetStateAction<Person[]>>) => {
     setter(prev => [
       ...prev,
@@ -482,6 +868,22 @@ export default function Launchpad() {
       // Directly remove the person from the array
       deleteDialog.setter(prev => prev.filter(p => p.id !== deleteDialog.personId));
       setDeleteDialog({ open: false });
+    }
+  };
+
+  // Handle unsaved changes dialog
+  const handleUnsavedChangesDialogContinue = () => {
+    setUnsavedChangesDialog({ open: false });
+    if (pendingTabChange) {
+      setActiveTab(pendingTabChange);
+      setPendingTabChange(null);
+    }
+  };
+
+  const handleUnsavedChangesDialogCancel = (open: boolean = false) => {
+    setUnsavedChangesDialog({ open });
+    if (!open) {
+      setPendingTabChange(null);
     }
   };
 
@@ -570,6 +972,7 @@ export default function Launchpad() {
         hasWarnings: false,
       });
       setFieldValidations({});
+      setHasUnsavedChanges(false);
 
       toast({
         title: "Success",
@@ -648,6 +1051,7 @@ export default function Launchpad() {
         hasWarnings: false,
       });
       setFieldValidations({});
+      setHasUnsavedChanges(false);
 
       toast({
         title: "Success",
@@ -701,6 +1105,7 @@ export default function Launchpad() {
         hasWarnings: false,
       });
       setFieldValidations({});
+      setHasUnsavedChanges(false);
 
       toast({
         title: "Success",
@@ -755,6 +1160,7 @@ export default function Launchpad() {
         hasWarnings: false,
       });
       setFieldValidations({});
+      setHasUnsavedChanges(false);
 
       toast({
         title: "Success",
@@ -808,7 +1214,7 @@ export default function Launchpad() {
         />
       )}
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
         <TabsList className="w-full flex gap-0 rounded-3xl outline outline-offset-[-1px] bg-muted p-1 overflow-hidden">
           <TabsTrigger
             value="account"
@@ -1611,6 +2017,29 @@ export default function Launchpad() {
               className="bg-red-600 hover:bg-red-700"
             >
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Unsaved Changes Warning Dialog */}
+      <AlertDialog open={unsavedChangesDialog.open} onOpenChange={handleUnsavedChangesDialogCancel}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
+            <AlertDialogDescription>
+              Unsaved changes in {getUnsavedChangesTabs().length === 1 ? 'tab' : 'tabs'}: <strong>{getUnsavedChangesTabs().join(", ")}</strong>. Switching tabs will keep your changes—they will not be lost. Please save before leaving launchpad page.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => handleUnsavedChangesDialogCancel(false)}>
+              Stay in Current Tab
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleUnsavedChangesDialogContinue}
+              className="bg-[#1C275E] hover:bg-[#233072]"
+            >
+              Continue Anyway
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

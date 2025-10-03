@@ -1,4 +1,4 @@
-import React, { useImperativeHandle, forwardRef, useEffect } from "react";
+import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -12,91 +12,25 @@ import type { SchedulingPoliciesValues } from "@/types/schedulingAgent";
  * SchedulingPoliciesTab
  * - Walk-ins, same-day, and cancellation policies configuration
  * - Mirrors the launchpad tab styling and structure
+ * - Controlled component: receives values and onChange handler
  */
 export type SchedulingPoliciesTabProps = {
-  initialValues?: SchedulingPoliciesValues;
-  onSave?: (values: SchedulingPoliciesValues) => Promise<void>;
+  values: SchedulingPoliciesValues;
+  onChange: (values: SchedulingPoliciesValues) => void;
+  onSave?: () => Promise<void>;
   isSaving?: boolean;
   readOnly?: boolean;
 };
 
-export type SchedulingPoliciesTabHandle = {
-  /**
-   * Returns the current values held by the tab.
-   */
-  getValues: () => SchedulingPoliciesValues;
-  /**
-   * Lightweight validation for the tab.
-   */
-  validate: () => { valid: boolean; errors: string[] };
-};
-
-const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, SchedulingPoliciesTabProps>(({ initialValues, onSave, isSaving = false, readOnly: readOnlyProp }, ref) => {
+const SchedulingPoliciesTab = ({ values, onChange, onSave, isSaving = false, readOnly: readOnlyProp }: SchedulingPoliciesTabProps) => {
   const { canEditSchedulingAgent } = usePermissions();
   const readOnly = readOnlyProp ?? !canEditSchedulingAgent;
-  // Walk-in Policy state
-  const [acceptWalkIns, setAcceptWalkIns] = React.useState(true);
-  const [allowSameDayAppointments, setAllowSameDayAppointments] = React.useState(true);
-  const [sameDayCutoffTime, setSameDayCutoffTime] = React.useState("15:00");
-
-  // Cancellation Policy state
-  const [minimumCancellationNotice, setMinimumCancellationNotice] = React.useState("24");
-  const [noShowFee, setNoShowFee] = React.useState("50");
-
-  // Set initial values when props change
-  useEffect(() => {
-    if (initialValues) {
-      setAcceptWalkIns(initialValues.walkInPolicy.acceptWalkIns);
-      setAllowSameDayAppointments(initialValues.walkInPolicy.allowSameDayAppointments);
-      setSameDayCutoffTime(initialValues.walkInPolicy.sameDayCutoffTime);
-      setMinimumCancellationNotice(initialValues.cancellationPolicy.minimumCancellationNotice);
-      setNoShowFee(initialValues.cancellationPolicy.noShowFee);
-    }
-  }, [initialValues]);
 
   // Save handler
   const handleSave = async () => {
     if (!onSave) return;
-
-    const currentRef = (ref as React.MutableRefObject<SchedulingPoliciesTabHandle | null>).current;
-    const currentValues = currentRef?.getValues();
-    if (currentValues) {
-      await onSave(currentValues);
-    }
+    await onSave();
   };
-
-  // Expose values and validation to parent page
-  useImperativeHandle(ref, () => ({
-    getValues: () => ({
-      walkInPolicy: {
-        acceptWalkIns,
-        allowSameDayAppointments,
-        sameDayCutoffTime,
-      },
-      cancellationPolicy: {
-        minimumCancellationNotice,
-        noShowFee,
-      },
-    }),
-    validate: () => {
-      const errors: string[] = [];
-
-      if (!minimumCancellationNotice || parseInt(minimumCancellationNotice) <= 0) {
-        errors.push("Minimum cancellation notice must be a positive number");
-      }
-
-      if (!noShowFee || parseFloat(noShowFee) < 0) {
-        errors.push("No-show fee must be a non-negative number");
-      }
-
-      // Validate time format (HH:MM)
-      if (!sameDayCutoffTime || !/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(sameDayCutoffTime)) {
-        errors.push("Same-day cutoff time must be in HH:MM format");
-      }
-
-      return { valid: errors.length === 0, errors };
-    },
-  }));
 
   return (
     <div className="space-y-6">
@@ -147,11 +81,17 @@ const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, Scheduling
               </div>
               <IOSSwitch
                 id="accept-walk-ins"
-                checked={acceptWalkIns}
+                checked={values.walkInPolicy.acceptWalkIns}
                 onCheckedChange={(checked) => {
                   if (!readOnly) {
-                    setAcceptWalkIns(checked);
-                    
+                    onChange({
+                      ...values,
+                      walkInPolicy: {
+                        ...values.walkInPolicy,
+                        acceptWalkIns: checked
+                      }
+                    });
+
                   }
                 }}
                 disabled={readOnly}
@@ -167,11 +107,17 @@ const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, Scheduling
               </div>
               <IOSSwitch
                 id="same-day-appointments"
-                checked={allowSameDayAppointments}
+                checked={values.walkInPolicy.allowSameDayAppointments}
                 onCheckedChange={(checked) => {
                   if (!readOnly) {
-                    setAllowSameDayAppointments(checked);
-                    
+                    onChange({
+                      ...values,
+                      walkInPolicy: {
+                        ...values.walkInPolicy,
+                        allowSameDayAppointments: checked
+                      }
+                    });
+
                   }
                 }}
                 disabled={readOnly}
@@ -185,11 +131,17 @@ const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, Scheduling
                 <Input
                   id="cutoff-time"
                   type="time"
-                  value={sameDayCutoffTime}
+                  value={values.walkInPolicy.sameDayCutoffTime}
                   onChange={(e) => {
                     if (!readOnly) {
-                      setSameDayCutoffTime(e.target.value);
-                      
+                      onChange({
+                        ...values,
+                        walkInPolicy: {
+                          ...values.walkInPolicy,
+                          sameDayCutoffTime: e.target.value
+                        }
+                      });
+
                     }
                   }}
                   readOnly={readOnly}
@@ -227,11 +179,17 @@ const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, Scheduling
                   type="number"
                   min="1"
                   placeholder="24"
-                  value={minimumCancellationNotice}
+                  value={values.cancellationPolicy.minimumCancellationNotice}
                   onChange={(e) => {
                     if (!readOnly) {
-                      setMinimumCancellationNotice(e.target.value);
-                      
+                      onChange({
+                        ...values,
+                        cancellationPolicy: {
+                          ...values.cancellationPolicy,
+                          minimumCancellationNotice: e.target.value
+                        }
+                      });
+
                     }
                   }}
                   readOnly={readOnly}
@@ -249,11 +207,17 @@ const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, Scheduling
                     min="0"
                     step="0.01"
                     placeholder="50.00"
-                    value={noShowFee}
+                    value={values.cancellationPolicy.noShowFee}
                     onChange={(e) => {
                       if (!readOnly) {
-                        setNoShowFee(e.target.value);
-                        
+                        onChange({
+                          ...values,
+                          cancellationPolicy: {
+                            ...values.cancellationPolicy,
+                            noShowFee: e.target.value
+                          }
+                        });
+
                       }
                     }}
                     readOnly={readOnly}
@@ -267,6 +231,6 @@ const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, Scheduling
       </Card>
     </div>
   );
-});
+};
 
 export default SchedulingPoliciesTab;

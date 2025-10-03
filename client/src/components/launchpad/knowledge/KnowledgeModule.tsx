@@ -484,7 +484,7 @@ export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount, read
                     Generating...
                   </>
                 ) : (
-                  "Generate"
+                  "Generate knowledge base"
                 )}
               </Button>
             )}

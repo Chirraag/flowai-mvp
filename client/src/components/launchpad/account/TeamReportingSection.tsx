@@ -113,52 +113,53 @@ export default function TeamReportingSection({
   };
   return (
     <div className="space-y-4">
-      {/* Team Section Header */}
-      <div className="border-b border-[#1C275E]/20 pb-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-[#1C275E]/10 rounded-lg flex items-center justify-center">
-              <svg className="w-4 h-4 text-[#1C275E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-              </svg>
+        {/* Team Section Header */}
+        <div className="border-b border-[#1C275E]/20 pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-[#1C275E]/10 rounded-lg flex items-center justify-center">
+                <svg className="w-4 h-4 text-[#1C275E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                </svg>
+              </div>
+              <h3 className="text-base font-semibold text-[#1C275E]">{title}</h3>
+              {team.length > 0 && (
+                <span className="bg-[#1C275E]/10 text-[#1C275E] px-2 py-1 rounded-full text-xs font-medium">
+                  {team.length} member{team.length !== 1 ? 's' : ''}
+                </span>
+              )}
             </div>
-            <h3 className="text-base font-semibold text-[#1C275E]">{title}</h3>
-            {team.length > 0 && (
-              <span className="bg-[#1C275E]/10 text-[#1C275E] px-2 py-1 rounded-full text-xs font-medium">
-                {team.length} member{team.length !== 1 ? 's' : ''}
-              </span>
+            {!readOnly && (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={onAdd}
+                className="bg-[#F48024] hover:bg-[#F48024]/90 text-white px-4 py-2 rounded-lg shadow-sm transition-all duration-200 hover:shadow-md"
+              >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+              </svg>
+              Add Person
+              </Button>
             )}
           </div>
-          {!readOnly && (
-            <Button
-              variant="default"
-              size="sm"
-              onClick={onAdd}
-              className="bg-[#F48024] hover:bg-[#F48024]/90 text-white px-4 py-2 rounded-lg shadow-sm"
-            >
-            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-            </svg>
-            Add Person
-            </Button>
-          )}
         </div>
-      </div>
-      {/* Team Members Table */}
-      <div className="space-y-2">
-        {team.length > 0 ? (
-          <div className="overflow-x-auto">
-            <Table className="min-w-[800px]">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-black font-semibold text-sm">Title</TableHead>
-                  <TableHead className="text-black font-semibold text-sm">First Name</TableHead>
-                  <TableHead className="text-black font-semibold text-sm">Last Name</TableHead>
-                  <TableHead className="text-black font-semibold text-sm">Email</TableHead>
-                  <TableHead className="text-black font-semibold text-sm">Phone</TableHead>
-                  <TableHead className="text-black font-semibold text-sm w-16">Action</TableHead>
-                </TableRow>
-              </TableHeader>
+        {/* Team Members Table */}
+        <div className="space-y-2">
+          {team.length > 0 ? (
+            <div className="bg-slate-50 rounded-lg border border-slate-100 overflow-hidden shadow-sm">
+              <div className="overflow-x-auto">
+                <Table className="min-w-[800px]">
+                  <TableHeader>
+                    <TableRow className="bg-white border-b border-slate-200">
+                      <TableHead className="text-black font-semibold text-sm py-3 px-4">Title</TableHead>
+                      <TableHead className="text-black font-semibold text-sm py-3 px-4">First Name</TableHead>
+                      <TableHead className="text-black font-semibold text-sm py-3 px-4">Last Name</TableHead>
+                      <TableHead className="text-black font-semibold text-sm py-3 px-4">Email</TableHead>
+                      <TableHead className="text-black font-semibold text-sm py-3 px-4">Phone</TableHead>
+                      <TableHead className="text-black font-semibold text-sm py-3 px-4 w-16">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
               <TableBody>
                 {team.map((member) => (
                   <TableRow key={member.id} className="hover:bg-[#1C275E]/5">
@@ -244,9 +245,11 @@ export default function TeamReportingSection({
                 ))}
               </TableBody>
             </Table>
-          </div>
+            </div>
+        </div>
         ) : (
-          <div className="text-center py-16 px-8 bg-gradient-to-br from-[#1C275E]/3 to-[#1C275E]/1 rounded-xl border-2 border-dashed border-[#1C275E]/20">
+          <div className="bg-slate-50 rounded-lg border border-slate-100 overflow-hidden shadow-sm">
+            <div className="text-center py-16 px-8 bg-gradient-to-br from-[#1C275E]/3 to-[#1C275E]/1 rounded-xl border-2 border-dashed border-[#1C275E]/20 mx-6 my-6">
             <div className="w-20 h-20 bg-[#1C275E]/10 rounded-full flex items-center justify-center mx-auto mb-6">
               <svg className="w-10 h-10 text-[#1C275E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
@@ -256,6 +259,7 @@ export default function TeamReportingSection({
             <p className="text-[#1C275E]/70 mb-6 max-w-sm mx-auto">
               Add the first team member for {title.toLowerCase()} to get started with reporting structure.
             </p>
+            </div>
           </div>
         )}
       </div>

@@ -148,18 +148,19 @@ export default function InfluencersCard({
         </div>
       )}
 
-      <div className="overflow-x-auto">
-      <Table className="min-w-[800px]">
-        <TableHeader>
-          <TableRow>
-            <TableHead className="text-black font-semibold text-sm">Title</TableHead>
-            <TableHead className="text-black font-semibold text-sm">First Name</TableHead>
-            <TableHead className="text-black font-semibold text-sm">Last Name</TableHead>
-            <TableHead className="text-black font-semibold text-sm">Email</TableHead>
-            <TableHead className="text-black font-semibold text-sm">Phone</TableHead>
-            <TableHead className="text-black font-semibold text-sm w-16">Action</TableHead>
-          </TableRow>
-        </TableHeader>
+      <div className="bg-slate-50 rounded-lg border border-slate-100 overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+        <Table className="min-w-[800px]">
+          <TableHeader>
+            <TableRow className="bg-white border-b border-slate-200">
+              <TableHead className="text-black font-semibold text-sm py-3 px-4">Title</TableHead>
+              <TableHead className="text-black font-semibold text-sm py-3 px-4">First Name</TableHead>
+              <TableHead className="text-black font-semibold text-sm py-3 px-4">Last Name</TableHead>
+              <TableHead className="text-black font-semibold text-sm py-3 px-4">Email</TableHead>
+              <TableHead className="text-black font-semibold text-sm py-3 px-4">Phone</TableHead>
+              <TableHead className="text-black font-semibold text-sm py-3 px-4 w-16">Action</TableHead>
+            </TableRow>
+          </TableHeader>
         <TableBody>
           {influencers.map((inf) => (
             <TableRow key={inf.id} className="hover:bg-[#1C275E]/5">
@@ -245,6 +246,7 @@ export default function InfluencersCard({
           ))}
         </TableBody>
       </Table>
+        </div>
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useState, useEffect } from "react";
+import React, { Suspense, lazy, useState, useEffect, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -49,14 +49,19 @@ export default function PatientIntakeAgent() {
   const [dirtyTabs, setDirtyTabs] = useState<Set<string>>(new Set());
   const [savingTabs, setSavingTabs] = useState<Set<string>>(new Set());
   
+  // Centralized tab states (Phase 1: Lift State to Parent)
+  interface PatientIntakeTabStates {
+    fieldContentRules: FieldContentRulesTabData;
+    deliveryMethods: DeliveryMethodsTabData;
+    formsQuestionnaires: FormsQuestionnairesTabData;
+  }
+  const [tabStates, setTabStates] = useState<PatientIntakeTabStates | null>(null);
+  
   // Validation state
   const [formValidation, setFormValidation] = useState<ValidationResult | null>(null);
   const [fieldValidations, setFieldValidations] = useState<Record<string, string>>({});
 
-  // Refs used to call validation on Save Configuration
-  const formsRef = React.useRef<any>(null);
-  const rulesRef = React.useRef<any>(null);
-  const deliveryRef = React.useRef<any>(null);
+  // Ref only for workflows (no state lifted there yet)
   const workflowsRef = React.useRef<any>(null);
 
   // Retry utility with exponential backoff
@@ -104,6 +109,14 @@ export default function PatientIntakeAgent() {
           1000
         );
         setAgentData(data.data);
+        
+        // Initialize tab states from fetched data (Phase 1)
+        setTabStates({
+          fieldContentRules: mapApiToFieldContentRules(data.data),
+          deliveryMethods: mapApiToDeliveryMethods(data.data),
+          formsQuestionnaires: mapApiToFormsQuestionnaires(data.data),
+        });
+        
         setRetryCount(0); // Reset retry count on success
       } catch (error) {
         console.error('Failed to fetch patient intake agent:', error);
@@ -122,16 +135,16 @@ export default function PatientIntakeAgent() {
 
   // Handle save all configurations with enhanced error handling
   const handleSaveAll = async () => {
-    if (!agentData || !user?.org_id) return;
+    if (!agentData || !user?.org_id || !tabStates) return;
 
     setIsSaving(true);
     setSavingTabs(new Set());
 
     try {
-      // Get values from all tabs (excluding forms which doesn't have API yet)
+      // Get values from centralized tab state (excluding forms which doesn't have API yet)
       const tabValues = {
-        rules: rulesRef.current?.getValues?.(),
-        delivery: deliveryRef.current?.getValues?.(),
+        rules: tabStates.fieldContentRules,
+        delivery: tabStates.deliveryMethods,
       };
 
       // Perform page-level validation before making any API calls
@@ -286,12 +299,44 @@ export default function PatientIntakeAgent() {
   };
 
 
+  // Change handlers for tab states (Phase 1)
+  const handleFieldContentRulesChange = (newValues: FieldContentRulesTabData) => {
+    setTabStates(prev => prev ? {
+      ...prev,
+      fieldContentRules: newValues
+    } : null);
+    setDirtyTabs(prev => new Set(Array.from(prev).concat('field-content-rules')));
+  };
+
+  const handleDeliveryMethodsChange = (newValues: DeliveryMethodsTabData) => {
+    setTabStates(prev => prev ? {
+      ...prev,
+      deliveryMethods: newValues
+    } : null);
+    setDirtyTabs(prev => new Set(Array.from(prev).concat('delivery-methods')));
+  };
+
+  const handleFormsQuestionnairesChange = (newValues: FormsQuestionnairesTabData) => {
+    setTabStates(prev => prev ? {
+      ...prev,
+      formsQuestionnaires: newValues
+    } : null);
+    setDirtyTabs(prev => new Set(Array.from(prev).concat('forms-questionnaires')));
+  };
+
   // Function to refetch agent data after save
   const refetchAgentData = async () => {
     if (!user?.org_id) return;
     try {
       const data = await api.get(`/api/v1/patient-intake-agent/${user.org_id}`) as { data: PatientIntakeApiData };
       setAgentData(data.data);
+      
+      // Update tab states from refetched data (Phase 1)
+      setTabStates({
+        fieldContentRules: mapApiToFieldContentRules(data.data),
+        deliveryMethods: mapApiToDeliveryMethods(data.data),
+        formsQuestionnaires: mapApiToFormsQuestionnaires(data.data),
+      });
     } catch (error) {
       console.error('Failed to refetch agent data:', error);
       toast({
@@ -303,11 +348,11 @@ export default function PatientIntakeAgent() {
   };
 
   // Individual save handlers for each tab
-  const handleSaveFieldRules = async (values: FieldContentRulesTabData) => {
-    if (!agentData || !user?.org_id) return;
+  const handleSaveFieldRules = async () => {
+    if (!agentData || !user?.org_id || !tabStates) return;
 
     // Validate before saving
-    const validation = validateFieldContentRules(values);
+    const validation = validateFieldContentRules(tabStates.fieldContentRules);
     if (!validation.valid) {
       setFormValidation(validation);
       toast({
@@ -326,7 +371,7 @@ export default function PatientIntakeAgent() {
     try {
       await retryWithBackoff(
         () => api.put(`/api/v1/patient-intake-agent/${user.org_id}/field-requirements`, {
-          ...mapFieldContentRulesToApi(values),
+          ...mapFieldContentRulesToApi(tabStates.fieldContentRules),
           current_version: agentData.current_version
         }),
         1,
@@ -346,11 +391,11 @@ export default function PatientIntakeAgent() {
     }
   };
 
-  const handleSaveDeliveryMethods = async (values: DeliveryMethodsTabData) => {
-    if (!agentData || !user?.org_id) return;
+  const handleSaveDeliveryMethods = async () => {
+    if (!agentData || !user?.org_id || !tabStates) return;
 
     // Validate before saving
-    const validation = validateDeliveryMethods(values);
+    const validation = validateDeliveryMethods(tabStates.deliveryMethods);
     if (!validation.valid) {
       setFormValidation(validation);
       toast({
@@ -369,7 +414,7 @@ export default function PatientIntakeAgent() {
     try {
       await retryWithBackoff(
         () => api.put(`/api/v1/patient-intake-agent/${user.org_id}/delivery-methods`, {
-          ...mapDeliveryMethodsToApi(values),
+          ...mapDeliveryMethodsToApi(tabStates.deliveryMethods),
           current_version: agentData.current_version
         }),
         1,
@@ -390,11 +435,14 @@ export default function PatientIntakeAgent() {
   };
 
   // Prepare initial values for tabs
-  const initialValues = agentData ? {
-    rules: mapApiToFieldContentRules(agentData),
-    delivery: mapApiToDeliveryMethods(agentData),
-    forms: mapApiToFormsQuestionnaires(agentData),
-  } : null;
+  const initialValues = useMemo(() => {
+    if (!agentData) return null;
+    return {
+      rules: mapApiToFieldContentRules(agentData),
+      delivery: mapApiToDeliveryMethods(agentData),
+      forms: mapApiToFormsQuestionnaires(agentData),
+    };
+  }, [agentData]); // Stable as long as agentData doesn't change
 
   // Show loading state
   if (isLoading) {
@@ -458,10 +506,10 @@ export default function PatientIntakeAgent() {
         <TabsContent value="forms-questionnaires">
           <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
             <FormsQuestionnairesTab
-              ref={formsRef}
+              ref={undefined}
               initialValues={initialValues?.forms}
-              onSave={undefined} // API not implemented yet
-              isSaving={false} // Not applicable for forms tab
+              onSave={undefined}
+              isSaving={false}
             />
           </Suspense>
         </TabsContent>
@@ -470,11 +518,41 @@ export default function PatientIntakeAgent() {
         <TabsContent value="field-content-rules">
           <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
             <FieldContentRulesTab
-              ref={rulesRef}
-              initialData={initialValues?.rules}
+              values={tabStates ? {
+                fieldRequirements: {
+                  patientName: tabStates.fieldContentRules.fieldRequirements.patientName ?? "required",
+                  dateOfBirth: tabStates.fieldContentRules.fieldRequirements.dateOfBirth ?? "required",
+                  phoneNumber: tabStates.fieldContentRules.fieldRequirements.phoneNumber ?? "required",
+                  email: tabStates.fieldContentRules.fieldRequirements.email ?? "optional",
+                  insuranceId: tabStates.fieldContentRules.fieldRequirements.insuranceId ?? "optional",
+                  emergencyContact: tabStates.fieldContentRules.fieldRequirements.emergencyContact ?? "required",
+                  preferredLanguage: tabStates.fieldContentRules.fieldRequirements.preferredLanguage ?? "optional",
+                },
+                specialInstructions: {
+                  menoresInstructions: tabStates.fieldContentRules.specialInstructions.menoresInstructions ?? "",
+                  noInsuranceInstructions: tabStates.fieldContentRules.specialInstructions.noInsuranceInstructions ?? "",
+                  languageBarrierInstructions: tabStates.fieldContentRules.specialInstructions.languageBarrierInstructions ?? "",
+                }
+              } : {
+                fieldRequirements: {
+                  patientName: "required",
+                  dateOfBirth: "required",
+                  phoneNumber: "required",
+                  email: "optional",
+                  insuranceId: "optional",
+                  emergencyContact: "required",
+                  preferredLanguage: "optional"
+                },
+                specialInstructions: {
+                  menoresInstructions: "",
+                  noInsuranceInstructions: "",
+                  languageBarrierInstructions: ""
+                }
+              }}
+              onChange={handleFieldContentRulesChange}
+              onSave={handleSaveFieldRules}
               isSaving={isSaving}
               readOnly={!canWriteAgents}
-              onSave={canWriteAgents ? handleSaveFieldRules : undefined}
             />
           </Suspense>
         </TabsContent>
@@ -483,11 +561,37 @@ export default function PatientIntakeAgent() {
         <TabsContent value="delivery-methods">
           <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
             <DeliveryMethodsTab
-              ref={deliveryRef}
-              initialData={initialValues?.delivery}
+              values={tabStates ? {
+                formatPreferences: {
+                  textMessageLink: !!tabStates.deliveryMethods.formatPreferences.textMessageLink,
+                  voiceCall: !!tabStates.deliveryMethods.formatPreferences.voiceCall,
+                  qrCode: !!tabStates.deliveryMethods.formatPreferences.qrCode,
+                  emailLink: !!tabStates.deliveryMethods.formatPreferences.emailLink,
+                  inPersonTablet: !!tabStates.deliveryMethods.formatPreferences.inPersonTablet,
+                },
+                consentMethods: {
+                  digitalSignature: !!tabStates.deliveryMethods.consentMethods.digitalSignature,
+                  verbalConsentRecording: !!tabStates.deliveryMethods.consentMethods.verbalConsentRecording,
+                  consentLanguage: tabStates.deliveryMethods.consentMethods.consentLanguage ?? "",
+                }
+              } : {
+                formatPreferences: {
+                  textMessageLink: false,
+                  voiceCall: false,
+                  qrCode: false,
+                  emailLink: false,
+                  inPersonTablet: false
+                },
+                consentMethods: {
+                  digitalSignature: false,
+                  verbalConsentRecording: false,
+                  consentLanguage: ""
+                }
+              }}
+              onChange={handleDeliveryMethodsChange}
+              onSave={handleSaveDeliveryMethods}
               isSaving={isSaving}
               readOnly={!canWriteAgents}
-              onSave={canWriteAgents ? handleSaveDeliveryMethods : undefined}
             />
           </Suspense>
         </TabsContent>

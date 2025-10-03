@@ -1,4 +1,4 @@
-import React, { useImperativeHandle, forwardRef, useEffect } from "react";
+import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -22,85 +22,73 @@ import type { PatientEligibilityValues } from "@/types/schedulingAgent";
  * PatientEligibilityTab
  * - Patient types and referral requirements configuration
  * - Mirrors the launchpad tab styling and structure
+ * - Controlled component: receives values and onChange handler
  */
 export type PatientEligibilityTabProps = {
-  initialValues?: PatientEligibilityValues;
-  onSave?: (values: PatientEligibilityValues) => Promise<void>;
+  values: PatientEligibilityValues;
+  onChange: (values: PatientEligibilityValues) => void;
+  onSave?: () => Promise<void>;
   isSaving?: boolean;
   readOnly?: boolean;
 };
 
-export type PatientEligibilityTabHandle = {
-  /**
-   * Returns the current values held by the tab.
-   */
-  getValues: () => PatientEligibilityValues;
-  /**
-   * Lightweight validation for the tab.
-   */
-  validate: () => { valid: boolean; errors: string[] };
-};
-
-const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEligibilityTabProps>(({ initialValues, onSave, isSaving = false, readOnly: readOnlyProp }, ref) => {
+const PatientEligibilityTab = ({ values, onChange, onSave, isSaving = false, readOnly: readOnlyProp }: PatientEligibilityTabProps) => {
   const { canEditSchedulingAgent } = usePermissions();
   const readOnly = readOnlyProp ?? !canEditSchedulingAgent;
-  // Patient Types state
-  const [newPatients, setNewPatients] = React.useState(false);
-  const [existingPatients, setExistingPatients] = React.useState(false);
-  const [selfPay, setSelfPay] = React.useState(false);
-  const [hmo, setHmo] = React.useState(false);
-  const [ppo, setPpo] = React.useState(false);
-  const [medicare, setMedicare] = React.useState(false);
-  const [medicaid, setMedicaid] = React.useState(false);
 
-  // Referral Requirements state (arrays for individual input fields)
-  const [servicesRequiringReferrals, setServicesRequiringReferrals] = React.useState<string[]>([]);
-  const [insurancePlansRequiringReferrals, setInsurancePlansRequiringReferrals] = React.useState<string[]>([]);
-
-  // Set initial values when props change
-  useEffect(() => {
-    if (initialValues) {
-      setNewPatients(initialValues.patientTypes.newPatients);
-      setExistingPatients(initialValues.patientTypes.existingPatients);
-      setSelfPay(initialValues.patientTypes.selfPay);
-      setHmo(initialValues.patientTypes.hmo);
-      setPpo(initialValues.patientTypes.ppo);
-      setMedicare(initialValues.patientTypes.medicare);
-      setMedicaid(initialValues.patientTypes.medicaid);
-
-      // Convert textarea strings to arrays for individual input fields
-      setServicesRequiringReferrals(
-        initialValues.referralRequirements.servicesRequiringReferrals
-          ? initialValues.referralRequirements.servicesRequiringReferrals.split('\n').filter(line => line.trim())
-          : []
-      );
-      setInsurancePlansRequiringReferrals(
-        initialValues.referralRequirements.insurancePlansRequiringReferrals
-          ? initialValues.referralRequirements.insurancePlansRequiringReferrals.split('\n').filter(line => line.trim())
-          : []
-      );
-    }
-  }, [initialValues]);
+  // Helper functions for working with referral requirements
+  const servicesArray = values.referralRequirements.servicesRequiringReferrals
+    ? values.referralRequirements.servicesRequiringReferrals.split('\n')
+    : [];
+  const insurancePlansArray = values.referralRequirements.insurancePlansRequiringReferrals
+    ? values.referralRequirements.insurancePlansRequiringReferrals.split('\n')
+    : [];
 
   // Referral management handlers
   const handleAddService = () => {
-    setServicesRequiringReferrals([...servicesRequiringReferrals, ""]);
+    const newServices = [...servicesArray, ""];
+    onChange({
+      ...values,
+      referralRequirements: {
+        ...values.referralRequirements,
+        servicesRequiringReferrals: newServices.join('\n')
+      }
+    });
   };
 
   const handleAddInsurancePlan = () => {
-    setInsurancePlansRequiringReferrals([...insurancePlansRequiringReferrals, ""]);
+    const newPlans = [...insurancePlansArray, ""];
+    onChange({
+      ...values,
+      referralRequirements: {
+        ...values.referralRequirements,
+        insurancePlansRequiringReferrals: newPlans.join('\n')
+      }
+    });
   };
 
   const handleUpdateService = (index: number, value: string) => {
-    const updated = [...servicesRequiringReferrals];
+    const updated = [...servicesArray];
     updated[index] = value;
-    setServicesRequiringReferrals(updated);
+    onChange({
+      ...values,
+      referralRequirements: {
+        ...values.referralRequirements,
+        servicesRequiringReferrals: updated.join('\n')
+      }
+    });
   };
 
   const handleUpdateInsurancePlan = (index: number, value: string) => {
-    const updated = [...insurancePlansRequiringReferrals];
+    const updated = [...insurancePlansArray];
     updated[index] = value;
-    setInsurancePlansRequiringReferrals(updated);
+    onChange({
+      ...values,
+      referralRequirements: {
+        ...values.referralRequirements,
+        insurancePlansRequiringReferrals: updated.join('\n')
+      }
+    });
   };
 
   // Delete confirmation dialog state
@@ -132,11 +120,23 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEli
 
   const handleConfirmDelete = () => {
     if (deleteDialog.type === 'service' && deleteDialog.index !== undefined) {
-      const updated = servicesRequiringReferrals.filter((_, i) => i !== deleteDialog.index);
-      setServicesRequiringReferrals(updated);
+      const updated = servicesArray.filter((_, i) => i !== deleteDialog.index);
+      onChange({
+        ...values,
+        referralRequirements: {
+          ...values.referralRequirements,
+          servicesRequiringReferrals: updated.join('\n')
+        }
+      });
     } else if (deleteDialog.type === 'insurance' && deleteDialog.index !== undefined) {
-      const updated = insurancePlansRequiringReferrals.filter((_, i) => i !== deleteDialog.index);
-      setInsurancePlansRequiringReferrals(updated);
+      const updated = insurancePlansArray.filter((_, i) => i !== deleteDialog.index);
+      onChange({
+        ...values,
+        referralRequirements: {
+          ...values.referralRequirements,
+          insurancePlansRequiringReferrals: updated.join('\n')
+        }
+      });
     }
     setDeleteDialog({ open: false });
   };
@@ -144,38 +144,8 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEli
   // Save handler
   const handleSave = async () => {
     if (!onSave) return;
-
-    const currentRef = (ref as React.MutableRefObject<PatientEligibilityTabHandle | null>).current;
-    const currentValues = currentRef?.getValues();
-    if (currentValues) {
-      await onSave(currentValues);
-    }
+    await onSave();
   };
-
-  // Expose values and validation to parent page
-  useImperativeHandle(ref, () => ({
-    getValues: () => ({
-      patientTypes: {
-        newPatients,
-        existingPatients,
-        selfPay,
-        hmo,
-        ppo,
-        medicare,
-        medicaid,
-      },
-      referralRequirements: {
-        // Convert arrays back to newline-separated strings for API compatibility
-        servicesRequiringReferrals: servicesRequiringReferrals.filter(item => item.trim()).join('\n'),
-        insurancePlansRequiringReferrals: insurancePlansRequiringReferrals.filter(item => item.trim()).join('\n'),
-      },
-    }),
-    validate: () => {
-      const errors: string[] = [];
-      // Basic validation can be added here if needed
-      return { valid: errors.length === 0, errors };
-    },
-  }));
 
   return (
     <div className="space-y-6">
@@ -226,10 +196,16 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEli
               </div>
               <IOSSwitch
                 id="new-patients"
-                checked={newPatients}
+                checked={values.patientTypes.newPatients}
                 onCheckedChange={(checked) => {
                   if (!readOnly) {
-                    setNewPatients(checked);
+                    onChange({
+                      ...values,
+                      patientTypes: {
+                        ...values.patientTypes,
+                        newPatients: checked
+                      }
+                    });
                   }
                 }}
                 disabled={readOnly}
@@ -245,10 +221,16 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEli
               </div>
               <IOSSwitch
                 id="existing-patients"
-                checked={existingPatients}
+                checked={values.patientTypes.existingPatients}
                 onCheckedChange={(checked) => {
                   if (!readOnly) {
-                    setExistingPatients(checked);
+                    onChange({
+                      ...values,
+                      patientTypes: {
+                        ...values.patientTypes,
+                        existingPatients: checked
+                      }
+                    });
                   }
                 }}
                 disabled={readOnly}
@@ -264,11 +246,17 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEli
               </div>
               <IOSSwitch
                 id="self-pay"
-                checked={selfPay}
+                checked={values.patientTypes.selfPay}
                 onCheckedChange={(checked) => {
                   if (!readOnly) {
-                    setSelfPay(checked);
-                    
+                    onChange({
+                      ...values,
+                      patientTypes: {
+                        ...values.patientTypes,
+                        selfPay: checked
+                      }
+                    });
+
                   }
                 }}
                 disabled={readOnly}
@@ -284,11 +272,17 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEli
               </div>
               <IOSSwitch
                 id="hmo"
-                checked={hmo}
+                checked={values.patientTypes.hmo}
                 onCheckedChange={(checked) => {
                   if (!readOnly) {
-                    setHmo(checked);
-                    
+                    onChange({
+                      ...values,
+                      patientTypes: {
+                        ...values.patientTypes,
+                        hmo: checked
+                      }
+                    });
+
                   }
                 }}
                 disabled={readOnly}
@@ -304,11 +298,17 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEli
               </div>
               <IOSSwitch
                 id="ppo"
-                checked={ppo}
+                checked={values.patientTypes.ppo}
                 onCheckedChange={(checked) => {
                   if (!readOnly) {
-                    setPpo(checked);
-                    
+                    onChange({
+                      ...values,
+                      patientTypes: {
+                        ...values.patientTypes,
+                        ppo: checked
+                      }
+                    });
+
                   }
                 }}
                 disabled={readOnly}
@@ -324,10 +324,16 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEli
               </div>
               <IOSSwitch
                 id="medicare"
-                checked={medicare}
+                checked={values.patientTypes.medicare}
                 onCheckedChange={(checked) => {
                   if (!readOnly) {
-                    setMedicare(checked);
+                    onChange({
+                      ...values,
+                      patientTypes: {
+                        ...values.patientTypes,
+                        medicare: checked
+                      }
+                    });
                     
                   }
                 }}
@@ -344,10 +350,16 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEli
               </div>
               <IOSSwitch
                 id="medicaid"
-                checked={medicaid}
+                checked={values.patientTypes.medicaid}
                 onCheckedChange={(checked) => {
                   if (!readOnly) {
-                    setMedicaid(checked);
+                    onChange({
+                      ...values,
+                      patientTypes: {
+                        ...values.patientTypes,
+                        medicaid: checked
+                      }
+                    });
                     
                   }
                 }}
@@ -391,7 +403,7 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEli
                 )}
               </div>
               <div className="flex flex-wrap gap-2">
-                {servicesRequiringReferrals.map((service, index) => (
+                {servicesArray.map((service, index) => (
                   <div key={index} className="flex items-center gap-1 bg-muted px-3 py-1 rounded-full">
                     <Input
                       placeholder="Service name (e.g., MRI)"
@@ -412,7 +424,7 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEli
                     )}
                   </div>
                 ))}
-                {servicesRequiringReferrals.length === 0 && (
+                {servicesArray.length === 0 && (
                   <p className="text-sm text-muted-foreground">No services added yet.</p>
                 )}
               </div>
@@ -434,7 +446,7 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEli
                 )}
               </div>
               <div className="flex flex-wrap gap-2">
-                {insurancePlansRequiringReferrals.map((plan, index) => (
+                {insurancePlansArray.map((plan, index) => (
                   <div key={index} className="flex items-center gap-1 bg-muted px-3 py-1 rounded-full">
                     <Input
                       placeholder="Insurance plan name"
@@ -455,7 +467,7 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEli
                     )}
                   </div>
                 ))}
-                {insurancePlansRequiringReferrals.length === 0 && (
+                {insurancePlansArray.length === 0 && (
                   <p className="text-sm text-muted-foreground">No insurance plans added yet.</p>
                 )}
               </div>
@@ -487,6 +499,6 @@ const PatientEligibilityTab = forwardRef<PatientEligibilityTabHandle, PatientEli
       </AlertDialog>
     </div>
   );
-});
+};
 
 export default PatientEligibilityTab;

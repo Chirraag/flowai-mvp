@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Check, X } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { usePermissions } from "@/context/AuthContext";
 import { OrgSpecialityService, SpecialtyServiceEntry, OrgLocation } from "@/components/launchpad/types";
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -323,11 +324,12 @@ export default function SpecialtiesModule({
               </CardHeader>
               {!minimizedCards[cardId] && (
                 <CardContent className="px-5 py-4">
-                  <Tabs
-                    value={activeTabs[cardId] || "basic"}
-                    onValueChange={(value) => handleTabChange(cardId, value)}
-                    className="w-full"
-                  >
+                  <div className="bg-slate-50 rounded-lg border border-slate-100 overflow-hidden shadow-sm p-4">
+                    <Tabs
+                      value={activeTabs[cardId] || "basic"}
+                      onValueChange={(value) => handleTabChange(cardId, value)}
+                      className="w-full"
+                    >
                     <TabsList className="flex w-full rounded-full border border-slate-200 bg-slate-50/70 p-0.5 h-11 items-center justify-center">
                       <TabsTrigger
                         value="basic"
@@ -349,8 +351,8 @@ export default function SpecialtiesModule({
                       </TabsTrigger>
                     </TabsList>
 
-                    <TabsContent value="basic" className="pt-4 space-y-5">
-                      <div className="flex-1 space-y-5">
+                    <TabsContent value="basic" className="pt-4 space-y-4">
+                      <div className="flex-1 space-y-4">
                         <div className="flex-1">
                           <Label className="text-sm font-semibold text-black uppercase tracking-wide">Specialty Name</Label>
                           <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="e.g., Cardiology" value={spec.specialty_name} onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { specialty_name: e.target.value })} readOnly={readOnly} />
@@ -443,85 +445,171 @@ export default function SpecialtiesModule({
                       </div> */}
                     </TabsContent>
 
-                    <TabsContent value="sources" className="pt-4 space-y-5">
-                      <div className="space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <Label className="text-sm font-semibold text-black uppercase tracking-wide">Physician Names Source</Label>
-                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="Source type (e.g., EMR)" value={spec.physician_names_source_type || ""} onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { physician_names_source_type: e.target.value })} readOnly={readOnly} />
-                          </div>
-                          <div>
-                            <Label className="text-sm font-semibold text-black uppercase tracking-wide">Source Link</Label>
-                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="URL" value={spec.physician_names_source_link || ""} onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { physician_names_source_link: e.target.value })} readOnly={readOnly} />
-                          </div>
-                        </div>
+                    <TabsContent value="sources" className="pt-4">
+                      <Table>
+                        <TableBody>
+                          {/* Physician Names */}
+                          <TableRow>
+                            <TableCell className="font-medium text-sm text-gray-900 w-1/3">Physician Names</TableCell>
+                            <TableCell className="w-1/3">
+                              <Input
+                                className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
+                                placeholder="Source type (e.g., EMR)"
+                                value={spec.physician_names_source_type || ""}
+                                onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { physician_names_source_type: e.target.value })}
+                                readOnly={readOnly}
+                              />
+                            </TableCell>
+                            <TableCell className="w-1/3">
+                              <Input
+                                className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
+                                placeholder="Source link"
+                                value={spec.physician_names_source_name || ""}
+                                onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { physician_names_source_name: e.target.value })}
+                                readOnly={readOnly}
+                              />
+                            </TableCell>
+                          </TableRow>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <Label className="text-sm font-semibold text-black uppercase tracking-wide">New Patients Source</Label>
-                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="Source type" value={spec.new_patients_source_type || ""} onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { new_patients_source_type: e.target.value })} readOnly={readOnly} />
-                          </div>
-                          <div>
-                            <Label className="text-sm font-semibold text-black uppercase tracking-wide">Source Link</Label>
-                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="URL" value={spec.new_patients_source_link || ""} onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { new_patients_source_link: e.target.value })} readOnly={readOnly} />
-                          </div>
-                        </div>
+                          {/* Physician Locations */}
+                          <TableRow>
+                            <TableCell className="font-medium text-sm text-gray-900 w-1/3">Physician Locations</TableCell>
+                            <TableCell className="w-1/3">
+                              <Input
+                                className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
+                                placeholder="Source type"
+                                value={spec.physician_locations_source_type || ""}
+                                onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { physician_locations_source_type: e.target.value })}
+                                readOnly={readOnly}
+                              />
+                            </TableCell>
+                            <TableCell className="w-1/3">
+                              <Input
+                                className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
+                                placeholder="Source link"
+                                value={spec.physician_locations_source_name || ""}
+                                onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { physician_locations_source_name: e.target.value })}
+                                readOnly={readOnly}
+                              />
+                            </TableCell>
+                          </TableRow>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <Label className="text-sm font-semibold text-black uppercase tracking-wide">Physician Locations Source</Label>
-                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="Source type" value={spec.physician_locations_source_type || ""} onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { physician_locations_source_type: e.target.value })} readOnly={readOnly} />
-                          </div>
-                          <div>
-                            <Label className="text-sm font-semibold text-black uppercase tracking-wide">Source Link</Label>
-                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="URL" value={spec.physician_locations_source_link || ""} onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { physician_locations_source_link: e.target.value })} readOnly={readOnly} />
-                          </div>
-                        </div>
+                          {/* Physician Credentials */}
+                          <TableRow>
+                            <TableCell className="font-medium text-sm text-gray-900 w-1/3">Physician Credentials</TableCell>
+                            <TableCell className="w-1/3">
+                              <Input
+                                className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
+                                placeholder="Source type"
+                                value={spec.physician_credentials_source_type || ""}
+                                onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { physician_credentials_source_type: e.target.value })}
+                                readOnly={readOnly}
+                              />
+                            </TableCell>
+                            <TableCell className="w-1/3">
+                              <Input
+                                className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
+                                placeholder="Source link"
+                                value={spec.physician_credentials_source_name || ""}
+                                onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { physician_credentials_source_name: e.target.value })}
+                                readOnly={readOnly}
+                              />
+                            </TableCell>
+                          </TableRow>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <Label className="text-sm font-semibold text-black uppercase tracking-wide">Physician Credentials Source</Label>
-                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="Source type" value={spec.physician_credentials_source_type || ""} onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { physician_credentials_source_type: e.target.value })} readOnly={readOnly} />
-                          </div>
-                          <div>
-                            <Label className="text-sm font-semibold text-black uppercase tracking-wide">Source Link</Label>
-                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="URL" value={spec.physician_credentials_source_link || ""} onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { physician_credentials_source_link: e.target.value })} readOnly={readOnly} />
-                          </div>
-                        </div>
+                          {/* New Patients */}
+                          <TableRow>
+                            <TableCell className="font-medium text-sm text-gray-900 w-1/3">New Patients</TableCell>
+                            <TableCell className="w-1/3">
+                              <Input
+                                className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
+                                placeholder="Source type"
+                                value={spec.new_patients_source_type || ""}
+                                onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { new_patients_source_type: e.target.value })}
+                                readOnly={readOnly}
+                              />
+                            </TableCell>
+                            <TableCell className="w-1/3">
+                              <Input
+                                className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
+                                placeholder="Source link"
+                                value={spec.new_patients_source_name || ""}
+                                onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { new_patients_source_name: e.target.value })}
+                                readOnly={readOnly}
+                              />
+                            </TableCell>
+                          </TableRow>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <Label className="text-sm font-semibold text-black uppercase tracking-wide">Services Offered Source</Label>
-                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="Source type" value={spec.services_offered_source_type || ""} onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { services_offered_source_type: e.target.value })} readOnly={readOnly} />
-                          </div>
-                          <div>
-                            <Label className="text-sm font-semibold text-black uppercase tracking-wide">Source Link</Label>
-                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="URL" value={spec.services_offered_source_link || ""} onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { services_offered_source_link: e.target.value })} readOnly={readOnly} />
-                          </div>
-                        </div>
+                          {/* Patient Preparation */}
+                          <TableRow>
+                            <TableCell className="font-medium text-sm text-gray-900 w-1/3">Patient Preparation</TableCell>
+                            <TableCell className="w-1/3">
+                              <Input
+                                className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
+                                placeholder="Source type"
+                                value={spec.patient_prep_source_type || ""}
+                                onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { patient_prep_source_type: e.target.value })}
+                                readOnly={readOnly}
+                              />
+                            </TableCell>
+                            <TableCell className="w-1/3">
+                              <Input
+                                className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
+                                placeholder="Source link"
+                                value={spec.patient_prep_source_name || ""}
+                                onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { patient_prep_source_name: e.target.value })}
+                                readOnly={readOnly}
+                              />
+                            </TableCell>
+                          </TableRow>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <Label className="text-sm font-semibold text-black uppercase tracking-wide">Patient Prep Source</Label>
-                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="Source type" value={spec.patient_prep_source_type || ""} onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { patient_prep_source_type: e.target.value })} readOnly={readOnly} />
-                          </div>
-                          <div>
-                            <Label className="text-sm font-semibold text-black uppercase tracking-wide">Source Link</Label>
-                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="URL" value={spec.patient_prep_source_link || ""} onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { patient_prep_source_link: e.target.value })} readOnly={readOnly} />
-                          </div>
-                        </div>
+                          {/* Patient FAQs */}
+                          <TableRow>
+                            <TableCell className="font-medium text-sm text-gray-900 w-1/3">Patient FAQs</TableCell>
+                            <TableCell className="w-1/3">
+                              <Input
+                                className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
+                                placeholder="Source type"
+                                value={spec.patient_faqs_source_type || ""}
+                                onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { patient_faqs_source_type: e.target.value })}
+                                readOnly={readOnly}
+                              />
+                            </TableCell>
+                            <TableCell className="w-1/3">
+                              <Input
+                                className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
+                                placeholder="Source link"
+                                value={spec.patient_faqs_source_name || ""}
+                                onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { patient_faqs_source_name: e.target.value })}
+                                readOnly={readOnly}
+                              />
+                            </TableCell>
+                          </TableRow>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <Label className="text-sm font-semibold text-black uppercase tracking-wide">Patient FAQs Source</Label>
-                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="Source type" value={spec.patient_faqs_source_type || ""} onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { patient_faqs_source_type: e.target.value })} readOnly={readOnly} />
-                          </div>
-                          <div>
-                            <Label className="text-sm font-semibold text-black uppercase tracking-wide">Source Link</Label>
-                            <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="URL" value={spec.patient_faqs_source_link || ""} onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { patient_faqs_source_link: e.target.value })} readOnly={readOnly} />
-                          </div>
-                        </div>
-                      </div>
+                          {/* Services Offered */}
+                          <TableRow>
+                            <TableCell className="font-medium text-sm text-gray-900 w-1/3">Services Offered</TableCell>
+                            <TableCell className="w-1/3">
+                              <Input
+                                className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
+                                placeholder="Source type"
+                                value={spec.services_offered_source_type || ""}
+                                onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { services_offered_source_type: e.target.value })}
+                                readOnly={readOnly}
+                              />
+                            </TableCell>
+                            <TableCell className="w-1/3">
+                              <Input
+                                className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
+                                placeholder="Source name"
+                                value={spec.services_offered_source_name || ""}
+                                onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { services_offered_source_name: e.target.value })}
+                                readOnly={readOnly}
+                              />
+                            </TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
                     </TabsContent>
 
                     <TabsContent value="services" className="pt-4">
@@ -562,132 +650,139 @@ export default function SpecialtiesModule({
                         };
 
                         return (
-                          <div className="flex flex-col lg:flex-row lg:gap-5 gap-4">
-                            <div className="lg:w-64 shrink-0 border border-slate-200 rounded-2xl bg-slate-50/80 p-4 space-y-3 shadow-inner">
-                              {!readOnly && (
-                                <Button
-                                  size="sm"
-                                  className="w-full bg-[#f49024] hover:bg-[#d87f1f] text-white"
-                                  onClick={handleAddService}
-                                >
-                                  Add Service
-                                </Button>
-                              )}
-                              <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
-                                {services.length === 0 ? (
-                                  <p className="text-xs text-muted-foreground text-center py-6">No services yet</p>
-                                ) : (
-                                  services.map((service, index) => {
-                                    const label = displayName(service, index);
-                                    const isSelected = selectedIndex === index;
-                                    return (
-                                      <Button
-                                        key={index}
-                                        variant={isSelected ? 'default' : 'ghost'}
-                                        size="sm"
-                                        className={`w-full justify-start text-left text-xs font-medium transition-all rounded-lg ${
-                                          isSelected
-                                            ? 'bg-[#1C275E] text-white hover:bg-[#233072] shadow-sm'
-                                            : 'text-[#1C275E] hover:bg-white/80'
-                                        }`}
-                                        onClick={() => handleSelectService(spec.id, index)}
-                                      >
-                                        {label}
-                                      </Button>
-                                    );
-                                  })
+                          <div className="flex flex-col lg:flex-row lg:gap-6 gap-4">
+                            <div className="lg:w-64 shrink-0 bg-slate-50 rounded-lg border border-slate-100 overflow-hidden shadow-sm">
+                              <div className="p-4 border-b border-slate-200">
+                                {!readOnly && (
+                                  <Button
+                                    size="sm"
+                                    className="w-full bg-[#f49024] hover:bg-[#d87f1f] text-white"
+                                    onClick={handleAddService}
+                                  >
+                                    Add Service
+                                  </Button>
                                 )}
                               </div>
+                              <div className="p-4">
+                                <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+                                  {services.length === 0 ? (
+                                    <p className="text-xs text-muted-foreground text-center py-6">No services yet</p>
+                                  ) : (
+                                    services.map((service, index) => {
+                                      const label = displayName(service, index);
+                                      const isSelected = selectedIndex === index;
+                                      return (
+                                        <Button
+                                          key={index}
+                                          variant={isSelected ? 'default' : 'ghost'}
+                                          size="sm"
+                                          className={`w-full justify-start text-left text-xs font-medium transition-all rounded-lg ${
+                                            isSelected
+                                              ? 'bg-[#1C275E] text-white hover:bg-[#233072] shadow-sm'
+                                              : 'text-[#1C275E] hover:bg-white/80'
+                                          }`}
+                                          onClick={() => handleSelectService(spec.id, index)}
+                                        >
+                                          {label}
+                                        </Button>
+                                      );
+                                    })
+                                  )}
+                                </div>
+                              </div>
                             </div>
-                            <div className="flex-1 border border-slate-200 rounded-2xl bg-white shadow-sm p-6 transition-shadow focus-within:shadow-md focus-within:border-[#0d9488]/50">
-                              {selectedService ? (
-                                <div className="space-y-5 text-sm">
-                                  <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
-                                    <div className="flex-1 md:mr-4">
-                                      <Label className="text-xs font-semibold text-[#1C275E] uppercase tracking-wide">Service Name</Label>
-                                      <Input
-                                        className="mt-2 h-10 text-sm border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20"
-                                        placeholder="e.g., MRI Scan, Blood Test"
-                                        value={selectedService.name}
-                                        onChange={readOnly ? undefined : (e) => handleServiceFieldChange('name', e.target.value)}
-                                        readOnly={readOnly}
-                                      />
+                            <div className="flex-1 bg-white rounded-lg border border-slate-100 overflow-hidden shadow-sm transition-shadow focus-within:shadow-md focus-within:border-[#0d9488]/50">
+                              <div className="p-6">
+                                {selectedService ? (
+                                  <div className="space-y-5 text-sm">
+                                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                                      <div className="flex-1 md:mr-4">
+                                        <Label className="text-xs font-semibold text-[#1C275E] uppercase tracking-wide">Service Name</Label>
+                                        <Input
+                                          className="mt-2 h-10 text-sm border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20"
+                                          placeholder="e.g., MRI Scan, Blood Test"
+                                          value={selectedService.name}
+                                          onChange={readOnly ? undefined : (e) => handleServiceFieldChange('name', e.target.value)}
+                                          readOnly={readOnly}
+                                        />
+                                      </div>
+                                      {!readOnly && (
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className="self-start mt-1 border-[#c0352b]/40 text-[#c0352b] hover:bg-[#c0352b] hover:text-white"
+                                          onClick={() =>
+                                            setRemoveServiceDialog({
+                                              open: true,
+                                              specialtyId: spec.id,
+                                              serviceIndex: selectedIndex ?? undefined,
+                                              serviceName: selectedService.name?.trim() || 'Untitled service',
+                                            })
+                                          }
+                                        >
+                                          Remove
+                                        </Button>
+                                      )}
                                     </div>
-                                    {!readOnly && (
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="self-start mt-1 border-[#c0352b]/40 text-[#c0352b] hover:bg-[#c0352b] hover:text-white"
-                                        onClick={() =>
-                                          setRemoveServiceDialog({
-                                            open: true,
-                                            specialtyId: spec.id,
-                                            serviceIndex: selectedIndex ?? undefined,
-                                            serviceName: selectedService.name?.trim() || 'Untitled service',
-                                          })
-                                        }
-                                      >
-                                        Remove
-                                      </Button>
-                                    )}
-                                  </div>
 
-                                  <div className="space-y-2">
-                                    <Label className="text-xs font-semibold text-[#1C275E] uppercase tracking-wide">Patient Preparation Requirements</Label>
-                                    <Textarea
-                                      className="min-h-[120px] text-sm border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
-                                      placeholder="Describe what patients need to do before this service"
-                                      value={selectedService.patient_prep_requirements || ''}
-                                      onChange={readOnly ? undefined : (e) => handleServiceFieldChange('patient_prep_requirements', e.target.value)}
-                                      readOnly={readOnly}
-                                    />
-                                  </div>
-
-                                  <div className="space-y-2">
-                                    <Label className="text-xs font-semibold text-[#1C275E] uppercase tracking-wide">Frequently Asked Questions</Label>
-                                    <Textarea
-                                      className="min-h-[120px] text-sm border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
-                                      placeholder="Common questions and answers about this service"
-                                      value={selectedService.faq || ''}
-                                      onChange={readOnly ? undefined : (e) => handleServiceFieldChange('faq', e.target.value)}
-                                      readOnly={readOnly}
-                                    />
-                                  </div>
-
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                      <Label className="text-xs font-semibold text-[#1C275E] uppercase tracking-wide">Service Information Name</Label>
-                                      <Input
-                                        className="h-10 text-sm border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20"
-                                        placeholder="e.g., Procedure Details, Cost Information"
-                                        value={selectedService.service_information_name || ''}
-                                        onChange={readOnly ? undefined : (e) => handleServiceFieldChange('service_information_name', e.target.value)}
+                                      <Label className="text-xs font-semibold text-[#1C275E] uppercase tracking-wide">Patient Preparation Requirements</Label>
+                                      <Textarea
+                                        className="min-h-[120px] text-sm border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
+                                        placeholder="Describe what patients need to do before this service"
+                                        value={selectedService.patient_prep_requirements || ''}
+                                        onChange={readOnly ? undefined : (e) => handleServiceFieldChange('patient_prep_requirements', e.target.value)}
                                         readOnly={readOnly}
                                       />
                                     </div>
+
                                     <div className="space-y-2">
-                                      <Label className="text-xs font-semibold text-[#1C275E] uppercase tracking-wide">Information Source</Label>
-                                      <Input
-                                        className="h-10 text-sm border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20"
-                                        placeholder="Source of this information"
-                                        value={selectedService.service_information_source || ''}
-                                        onChange={readOnly ? undefined : (e) => handleServiceFieldChange('service_information_source', e.target.value)}
+                                      <Label className="text-xs font-semibold text-[#1C275E] uppercase tracking-wide">Frequently Asked Questions</Label>
+                                      <Textarea
+                                        className="min-h-[120px] text-sm border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
+                                        placeholder="Common questions and answers about this service"
+                                        value={selectedService.faq || ''}
+                                        onChange={readOnly ? undefined : (e) => handleServiceFieldChange('faq', e.target.value)}
                                         readOnly={readOnly}
                                       />
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                      <div className="space-y-2">
+                                        <Label className="text-xs font-semibold text-[#1C275E] uppercase tracking-wide">Service Information Name</Label>
+                                        <Input
+                                          className="h-10 text-sm border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20"
+                                          placeholder="e.g., Procedure Details, Cost Information"
+                                          value={selectedService.service_information_name || ''}
+                                          onChange={readOnly ? undefined : (e) => handleServiceFieldChange('service_information_name', e.target.value)}
+                                          readOnly={readOnly}
+                                        />
+                                      </div>
+                                      <div className="space-y-2">
+                                        <Label className="text-xs font-semibold text-[#1C275E] uppercase tracking-wide">Information Source</Label>
+                                        <Input
+                                          className="h-10 text-sm border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20"
+                                          placeholder="Source of this information"
+                                          value={selectedService.service_information_source || ''}
+                                          onChange={readOnly ? undefined : (e) => handleServiceFieldChange('service_information_source', e.target.value)}
+                                          readOnly={readOnly}
+                                        />
+                                      </div>
                                     </div>
                                   </div>
-                                </div>
-                              ) : (
-                                <div className="flex h-[320px] items-center justify-center text-sm text-muted-foreground">
-                                  Select a service from the sidebar to view and edit details.
-                                </div>
-                              )}
+                                ) : (
+                                  <div className="flex h-[320px] items-center justify-center text-sm text-muted-foreground">
+                                    Select a service from the sidebar to view and edit details.
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
                         );
                       })()}
                     </TabsContent>
                   </Tabs>
+                  </div>
                 </CardContent>
               )}
             </Card>

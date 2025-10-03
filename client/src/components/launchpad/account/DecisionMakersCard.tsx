@@ -125,41 +125,42 @@ export default function DecisionMakersCard({
 
   return (
     <div className="space-y-4">
-      <SectionErrorSummary
-        errors={formErrors}
-        warnings={formWarnings}
-        sectionName="decision-makers"
-      />
+        <SectionErrorSummary
+          errors={formErrors}
+          warnings={formWarnings}
+          sectionName="decision-makers"
+        />
 
-      {/* Add Person Button */}
-      {!readOnly && onAdd && (
-        <div className="flex justify-end">
-          <Button
-            variant="default"
-            size="sm"
-            onClick={onAdd}
-            className="bg-[#F48024] hover:bg-[#F48024]/90 text-white px-4 py-2 rounded-lg shadow-sm"
-          >
-            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-            </svg>
-            Add Person
-          </Button>
-        </div>
-      )}
+        {/* Add Person Button */}
+        {!readOnly && onAdd && (
+          <div className="flex justify-end">
+            <Button
+              variant="default"
+              size="sm"
+              onClick={onAdd}
+              className="bg-[#F48024] hover:bg-[#F48024]/90 text-white px-4 py-2 rounded-lg shadow-sm transition-all duration-200 hover:shadow-md"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+              </svg>
+              Add Person
+            </Button>
+          </div>
+        )}
 
-      <div className="overflow-x-auto">
-      <Table className="min-w-[800px]">
-        <TableHeader>
-          <TableRow>
-            <TableHead className="text-black font-semibold text-sm">Title</TableHead>
-            <TableHead className="text-black font-semibold text-sm">First Name</TableHead>
-            <TableHead className="text-black font-semibold text-sm">Last Name</TableHead>
-            <TableHead className="text-black font-semibold text-sm">Email</TableHead>
-            <TableHead className="text-black font-semibold text-sm">Phone</TableHead>
-            <TableHead className="text-black font-semibold text-sm w-16">Action</TableHead>
-          </TableRow>
-        </TableHeader>
+        <div className="bg-slate-50 rounded-lg border border-slate-100 overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
+            <Table className="min-w-[800px]">
+              <TableHeader>
+                <TableRow className="bg-white border-b border-slate-200">
+                  <TableHead className="text-black font-semibold text-sm py-3 px-4">Title</TableHead>
+                  <TableHead className="text-black font-semibold text-sm py-3 px-4">First Name</TableHead>
+                  <TableHead className="text-black font-semibold text-sm py-3 px-4">Last Name</TableHead>
+                  <TableHead className="text-black font-semibold text-sm py-3 px-4">Email</TableHead>
+                  <TableHead className="text-black font-semibold text-sm py-3 px-4">Phone</TableHead>
+                  <TableHead className="text-black font-semibold text-sm py-3 px-4 w-16">Action</TableHead>
+                </TableRow>
+              </TableHeader>
         <TableBody>
           {decisionMakers.map((dm) => (
             <TableRow key={dm.id} className="hover:bg-[#1C275E]/5">
@@ -245,6 +246,7 @@ export default function DecisionMakersCard({
           ))}
         </TableBody>
       </Table>
+        </div>
       </div>
     </div>
   );

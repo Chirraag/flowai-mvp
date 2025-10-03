@@ -1,4 +1,4 @@
-import React, { useImperativeHandle, forwardRef, useEffect, useState } from "react";
+import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,26 +11,10 @@ import { usePermissions } from "@/context/AuthContext";
  * DeliveryMethodsTab
  * - Format preferences and signature/consent capture configuration
  * - Enhanced with brand styling and sophisticated save system
+ * - Controlled component: receives values and onChange handler
  */
 export type DeliveryMethodsTabProps = {
-  initialData?: {
-    formatPreferences: Record<string, boolean>;
-    consentMethods: {
-      digitalSignature: boolean;
-      verbalConsentRecording: boolean;
-      consentLanguage: string;
-    };
-  };
-  onSave?: (values: any) => Promise<void>;
-  isSaving?: boolean;
-  readOnly?: boolean;
-};
-
-export type DeliveryMethodsTabHandle = {
-  /**
-   * Returns the current values held by the tab.
-   */
-  getValues: () => {
+  values: {
     formatPreferences: {
       textMessageLink: boolean;
       voiceCall: boolean;
@@ -44,79 +28,21 @@ export type DeliveryMethodsTabHandle = {
       consentLanguage: string;
     };
   };
-  /**
-   * Lightweight validation for the tab.
-   */
-  validate: () => { valid: boolean; errors: string[] };
+  onChange: (values: DeliveryMethodsTabProps['values']) => void;
+  onSave?: () => Promise<void>;
+  isSaving?: boolean;
+  readOnly?: boolean;
 };
 
-const DeliveryMethodsTab = forwardRef<DeliveryMethodsTabHandle, DeliveryMethodsTabProps>(({ initialData, onSave, isSaving = false, readOnly: readOnlyProp }, ref) => {
+const DeliveryMethodsTab = ({ values, onChange, onSave, isSaving = false, readOnly: readOnlyProp }: DeliveryMethodsTabProps) => {
   const { canEditPatientIntakeAgent } = usePermissions();
   const readOnly = readOnlyProp ?? !canEditPatientIntakeAgent;
-  // Format Preferences state (default values, overridden by initialData if provided)
-  const [textMessageLink, setTextMessageLink] = useState(true);
-  const [voiceCall, setVoiceCall] = useState(false);
-  const [qrCode, setQrCode] = useState(true);
-  const [emailLink, setEmailLink] = useState(true);
-  const [inPersonTablet, setInPersonTablet] = useState(false);
-
-  // Consent Methods state
-  const [digitalSignature, setDigitalSignature] = useState(true);
-  const [verbalConsentRecording, setVerbalConsentRecording] = useState(false);
-  const [consentLanguage, setConsentLanguage] = useState("");
-
-  // Populate state from initialData if provided
-  useEffect(() => {
-    if (initialData) {
-      setTextMessageLink(initialData.formatPreferences.textMessageLink ?? true);
-      setVoiceCall(initialData.formatPreferences.voiceCall ?? false);
-      setQrCode(initialData.formatPreferences.qrCode ?? true);
-      setEmailLink(initialData.formatPreferences.emailLink ?? true);
-      setInPersonTablet(initialData.formatPreferences.inPersonTablet ?? false);
-
-      setDigitalSignature(initialData.consentMethods.digitalSignature ?? true);
-      setVerbalConsentRecording(initialData.consentMethods.verbalConsentRecording ?? false);
-      setConsentLanguage(initialData.consentMethods.consentLanguage ?? "");
-    }
-  }, [initialData]);
 
   // Save handler
   const handleSave = async () => {
     if (!onSave) return;
-
-    const currentRef = (ref as React.MutableRefObject<DeliveryMethodsTabHandle | null>).current;
-    const validation = currentRef?.validate();
-    if (validation && !validation.valid) {
-      // Validation errors will be handled by the parent
-      return;
-    }
-
-    const currentValues = currentRef?.getValues();
-    if (currentValues) {
-      await onSave(currentValues);
-    }
+    await onSave();
   };
-
-  useImperativeHandle(ref, () => ({
-    getValues: () => ({
-      formatPreferences: {
-        textMessageLink,
-        voiceCall,
-        qrCode,
-        emailLink,
-        inPersonTablet,
-      },
-      consentMethods: {
-        digitalSignature,
-        verbalConsentRecording,
-        consentLanguage,
-      },
-    }),
-    validate: () => {
-      // Validation is now handled at page level
-      return { valid: true, errors: [] };
-    },
-  }));
 
   return (
     <div className="space-y-6">
@@ -133,7 +59,7 @@ const DeliveryMethodsTab = forwardRef<DeliveryMethodsTabHandle, DeliveryMethodsT
                 <p className="text-gray-200 text-sm mt-1">Configure how intake forms are delivered to patients</p>
               </div>
             </div>
-            {onSave && (
+            {onSave && !readOnly && (
               <Button
                 onClick={handleSave}
                 disabled={isSaving}
@@ -160,11 +86,17 @@ const DeliveryMethodsTab = forwardRef<DeliveryMethodsTabHandle, DeliveryMethodsT
               <Label htmlFor="text-message-link" className="text-[#1c275e] font-medium">Text Message Link</Label>
               <IOSSwitch
                 id="text-message-link"
-                checked={textMessageLink}
+                checked={values.formatPreferences.textMessageLink}
                 onCheckedChange={(checked) => {
                   if (!readOnly) {
-                    setTextMessageLink(checked);
-                    
+                    onChange({
+                      ...values,
+                      formatPreferences: {
+                        ...values.formatPreferences,
+                        textMessageLink: checked
+                      }
+                    });
+
                   }
                 }}
                 disabled={readOnly}
@@ -175,11 +107,17 @@ const DeliveryMethodsTab = forwardRef<DeliveryMethodsTabHandle, DeliveryMethodsT
               <Label htmlFor="voice-call" className="text-[#1c275e] font-medium">Voice Call</Label>
               <IOSSwitch
                 id="voice-call"
-                checked={voiceCall}
+                checked={values.formatPreferences.voiceCall}
                 onCheckedChange={(checked) => {
                   if (!readOnly) {
-                    setVoiceCall(checked);
-                    
+                    onChange({
+                      ...values,
+                      formatPreferences: {
+                        ...values.formatPreferences,
+                        voiceCall: checked
+                      }
+                    });
+
                   }
                 }}
                 disabled={readOnly}
@@ -190,11 +128,17 @@ const DeliveryMethodsTab = forwardRef<DeliveryMethodsTabHandle, DeliveryMethodsT
               <Label htmlFor="qr-code" className="text-[#1c275e] font-medium">QR Code</Label>
               <IOSSwitch
                 id="qr-code"
-                checked={qrCode}
+                checked={values.formatPreferences.qrCode}
                 onCheckedChange={(checked) => {
                   if (!readOnly) {
-                    setQrCode(checked);
-                    
+                    onChange({
+                      ...values,
+                      formatPreferences: {
+                        ...values.formatPreferences,
+                        qrCode: checked
+                      }
+                    });
+
                   }
                 }}
                 disabled={readOnly}
@@ -205,11 +149,17 @@ const DeliveryMethodsTab = forwardRef<DeliveryMethodsTabHandle, DeliveryMethodsT
               <Label htmlFor="email-link" className="text-[#1c275e] font-medium">Email Link</Label>
               <IOSSwitch
                 id="email-link"
-                checked={emailLink}
+                checked={values.formatPreferences.emailLink}
                 onCheckedChange={(checked) => {
                   if (!readOnly) {
-                    setEmailLink(checked);
-                    
+                    onChange({
+                      ...values,
+                      formatPreferences: {
+                        ...values.formatPreferences,
+                        emailLink: checked
+                      }
+                    });
+
                   }
                 }}
                 disabled={readOnly}
@@ -220,11 +170,17 @@ const DeliveryMethodsTab = forwardRef<DeliveryMethodsTabHandle, DeliveryMethodsT
               <Label htmlFor="in-person-tablet" className="text-[#1c275e] font-medium">In-Person Tablet</Label>
               <IOSSwitch
                 id="in-person-tablet"
-                checked={inPersonTablet}
+                checked={values.formatPreferences.inPersonTablet}
                 onCheckedChange={(checked) => {
                   if (!readOnly) {
-                    setInPersonTablet(checked);
-                    
+                    onChange({
+                      ...values,
+                      formatPreferences: {
+                        ...values.formatPreferences,
+                        inPersonTablet: checked
+                      }
+                    });
+
                   }
                 }}
                 disabled={readOnly}
@@ -253,11 +209,17 @@ const DeliveryMethodsTab = forwardRef<DeliveryMethodsTabHandle, DeliveryMethodsT
               <Label htmlFor="digital-signature" className="text-[#1c275e] font-medium">Digital Signature</Label>
               <IOSSwitch
                 id="digital-signature"
-                checked={digitalSignature}
+                checked={values.consentMethods.digitalSignature}
                 onCheckedChange={(checked) => {
                   if (!readOnly) {
-                    setDigitalSignature(checked);
-                    
+                    onChange({
+                      ...values,
+                      consentMethods: {
+                        ...values.consentMethods,
+                        digitalSignature: checked
+                      }
+                    });
+
                   }
                 }}
                 disabled={readOnly}
@@ -268,11 +230,17 @@ const DeliveryMethodsTab = forwardRef<DeliveryMethodsTabHandle, DeliveryMethodsT
               <Label htmlFor="verbal-consent" className="text-[#1c275e] font-medium">Verbal Consent Recording</Label>
               <IOSSwitch
                 id="verbal-consent"
-                checked={verbalConsentRecording}
+                checked={values.consentMethods.verbalConsentRecording}
                 onCheckedChange={(checked) => {
                   if (!readOnly) {
-                    setVerbalConsentRecording(checked);
-                    
+                    onChange({
+                      ...values,
+                      consentMethods: {
+                        ...values.consentMethods,
+                        verbalConsentRecording: checked
+                      }
+                    });
+
                   }
                 }}
                 disabled={readOnly}
@@ -284,10 +252,16 @@ const DeliveryMethodsTab = forwardRef<DeliveryMethodsTabHandle, DeliveryMethodsT
               <Textarea
                 id="consent-language"
                 placeholder="Enter the consent text that will be shown to patients..."
-                value={consentLanguage}
+                value={values.consentMethods.consentLanguage}
                 onChange={readOnly ? undefined : (e) => {
-                  setConsentLanguage(e.target.value);
-                  
+                  onChange({
+                    ...values,
+                    consentMethods: {
+                      ...values.consentMethods,
+                      consentLanguage: e.target.value
+                    }
+                  });
+
                 }}
                 readOnly={readOnly}
                 className="min-h-24 resize-none border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
@@ -298,6 +272,6 @@ const DeliveryMethodsTab = forwardRef<DeliveryMethodsTabHandle, DeliveryMethodsT
       </Card>
     </div>
   );
-});
+};
 
 export default DeliveryMethodsTab;
