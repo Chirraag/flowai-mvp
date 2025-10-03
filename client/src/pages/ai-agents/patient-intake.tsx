@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useState, useEffect } from "react";
+import React, { Suspense, lazy, useState, useEffect, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +13,13 @@ import {
   mapFieldContentRulesToApi,
   mapDeliveryMethodsToApi
 } from "@/lib/patient-intake.mappers";
+import {
+  validateFieldContentRules,
+  validateDeliveryMethods,
+  formatValidationErrors,
+  ValidationResult,
+  ValidationError
+} from "@/lib/patient-intake-validation.utils";
 
 // Import types for better type safety
 import type {
@@ -29,11 +36,10 @@ const PatientWorkflowsTab = lazy(() => import("@/components/patient-intake/Patie
 
 export default function PatientIntakeAgent() {
   const { toast } = useToast();
-  const { user, hasWriteAccess, isReadOnlyFor } = useAuth();
+  const { user, hasWriteAccess } = useAuth();
   
-  // RBAC Permission checks
+  // RBAC Permission check for save button visibility
   const canWriteAgents = hasWriteAccess("ai-agents");
-  const isReadOnly = isReadOnlyFor("ai-agents");
 
   // Loading and data state
   const [isLoading, setIsLoading] = useState(true);
@@ -42,11 +48,20 @@ export default function PatientIntakeAgent() {
   const [retryCount, setRetryCount] = useState(0);
   const [dirtyTabs, setDirtyTabs] = useState<Set<string>>(new Set());
   const [savingTabs, setSavingTabs] = useState<Set<string>>(new Set());
+  
+  // Centralized tab states (Phase 1: Lift State to Parent)
+  interface PatientIntakeTabStates {
+    fieldContentRules: FieldContentRulesTabData;
+    deliveryMethods: DeliveryMethodsTabData;
+    formsQuestionnaires: FormsQuestionnairesTabData;
+  }
+  const [tabStates, setTabStates] = useState<PatientIntakeTabStates | null>(null);
+  
+  // Validation state
+  const [formValidation, setFormValidation] = useState<ValidationResult | null>(null);
+  const [fieldValidations, setFieldValidations] = useState<Record<string, string>>({});
 
-  // Refs used to call validation on Save Configuration
-  const formsRef = React.useRef<any>(null);
-  const rulesRef = React.useRef<any>(null);
-  const deliveryRef = React.useRef<any>(null);
+  // Ref only for workflows (no state lifted there yet)
   const workflowsRef = React.useRef<any>(null);
 
   // Retry utility with exponential backoff
@@ -94,6 +109,14 @@ export default function PatientIntakeAgent() {
           1000
         );
         setAgentData(data.data);
+        
+        // Initialize tab states from fetched data (Phase 1)
+        setTabStates({
+          fieldContentRules: mapApiToFieldContentRules(data.data),
+          deliveryMethods: mapApiToDeliveryMethods(data.data),
+          formsQuestionnaires: mapApiToFormsQuestionnaires(data.data),
+        });
+        
         setRetryCount(0); // Reset retry count on success
       } catch (error) {
         console.error('Failed to fetch patient intake agent:', error);
@@ -112,37 +135,51 @@ export default function PatientIntakeAgent() {
 
   // Handle save all configurations with enhanced error handling
   const handleSaveAll = async () => {
-    if (!agentData || !user?.org_id) return;
+    if (!agentData || !user?.org_id || !tabStates) return;
 
     setIsSaving(true);
     setSavingTabs(new Set());
 
     try {
-      // Validate all tabs (excluding forms which doesn't have API yet)
-      const validations = await Promise.all([
-        rulesRef.current?.validate?.(),
-        deliveryRef.current?.validate?.(),
-        // Note: Forms tab validation skipped as API is not implemented yet
-      ]);
+      // Get values from centralized tab state (excluding forms which doesn't have API yet)
+      const tabValues = {
+        rules: tabStates.fieldContentRules,
+        delivery: tabStates.deliveryMethods,
+      };
 
-      // Check if any validation failed
-      const failedValidations = validations.filter(v => v && !v.valid);
-      if (failedValidations.length > 0) {
-        const firstError = failedValidations[0];
+      // Perform page-level validation before making any API calls
+      const rulesValidation = validateFieldContentRules(tabValues.rules);
+      const deliveryValidation = validateDeliveryMethods(tabValues.delivery);
+
+      const allErrors: ValidationError[] = [
+        ...rulesValidation.errors,
+        ...deliveryValidation.errors
+      ];
+      const allWarnings: ValidationError[] = [
+        ...rulesValidation.warnings,
+        ...deliveryValidation.warnings
+      ];
+
+      // If validation fails, show errors and prevent API calls
+      if (allErrors.length > 0) {
+        setFormValidation({
+          valid: false,
+          errors: allErrors,
+          warnings: allWarnings
+        });
+
         toast({
-          title: "Validation Error",
-          description: firstError.errors[0],
+          title: "Validation Failed",
+          description: formatValidationErrors(allErrors),
           variant: "destructive",
         });
         setIsSaving(false);
         return;
       }
 
-      // Get values from all tabs (excluding forms which doesn't have API yet)
-      const tabValues = {
-        rules: rulesRef.current?.getValues?.(),
-        delivery: deliveryRef.current?.getValues?.(),
-      };
+      // Clear validation state on success
+      setFormValidation(null);
+      setFieldValidations({});
 
       // Build update tasks with metadata (excluding forms which doesn't have API yet)
       const updateTasks: Array<{
@@ -261,45 +298,30 @@ export default function PatientIntakeAgent() {
     }
   };
 
-  // Individual save handlers for each tab
-  const handleSaveFieldRequirements = async () => {
-    if (!agentData || !user?.org_id) return;
-    const validation = rulesRef.current?.validate?.();
-    if (validation && !validation.valid) {
-      toast({
-        title: "Validation Error",
-        description: validation.errors[0],
-        variant: "destructive",
-      });
-      return;
-    }
-    const tabData = rulesRef.current?.getValues?.();
-    if (tabData) {
-      await api.put(`/api/v1/patient-intake-agent/${user.org_id}/field-requirements`,
-        { ...mapFieldContentRulesToApi(tabData), current_version: agentData.current_version });
-      toast({ title: "Success", description: "Field requirements saved successfully." });
-      await refetchAgentData();
-    }
+
+  // Change handlers for tab states (Phase 1)
+  const handleFieldContentRulesChange = (newValues: FieldContentRulesTabData) => {
+    setTabStates(prev => prev ? {
+      ...prev,
+      fieldContentRules: newValues
+    } : null);
+    setDirtyTabs(prev => new Set(Array.from(prev).concat('field-content-rules')));
   };
 
-  const handleSaveDeliveryMethods = async () => {
-    if (!agentData || !user?.org_id) return;
-    const validation = deliveryRef.current?.validate?.();
-    if (validation && !validation.valid) {
-      toast({
-        title: "Validation Error",
-        description: validation.errors[0],
-        variant: "destructive",
-      });
-      return;
-    }
-    const tabData = deliveryRef.current?.getValues?.();
-    if (tabData) {
-      await api.put(`/api/v1/patient-intake-agent/${user.org_id}/delivery-methods`,
-        { ...mapDeliveryMethodsToApi(tabData), current_version: agentData.current_version });
-      toast({ title: "Success", description: "Delivery methods saved successfully." });
-      await refetchAgentData();
-    }
+  const handleDeliveryMethodsChange = (newValues: DeliveryMethodsTabData) => {
+    setTabStates(prev => prev ? {
+      ...prev,
+      deliveryMethods: newValues
+    } : null);
+    setDirtyTabs(prev => new Set(Array.from(prev).concat('delivery-methods')));
+  };
+
+  const handleFormsQuestionnairesChange = (newValues: FormsQuestionnairesTabData) => {
+    setTabStates(prev => prev ? {
+      ...prev,
+      formsQuestionnaires: newValues
+    } : null);
+    setDirtyTabs(prev => new Set(Array.from(prev).concat('forms-questionnaires')));
   };
 
   // Function to refetch agent data after save
@@ -308,6 +330,13 @@ export default function PatientIntakeAgent() {
     try {
       const data = await api.get(`/api/v1/patient-intake-agent/${user.org_id}`) as { data: PatientIntakeApiData };
       setAgentData(data.data);
+      
+      // Update tab states from refetched data (Phase 1)
+      setTabStates({
+        fieldContentRules: mapApiToFieldContentRules(data.data),
+        deliveryMethods: mapApiToDeliveryMethods(data.data),
+        formsQuestionnaires: mapApiToFormsQuestionnaires(data.data),
+      });
     } catch (error) {
       console.error('Failed to refetch agent data:', error);
       toast({
@@ -318,12 +347,102 @@ export default function PatientIntakeAgent() {
     }
   };
 
+  // Individual save handlers for each tab
+  const handleSaveFieldRules = async () => {
+    if (!agentData || !user?.org_id || !tabStates) return;
+
+    // Validate before saving
+    const validation = validateFieldContentRules(tabStates.fieldContentRules);
+    if (!validation.valid) {
+      setFormValidation(validation);
+      toast({
+        title: "Validation Failed",
+        description: formatValidationErrors(validation.errors),
+        variant: "destructive",
+      });
+      // Return early - validation error is already shown to the user
+      return;
+    }
+
+    // Clear validation on success
+    setFormValidation(null);
+    setFieldValidations({});
+
+    try {
+      await retryWithBackoff(
+        () => api.put(`/api/v1/patient-intake-agent/${user.org_id}/field-requirements`, {
+          ...mapFieldContentRulesToApi(tabStates.fieldContentRules),
+          current_version: agentData.current_version
+        }),
+        1,
+        500
+      );
+
+      toast({
+        title: "Success",
+        description: "Field & Content Rules saved successfully",
+      });
+
+      await refetchAgentData();
+    } catch (error) {
+      console.error('Failed to save field rules:', error);
+      const errorToast = handleApiError(error, { action: "save field & content rules" });
+      toast(errorToast);
+    }
+  };
+
+  const handleSaveDeliveryMethods = async () => {
+    if (!agentData || !user?.org_id || !tabStates) return;
+
+    // Validate before saving
+    const validation = validateDeliveryMethods(tabStates.deliveryMethods);
+    if (!validation.valid) {
+      setFormValidation(validation);
+      toast({
+        title: "Validation Failed",
+        description: formatValidationErrors(validation.errors),
+        variant: "destructive",
+      });
+      // Return early - validation error is already shown to the user
+      return;
+    }
+
+    // Clear validation on success
+    setFormValidation(null);
+    setFieldValidations({});
+
+    try {
+      await retryWithBackoff(
+        () => api.put(`/api/v1/patient-intake-agent/${user.org_id}/delivery-methods`, {
+          ...mapDeliveryMethodsToApi(tabStates.deliveryMethods),
+          current_version: agentData.current_version
+        }),
+        1,
+        500
+      );
+
+      toast({
+        title: "Success",
+        description: "Delivery Methods saved successfully",
+      });
+
+      await refetchAgentData();
+    } catch (error) {
+      console.error('Failed to save delivery methods:', error);
+      const errorToast = handleApiError(error, { action: "save delivery methods" });
+      toast(errorToast);
+    }
+  };
+
   // Prepare initial values for tabs
-  const initialValues = agentData ? {
-    rules: mapApiToFieldContentRules(agentData),
-    delivery: mapApiToDeliveryMethods(agentData),
-    forms: mapApiToFormsQuestionnaires(agentData),
-  } : null;
+  const initialValues = useMemo(() => {
+    if (!agentData) return null;
+    return {
+      rules: mapApiToFieldContentRules(agentData),
+      delivery: mapApiToDeliveryMethods(agentData),
+      forms: mapApiToFormsQuestionnaires(agentData),
+    };
+  }, [agentData]); // Stable as long as agentData doesn't change
 
   // Show loading state
   if (isLoading) {
@@ -387,11 +506,10 @@ export default function PatientIntakeAgent() {
         <TabsContent value="forms-questionnaires">
           <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
             <FormsQuestionnairesTab
-              ref={formsRef}
+              ref={undefined}
               initialValues={initialValues?.forms}
-              onSave={undefined} // API not implemented yet
-              isSaving={false} // Not applicable for forms tab
-              readOnly={isReadOnly}
+              onSave={undefined}
+              isSaving={false}
             />
           </Suspense>
         </TabsContent>
@@ -400,11 +518,41 @@ export default function PatientIntakeAgent() {
         <TabsContent value="field-content-rules">
           <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
             <FieldContentRulesTab
-              ref={rulesRef}
-              initialData={initialValues?.rules}
-              onSave={handleSaveFieldRequirements}
+              values={tabStates ? {
+                fieldRequirements: {
+                  patientName: tabStates.fieldContentRules.fieldRequirements.patientName ?? "required",
+                  dateOfBirth: tabStates.fieldContentRules.fieldRequirements.dateOfBirth ?? "required",
+                  phoneNumber: tabStates.fieldContentRules.fieldRequirements.phoneNumber ?? "required",
+                  email: tabStates.fieldContentRules.fieldRequirements.email ?? "optional",
+                  insuranceId: tabStates.fieldContentRules.fieldRequirements.insuranceId ?? "optional",
+                  emergencyContact: tabStates.fieldContentRules.fieldRequirements.emergencyContact ?? "required",
+                  preferredLanguage: tabStates.fieldContentRules.fieldRequirements.preferredLanguage ?? "optional",
+                },
+                specialInstructions: {
+                  menoresInstructions: tabStates.fieldContentRules.specialInstructions.menoresInstructions ?? "",
+                  noInsuranceInstructions: tabStates.fieldContentRules.specialInstructions.noInsuranceInstructions ?? "",
+                  languageBarrierInstructions: tabStates.fieldContentRules.specialInstructions.languageBarrierInstructions ?? "",
+                }
+              } : {
+                fieldRequirements: {
+                  patientName: "required",
+                  dateOfBirth: "required",
+                  phoneNumber: "required",
+                  email: "optional",
+                  insuranceId: "optional",
+                  emergencyContact: "required",
+                  preferredLanguage: "optional"
+                },
+                specialInstructions: {
+                  menoresInstructions: "",
+                  noInsuranceInstructions: "",
+                  languageBarrierInstructions: ""
+                }
+              }}
+              onChange={handleFieldContentRulesChange}
+              onSave={handleSaveFieldRules}
               isSaving={isSaving}
-              readOnly={isReadOnly}
+              readOnly={!canWriteAgents}
             />
           </Suspense>
         </TabsContent>
@@ -413,11 +561,37 @@ export default function PatientIntakeAgent() {
         <TabsContent value="delivery-methods">
           <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
             <DeliveryMethodsTab
-              ref={deliveryRef}
-              initialData={initialValues?.delivery}
+              values={tabStates ? {
+                formatPreferences: {
+                  textMessageLink: !!tabStates.deliveryMethods.formatPreferences.textMessageLink,
+                  voiceCall: !!tabStates.deliveryMethods.formatPreferences.voiceCall,
+                  qrCode: !!tabStates.deliveryMethods.formatPreferences.qrCode,
+                  emailLink: !!tabStates.deliveryMethods.formatPreferences.emailLink,
+                  inPersonTablet: !!tabStates.deliveryMethods.formatPreferences.inPersonTablet,
+                },
+                consentMethods: {
+                  digitalSignature: !!tabStates.deliveryMethods.consentMethods.digitalSignature,
+                  verbalConsentRecording: !!tabStates.deliveryMethods.consentMethods.verbalConsentRecording,
+                  consentLanguage: tabStates.deliveryMethods.consentMethods.consentLanguage ?? "",
+                }
+              } : {
+                formatPreferences: {
+                  textMessageLink: false,
+                  voiceCall: false,
+                  qrCode: false,
+                  emailLink: false,
+                  inPersonTablet: false
+                },
+                consentMethods: {
+                  digitalSignature: false,
+                  verbalConsentRecording: false,
+                  consentLanguage: ""
+                }
+              }}
+              onChange={handleDeliveryMethodsChange}
               onSave={handleSaveDeliveryMethods}
               isSaving={isSaving}
-              readOnly={isReadOnly}
+              readOnly={!canWriteAgents}
             />
           </Suspense>
         </TabsContent>
@@ -425,7 +599,7 @@ export default function PatientIntakeAgent() {
         {/* Workflows tab */}
         <TabsContent value="workflows">
           <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
-            <PatientWorkflowsTab ref={workflowsRef} readOnly={isReadOnly} />
+            <PatientWorkflowsTab ref={workflowsRef} />
           </Suspense>
         </TabsContent>
       </Tabs>

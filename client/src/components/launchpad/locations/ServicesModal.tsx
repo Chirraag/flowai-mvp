@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { usePermissions } from "@/context/AuthContext";
 import { SpecialtyServiceEntry } from "@/components/launchpad/types";
 
 interface ServicesModalProps {
@@ -17,7 +18,9 @@ interface ServicesModalProps {
   readOnly?: boolean;
 }
 
-export default function ServicesModal({ open, title, services, onUpdate, onOpenChange, readOnly = false }: ServicesModalProps) {
+export default function ServicesModal({ open, title, services, onUpdate, onOpenChange, readOnly: readOnlyProp }: ServicesModalProps) {
+  const { canEditLocations } = usePermissions();
+  const readOnly = readOnlyProp ?? !canEditLocations;
   const [draftServices, setDraftServices] = React.useState<SpecialtyServiceEntry[]>(services);
 
   React.useEffect(() => {

@@ -36,7 +36,6 @@ const AgentConfigTab = forwardRef<AgentConfigTabHandle, AgentConfigTabProps>(({ 
   const [voice, setVoice] = useState("nova");
   const [agentInstructions, setAgentInstructions] = useState("");
   const [humanTransferCriteria, setHumanTransferCriteria] = useState("");
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Set initial values when props change
   useEffect(() => {
@@ -46,14 +45,10 @@ const AgentConfigTab = forwardRef<AgentConfigTabHandle, AgentConfigTabProps>(({ 
       setVoice(initialValues.voice);
       setAgentInstructions(initialValues.agentInstructions);
       setHumanTransferCriteria(initialValues.humanTransferCriteria);
-      setHasUnsavedChanges(false);
+      
     }
   }, [initialValues]);
 
-  // Track changes
-  const handleFieldChange = () => {
-    setHasUnsavedChanges(true);
-  };
 
   // Save handler
   const handleSave = async () => {
@@ -69,7 +64,7 @@ const AgentConfigTab = forwardRef<AgentConfigTabHandle, AgentConfigTabProps>(({ 
 
     try {
       await onSave(currentValues);
-      setHasUnsavedChanges(false);
+      
     } catch (error) {
       console.error('Failed to save agent config:', error);
     }
@@ -111,21 +106,23 @@ const AgentConfigTab = forwardRef<AgentConfigTabHandle, AgentConfigTabProps>(({ 
               </div>
             </div>
             {onSave && !readOnly && (
-              <div className="flex items-center gap-3">
-                {hasUnsavedChanges && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <div className="w-2 h-2 bg-[#f48024] rounded-full animate-pulse"></div>
-                    <span className="text-gray-200">Unsaved changes</span>
-                  </div>
+              <Button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="bg-white hover:bg-slate-400 active:bg-slate-500 text-[#1c275e] border-[#1c275e] px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save
+                  </>
                 )}
-                <Button
-                  onClick={handleSave}
-                  disabled={isSaving || !hasUnsavedChanges}
-                  className="bg-white hover:bg-slate-400 active:bg-slate-500 text-[#1c275e] border-[#1c275e] px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
-                >
-                  {isSaving ? "Saving..." : "Save"}
-                </Button>
-              </div>
+              </Button>
             )}
           </div>
         </CardHeader>
@@ -142,7 +139,7 @@ const AgentConfigTab = forwardRef<AgentConfigTabHandle, AgentConfigTabProps>(({ 
                 onChange={(e) => {
                   if (!readOnly) {
                     setAgentName(e.target.value);
-                    handleFieldChange();
+                    
                   }
                 }}
                 readOnly={readOnly}
@@ -159,7 +156,7 @@ const AgentConfigTab = forwardRef<AgentConfigTabHandle, AgentConfigTabProps>(({ 
                 onChange={(e) => {
                   if (!readOnly) {
                     setLanguage(e.target.value);
-                    handleFieldChange();
+                    
                   }
                 }}
                 readOnly={readOnly}
@@ -176,7 +173,7 @@ const AgentConfigTab = forwardRef<AgentConfigTabHandle, AgentConfigTabProps>(({ 
                 onChange={(e) => {
                   if (!readOnly) {
                     setVoice(e.target.value);
-                    handleFieldChange();
+                    
                   }
                 }}
                 readOnly={readOnly}
@@ -195,7 +192,7 @@ const AgentConfigTab = forwardRef<AgentConfigTabHandle, AgentConfigTabProps>(({ 
               onChange={(e) => {
                 if (!readOnly) {
                   setAgentInstructions(e.target.value);
-                  handleFieldChange();
+                  
                 }
               }}
               readOnly={readOnly}
@@ -213,7 +210,7 @@ const AgentConfigTab = forwardRef<AgentConfigTabHandle, AgentConfigTabProps>(({ 
               onChange={(e) => {
                 if (!readOnly) {
                   setHumanTransferCriteria(e.target.value);
-                  handleFieldChange();
+                  
                 }
               }}
               readOnly={readOnly}

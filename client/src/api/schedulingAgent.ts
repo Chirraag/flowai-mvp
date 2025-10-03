@@ -6,8 +6,6 @@ import type {
   UpdatePatientEligibilityPayload,
   UpdateSchedulingPoliciesPayload,
   UpdateProviderPreferencesPayload,
-  UpdateAgentConfigPayload,
-  UpdateVoicePayload,
   UpdateResponse,
 } from '@/types/schedulingAgent';
 
@@ -80,34 +78,6 @@ export const schedulingAgentApi = {
     );
     if (!response.success || !response.data) {
       throw new Error(response.message || 'Failed to update provider preferences');
-    }
-    return response.data;
-  },
-
-  /**
-   * Update agent configuration
-   */
-  async updateAgentConfig(id: string, payload: UpdateAgentConfigPayload): Promise<UpdateResponse> {
-    const response: ApiResponse<UpdateResponse> = await api.put(
-      `/api/v1/scheduling-agent/${id}/agent-config`,
-      payload
-    );
-    if (!response.success || !response.data) {
-      throw new Error(response.message || 'Failed to update agent config');
-    }
-    return response.data;
-  },
-
-  /**
-   * Update voice setting independently (quick update)
-   */
-  async updateVoice(id: string, payload: UpdateVoicePayload): Promise<UpdateResponse> {
-    const response: ApiResponse<UpdateResponse> = await api.put(
-      `/api/v1/scheduling-agent/${id}/update-voice`,
-      payload
-    );
-    if (!response.success || !response.data) {
-      throw new Error(response.message || 'Failed to update voice');
     }
     return response.data;
   },

@@ -2,6 +2,7 @@ import React, { useImperativeHandle, forwardRef, useCallback, useRef, useState }
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Workflow, Save } from "lucide-react";
+import { usePermissions } from "@/context/AuthContext";
 import EmbeddedWorkflowEditor from "@/components/business-workflows/EmbeddedWorkflowEditor";
 
 /**
@@ -26,7 +27,9 @@ interface CustomerSupportWorkflowsTabProps {
   readOnly?: boolean;
 }
 
-const CustomerSupportWorkflowsTab = forwardRef<CustomerSupportWorkflowsTabHandle, CustomerSupportWorkflowsTabProps>(({ readOnly = false }, ref) => {
+const CustomerSupportWorkflowsTab = forwardRef<CustomerSupportWorkflowsTabHandle, CustomerSupportWorkflowsTabProps>(({ readOnly: readOnlyProp }, ref) => {
+  const { canEditCustomerSupportAgent } = usePermissions();
+  const readOnly = readOnlyProp ?? !canEditCustomerSupportAgent;
   // Workflow loader function for customer support agent
   // Reuse the same fetching pattern used by index/editor:
   // 1) GET list /api/v1/business-workflows

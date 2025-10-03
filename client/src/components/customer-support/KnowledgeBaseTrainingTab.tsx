@@ -2,6 +2,7 @@ import React, { useImperativeHandle, forwardRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { usePermissions } from "@/context/AuthContext";
 import { BookOpen, Upload, Eye, Download, Trash2 } from "lucide-react";
 
 /**
@@ -22,7 +23,13 @@ interface CuratedDocument {
   tags?: string[];
 }
 
-const KnowledgeBaseTrainingTab = forwardRef<KnowledgeBaseTrainingTabHandle>((_props, ref) => {
+interface KnowledgeBaseTrainingTabProps {
+  readOnly?: boolean;
+}
+
+const KnowledgeBaseTrainingTab = forwardRef<KnowledgeBaseTrainingTabHandle, KnowledgeBaseTrainingTabProps>(({ readOnly: readOnlyProp }, ref) => {
+  const { canEditCustomerSupportAgent } = usePermissions();
+  const readOnly = readOnlyProp ?? !canEditCustomerSupportAgent;
   // File upload state
   const [uploadedFiles, setUploadedFiles] = React.useState<string[]>([]);
   const fileInputRef = React.useRef<HTMLInputElement>(null);

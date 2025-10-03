@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useState, useEffect } from "react";
+import React, { Suspense, lazy, useState, useEffect, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -6,6 +6,14 @@ import { handleApiError } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import { schedulingAgentApi } from "@/api/schedulingAgent";
 import { apiToUi, uiToApi } from "@/lib/schedulingAgent.mappers";
+import {
+  validateAppointmentSetup,
+  validatePatientEligibility,
+  validateSchedulingPolicies,
+  validateProviderPreferences,
+  type ValidationResult,
+  type ValidationError,
+} from "@/lib/scheduling-validation.utils";
 import type {
   SchedulingAgent,
   AppointmentSetupValues,
@@ -23,11 +31,10 @@ const WorkflowsTab = lazy(() => import("@/components/scheduling-agent/WorkflowsT
 
 export default function SchedulingAgent() {
   const { toast } = useToast();
-  const { user, hasWriteAccess, isReadOnlyFor } = useAuth();
+  const { user, hasWriteAccess } = useAuth();
   
-  // RBAC Permission checks
+  // RBAC Permission check for save button visibility
   const canWriteAgents = hasWriteAccess("ai-agents");
-  const isReadOnly = isReadOnlyFor("ai-agents");
 
   // Loading and data state
   const [isLoading, setIsLoading] = useState(true);
@@ -37,11 +44,26 @@ export default function SchedulingAgent() {
   const [dirtyTabs, setDirtyTabs] = useState<Set<string>>(new Set());
   const [savingTabs, setSavingTabs] = useState<Set<string>>(new Set());
 
-  // Refs used to call validation on Save Configuration
-  const appointmentSetupRef = React.useRef<any>(null);
-  const patientEligibilityRef = React.useRef<any>(null);
-  const schedulingPoliciesRef = React.useRef<any>(null);
-  const providerPreferencesRef = React.useRef<any>(null);
+  // Centralized tab states (Phase 1: Lift State to Parent)
+  interface SchedulingTabStates {
+    appointmentSetup: AppointmentSetupValues;
+    patientEligibility: PatientEligibilityValues;
+    schedulingPolicies: SchedulingPoliciesValues;
+    providerPreferences: ProviderPreferencesValues;
+  }
+  const [tabStates, setTabStates] = useState<SchedulingTabStates | null>(null);
+
+  // Validation state
+  const [formValidation, setFormValidation] = useState<ValidationResult>({
+    isValid: true,
+    errors: [],
+    warnings: [],
+    hasErrors: false,
+    hasWarnings: false,
+  });
+  const [fieldValidations, setFieldValidations] = useState<Record<string, ValidationError | null>>({});
+
+  // Ref for workflows tab (others no longer needed with lifted state)
   const workflowsRef = React.useRef<any>(null);
 
   // Retry utility with exponential backoff
@@ -89,6 +111,15 @@ export default function SchedulingAgent() {
           1000
         );
         setAgentData(data);
+        
+        // Initialize tab states from fetched data (Phase 1)
+        setTabStates({
+          appointmentSetup: apiToUi.appointmentSetup(data),
+          patientEligibility: apiToUi.patientEligibility(data),
+          schedulingPolicies: apiToUi.schedulingPolicies(data),
+          providerPreferences: apiToUi.providerPreferences(data),
+        });
+        
         setRetryCount(0); // Reset retry count on success
       } catch (error) {
         console.error('Failed to fetch scheduling agent:', error);
@@ -107,41 +138,60 @@ export default function SchedulingAgent() {
 
   // Handle save all configurations with enhanced error handling
   const handleSaveAll = async () => {
-    if (!agentData || !user?.org_id) return;
+    if (!agentData || !user?.org_id || !tabStates) return;
 
     setIsSaving(true);
     setSavingTabs(new Set());
 
     try {
-      // Validate all tabs
-      const validations = await Promise.all([
-        appointmentSetupRef.current?.validate?.(),
-        patientEligibilityRef.current?.validate?.(),
-        schedulingPoliciesRef.current?.validate?.(),
-        providerPreferencesRef.current?.validate?.(),
-        workflowsRef.current?.validate?.(),
-      ]);
+      // Get values from centralized tab state
+      const tabValues = {
+        appointmentSetup: tabStates.appointmentSetup,
+        patientEligibility: tabStates.patientEligibility,
+        schedulingPolicies: tabStates.schedulingPolicies,
+        providerPreferences: tabStates.providerPreferences,
+      };
+
+      // Validate all tabs at page level
+      const validations = [
+        validateAppointmentSetup(tabValues.appointmentSetup),
+        validatePatientEligibility(tabValues.patientEligibility),
+        validateSchedulingPolicies(tabValues.schedulingPolicies),
+        validateProviderPreferences(tabValues.providerPreferences),
+      ];
 
       // Check if any validation failed
-      const failedValidations = validations.filter(v => v && !v.valid);
+      const failedValidations = validations.filter(v => !v.isValid);
       if (failedValidations.length > 0) {
-        const firstError = failedValidations[0];
+        // Aggregate all errors
+        const allErrors = failedValidations.flatMap(v => v.errors);
+        const allWarnings = failedValidations.flatMap(v => v.warnings);
+        
+        setFormValidation({
+          isValid: false,
+          errors: allErrors,
+          warnings: allWarnings,
+          hasErrors: true,
+          hasWarnings: allWarnings.length > 0,
+        });
+
         toast({
-          title: "Validation Error",
-          description: firstError.errors[0],
+          title: "Validation Errors Found",
+          description: `Please fix ${allErrors.length} error(s) before saving.`,
           variant: "destructive",
         });
         setIsSaving(false);
-        return;
+        return; // Prevent all API calls
       }
 
-      // Get values from all tabs
-      const tabValues = {
-        appointmentSetup: appointmentSetupRef.current?.getValues?.(),
-        patientEligibility: patientEligibilityRef.current?.getValues?.(),
-        schedulingPolicies: schedulingPoliciesRef.current?.getValues?.(),
-        providerPreferences: providerPreferencesRef.current?.getValues?.(),
-      };
+      // Clear validation state on success
+      setFormValidation({
+        isValid: true,
+        errors: [],
+        warnings: [],
+        hasErrors: false,
+        hasWarnings: false,
+      });
 
       // Build update tasks with metadata
       const updateTasks: Array<{
@@ -272,33 +322,190 @@ export default function SchedulingAgent() {
     }
   };
 
-  // Individual save handlers for each tab
-  const handleSaveAppointmentSetup = async (values: AppointmentSetupValues) => {
-    if (!agentData || !user?.org_id) return;
-    await schedulingAgentApi.updateAppointmentSetup(String(user.org_id), uiToApi.appointmentSetup(values));
-    toast({ title: "Success", description: "Appointment setup saved successfully." });
-    await refetchAgentData();
+  // Individual save handlers for each tab with validation
+  const handleSaveAppointmentSetup = async () => {
+    if (!agentData || !user?.org_id || !tabStates) return;
+
+    try {
+      // Validate before API call
+      const validation = validateAppointmentSetup(tabStates.appointmentSetup);
+      setFormValidation(validation);
+
+      if (!validation.isValid) {
+        toast({
+          title: "Validation Error",
+          description: validation.errors[0]?.message || "Please fix validation errors before saving.",
+          variant: "destructive",
+        });
+        // Return early - validation error is already shown to the user
+        return;
+      }
+
+      // Clear validation state
+      setFormValidation({
+        isValid: true,
+        errors: [],
+        warnings: [],
+        hasErrors: false,
+        hasWarnings: false,
+      });
+      setFieldValidations({});
+
+      await schedulingAgentApi.updateAppointmentSetup(String(user.org_id), uiToApi.appointmentSetup(tabStates.appointmentSetup));
+      toast({ title: "Success", description: "Appointment setup saved successfully." });
+      await refetchAgentData();
+    } catch (error) {
+      console.error('Failed to save appointment setup:', error);
+      const errorToast = handleApiError(error, { action: "save appointment setup" });
+      toast(errorToast);
+    }
   };
 
-  const handleSavePatientEligibility = async (values: PatientEligibilityValues) => {
-    if (!agentData || !user?.org_id) return;
-    await schedulingAgentApi.updatePatientEligibility(String(user.org_id), uiToApi.patientEligibility(values));
-    toast({ title: "Success", description: "Patient eligibility settings saved successfully." });
-    await refetchAgentData();
+  const handleSavePatientEligibility = async () => {
+    if (!agentData || !user?.org_id || !tabStates) return;
+
+    try {
+      // Validate before API call
+      const validation = validatePatientEligibility(tabStates.patientEligibility);
+      setFormValidation(validation);
+
+      if (!validation.isValid) {
+        toast({
+          title: "Validation Error",
+          description: validation.errors[0]?.message || "Please fix validation errors before saving.",
+          variant: "destructive",
+        });
+        // Return early - validation error is already shown to the user
+        return;
+      }
+
+      // Clear validation state
+      setFormValidation({
+        isValid: true,
+        errors: [],
+        warnings: [],
+        hasErrors: false,
+        hasWarnings: false,
+      });
+      setFieldValidations({});
+
+      await schedulingAgentApi.updatePatientEligibility(String(user.org_id), uiToApi.patientEligibility(tabStates.patientEligibility));
+      toast({ title: "Success", description: "Patient eligibility settings saved successfully." });
+      await refetchAgentData();
+    } catch (error) {
+      console.error('Failed to save patient eligibility:', error);
+      const errorToast = handleApiError(error, { action: "save patient eligibility" });
+      toast(errorToast);
+    }
   };
 
-  const handleSaveSchedulingPolicies = async (values: SchedulingPoliciesValues) => {
-    if (!agentData || !user?.org_id) return;
-    await schedulingAgentApi.updateSchedulingPolicies(String(user.org_id), uiToApi.schedulingPolicies(values));
-    toast({ title: "Success", description: "Scheduling policies saved successfully." });
-    await refetchAgentData();
+  const handleSaveSchedulingPolicies = async () => {
+    if (!agentData || !user?.org_id || !tabStates) return;
+
+    try {
+      // Validate before API call
+      const validation = validateSchedulingPolicies(tabStates.schedulingPolicies);
+      setFormValidation(validation);
+
+      if (!validation.isValid) {
+        toast({
+          title: "Validation Error",
+          description: validation.errors[0]?.message || "Please fix validation errors before saving.",
+          variant: "destructive",
+        });
+        // Return early - validation error is already shown to the user
+        return;
+      }
+
+      // Clear validation state
+      setFormValidation({
+        isValid: true,
+        errors: [],
+        warnings: [],
+        hasErrors: false,
+        hasWarnings: false,
+      });
+      setFieldValidations({});
+
+      await schedulingAgentApi.updateSchedulingPolicies(String(user.org_id), uiToApi.schedulingPolicies(tabStates.schedulingPolicies));
+      toast({ title: "Success", description: "Scheduling policies saved successfully." });
+      await refetchAgentData();
+    } catch (error) {
+      console.error('Failed to save scheduling policies:', error);
+      const errorToast = handleApiError(error, { action: "save scheduling policies" });
+      toast(errorToast);
+    }
   };
 
-  const handleSaveProviderPreferences = async (values: ProviderPreferencesValues) => {
-    if (!agentData || !user?.org_id) return;
-    await schedulingAgentApi.updateProviderPreferences(String(user.org_id), uiToApi.providerPreferences(values));
-    toast({ title: "Success", description: "Provider preferences saved successfully." });
-    await refetchAgentData();
+  const handleSaveProviderPreferences = async () => {
+    if (!agentData || !user?.org_id || !tabStates) return;
+
+    try {
+      // Validate before API call
+      const validation = validateProviderPreferences(tabStates.providerPreferences);
+      setFormValidation(validation);
+
+      if (!validation.isValid) {
+        toast({
+          title: "Validation Error",
+          description: validation.errors[0]?.message || "Please fix validation errors before saving.",
+          variant: "destructive",
+        });
+        // Return early - validation error is already shown to the user
+        return;
+      }
+
+      // Clear validation state
+      setFormValidation({
+        isValid: true,
+        errors: [],
+        warnings: [],
+        hasErrors: false,
+        hasWarnings: false,
+      });
+      setFieldValidations({});
+
+      await schedulingAgentApi.updateProviderPreferences(String(user.org_id), uiToApi.providerPreferences(tabStates.providerPreferences));
+      toast({ title: "Success", description: "Provider preferences saved successfully." });
+      await refetchAgentData();
+    } catch (error) {
+      console.error('Failed to save provider preferences:', error);
+      const errorToast = handleApiError(error, { action: "save provider preferences" });
+      toast(errorToast);
+    }
+  };
+
+  // Change handlers for tab states (Phase 1)
+  const handleAppointmentSetupChange = (newValues: AppointmentSetupValues) => {
+    setTabStates(prev => prev ? {
+      ...prev,
+      appointmentSetup: newValues
+    } : null);
+    setDirtyTabs(prev => new Set(Array.from(prev).concat('appointment-setup')));
+  };
+
+  const handlePatientEligibilityChange = (newValues: PatientEligibilityValues) => {
+    setTabStates(prev => prev ? {
+      ...prev,
+      patientEligibility: newValues
+    } : null);
+    setDirtyTabs(prev => new Set(Array.from(prev).concat('patient-eligibility')));
+  };
+
+  const handleSchedulingPoliciesChange = (newValues: SchedulingPoliciesValues) => {
+    setTabStates(prev => prev ? {
+      ...prev,
+      schedulingPolicies: newValues
+    } : null);
+    setDirtyTabs(prev => new Set(Array.from(prev).concat('scheduling-policies')));
+  };
+
+  const handleProviderPreferencesChange = (newValues: ProviderPreferencesValues) => {
+    setTabStates(prev => prev ? {
+      ...prev,
+      providerPreferences: newValues
+    } : null);
+    setDirtyTabs(prev => new Set(Array.from(prev).concat('provider-preferences')));
   };
 
   // Function to refetch agent data after save
@@ -307,6 +514,14 @@ export default function SchedulingAgent() {
     try {
       const data = await schedulingAgentApi.getSchedulingAgent(String(user.org_id));
       setAgentData(data);
+      
+      // Update tab states from refetched data (Phase 1)
+      setTabStates({
+        appointmentSetup: apiToUi.appointmentSetup(data),
+        patientEligibility: apiToUi.patientEligibility(data),
+        schedulingPolicies: apiToUi.schedulingPolicies(data),
+        providerPreferences: apiToUi.providerPreferences(data),
+      });
     } catch (error) {
       console.error('Failed to refetch agent data:', error);
       toast({
@@ -318,12 +533,15 @@ export default function SchedulingAgent() {
   };
 
   // Prepare initial values for tabs
-  const initialValues = agentData ? {
-    appointmentSetup: apiToUi.appointmentSetup(agentData),
-    patientEligibility: apiToUi.patientEligibility(agentData),
-    schedulingPolicies: apiToUi.schedulingPolicies(agentData),
-    providerPreferences: apiToUi.providerPreferences(agentData),
-  } : null;
+  const initialValues = useMemo(() => {
+    if (!agentData) return null;
+    return {
+      appointmentSetup: apiToUi.appointmentSetup(agentData),
+      patientEligibility: apiToUi.patientEligibility(agentData),
+      schedulingPolicies: apiToUi.schedulingPolicies(agentData),
+      providerPreferences: apiToUi.providerPreferences(agentData),
+    };
+  }, [agentData]);
 
 
   // Show loading state
@@ -393,11 +611,23 @@ export default function SchedulingAgent() {
         <TabsContent value="appointment-setup">
           <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
             <AppointmentSetupTab
-              ref={appointmentSetupRef}
-              initialValues={initialValues?.appointmentSetup}
+              values={tabStates?.appointmentSetup || {
+                newPatientDuration: "",
+                followUpDuration: "",
+                procedureSpecific: "",
+                procedureDuration: "",
+                maxNewPatients: "",
+                maxFollowUps: "",
+                appointmentTypes: {
+                  newPatient: false,
+                  followUp: false,
+                  procedure: false
+                }
+              }}
+              onChange={handleAppointmentSetupChange}
               onSave={handleSaveAppointmentSetup}
               isSaving={isSaving}
-              readOnly={isReadOnly}
+              readOnly={!canWriteAgents}
             />
           </Suspense>
         </TabsContent>
@@ -406,11 +636,25 @@ export default function SchedulingAgent() {
         <TabsContent value="patient-eligibility">
           <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
             <PatientEligibilityTab
-              ref={patientEligibilityRef}
-              initialValues={initialValues?.patientEligibility}
+              values={tabStates?.patientEligibility || {
+                patientTypes: {
+                  newPatients: false,
+                  existingPatients: false,
+                  selfPay: false,
+                  hmo: false,
+                  ppo: false,
+                  medicare: false,
+                  medicaid: false
+                },
+                referralRequirements: {
+                  servicesRequiringReferrals: "",
+                  insurancePlansRequiringReferrals: ""
+                }
+              }}
+              onChange={handlePatientEligibilityChange}
               onSave={handleSavePatientEligibility}
               isSaving={isSaving}
-              readOnly={isReadOnly}
+              readOnly={!canWriteAgents}
             />
           </Suspense>
         </TabsContent>
@@ -419,11 +663,21 @@ export default function SchedulingAgent() {
         <TabsContent value="scheduling-policies">
           <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
             <SchedulingPoliciesTab
-              ref={schedulingPoliciesRef}
-              initialValues={initialValues?.schedulingPolicies}
+              values={tabStates?.schedulingPolicies || {
+                walkInPolicy: {
+                  acceptWalkIns: false,
+                  allowSameDayAppointments: false,
+                  sameDayCutoffTime: ""
+                },
+                cancellationPolicy: {
+                  minimumCancellationNotice: "",
+                  noShowFee: ""
+                }
+              }}
+              onChange={handleSchedulingPoliciesChange}
               onSave={handleSaveSchedulingPolicies}
               isSaving={isSaving}
-              readOnly={isReadOnly}
+              readOnly={!canWriteAgents}
             />
           </Suspense>
         </TabsContent>
@@ -432,11 +686,15 @@ export default function SchedulingAgent() {
         <TabsContent value="provider-preferences">
           <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
             <ProviderPreferencesTab
-              ref={providerPreferencesRef}
-              initialValues={initialValues?.providerPreferences}
+              values={tabStates?.providerPreferences || {
+                providerBlackoutDates: "",
+                establishedPatientsOnlyDays: "",
+                customSchedulingRules: ""
+              }}
+              onChange={handleProviderPreferencesChange}
               onSave={handleSaveProviderPreferences}
               isSaving={isSaving}
-              readOnly={isReadOnly}
+              readOnly={!canWriteAgents}
             />
           </Suspense>
         </TabsContent>
@@ -444,7 +702,7 @@ export default function SchedulingAgent() {
         {/* Workflows tab */}
         <TabsContent value="workflows">
           <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
-            <WorkflowsTab ref={workflowsRef} readOnly={isReadOnly} />
+            <WorkflowsTab ref={workflowsRef} />
           </Suspense>
         </TabsContent>
       </Tabs>

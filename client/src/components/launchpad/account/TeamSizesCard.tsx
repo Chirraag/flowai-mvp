@@ -2,6 +2,7 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { usePermissions } from "@/context/AuthContext";
 
 interface TeamSizesCardProps {
   orderEntryTeamSize?: number;
@@ -25,8 +26,10 @@ export default function TeamSizesCard({
   patientIntakeTeamSize,
   rcmTeamSize,
   onChange,
-  readOnly = false,
+  readOnly: readOnlyProp,
 }: TeamSizesCardProps) {
+  const { canEditAccountDetails } = usePermissions();
+  const readOnly = readOnlyProp ?? !canEditAccountDetails;
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

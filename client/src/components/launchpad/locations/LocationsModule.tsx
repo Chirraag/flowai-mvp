@@ -2,6 +2,7 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import LocationCard from "@/components/launchpad/locations/LocationCard";
+import { usePermissions } from "@/context/AuthContext";
 import { OrgLocation } from "@/components/launchpad/types";
 import { Input } from "@/components/ui/input";
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -34,8 +35,10 @@ export default function LocationsModule({
   onRemove,
   onSave,
   isSaving = false,
-  readOnly = false,
+  readOnly: readOnlyProp,
 }: LocationsModuleProps) {
+  const { canEditLocations } = usePermissions();
+  const readOnly = readOnlyProp ?? !canEditLocations;
 
   const [searchTerm, setSearchTerm] = React.useState("");
 

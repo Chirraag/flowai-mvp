@@ -2,6 +2,7 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { usePermissions } from "@/context/AuthContext";
 import { AccountOpportunitySizing } from "@/components/launchpad/types";
 
 interface OpportunitySizingCardProps {
@@ -13,8 +14,10 @@ interface OpportunitySizingCardProps {
 export default function OpportunitySizingCard({
   opportunitySizing,
   onChange,
-  readOnly = false,
+  readOnly: readOnlyProp,
 }: OpportunitySizingCardProps) {
+  const { canEditAccountDetails } = usePermissions();
+  const readOnly = readOnlyProp ?? !canEditAccountDetails;
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
