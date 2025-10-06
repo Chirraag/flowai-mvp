@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FormSummary } from "@/components/ui/form-error";
+import { FormValidationSummary, SectionErrorSummary } from "@/components/ui/validation-components";
 import { ContextualHelp } from "@/components/ui/breadcrumb-nav";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -65,7 +66,14 @@ import {
   validateLocationsData,
   validateSpecialtiesData,
   validateInsuranceData,
-  formatValidationErrors
+  formatValidationErrors,
+  groupErrorsBySection,
+  getFieldError,
+  sectionHasErrors,
+  sectionHasWarnings,
+  validateField,
+  type ValidationResult,
+  type ValidationError
 } from "@/lib/launchpad.utils";
 import DocumentUpload from "@/components/launchpad/shared/DocumentUpload";
 import { getDocumentsForTab, getDocumentTitle } from "@/lib/launchpad.utils";
@@ -81,12 +89,11 @@ type Person = {
 };
 
 export default function Launchpad() {
-  const { user, isLoading: authLoading, hasWriteAccess, isReadOnlyFor } = useAuth();
+  const { user, isLoading: authLoading, hasWriteAccess } = useAuth();
   const { toast } = useToast();
   
-  // RBAC Permission checks
+  // RBAC Permission check for save button visibility
   const canWriteLaunchpad = hasWriteAccess("launchpad");
-  const isReadOnly = isReadOnlyFor("launchpad");
   const queryClient = useQueryClient();
   const { orgId: urlOrgId } = useParams<{ orgId: string }>();
   
@@ -177,8 +184,17 @@ export default function Launchpad() {
   // Locations (hydrated from API snapshot)
   const [locations, setLocations] = useState<OrgLocation[]>([]);
 
-  // Basic form error summary (placeholder for future validation)
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  // Enhanced form validation state
+  const [formValidation, setFormValidation] = useState<ValidationResult>({
+    isValid: true,
+    errors: [],
+    warnings: [],
+    hasErrors: false,
+    hasWarnings: false,
+  });
+
+  // Real-time validation state for individual fields
+  const [fieldValidations, setFieldValidations] = useState<Record<string, ValidationError | null>>({});
 
   // Specialties (hydrated from API snapshot)
   const [specialties, setSpecialties] = useState<OrgSpecialityService[]>([]);
@@ -188,6 +204,8 @@ export default function Launchpad() {
 
   // Tab management
   const [activeTab, setActiveTab] = useState("account");
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [pendingTabChange, setPendingTabChange] = useState<string | null>(null);
 
   // Minimize state for cards
   const [minimizedCards, setMinimizedCards] = useState<Record<string, boolean>>({});
@@ -202,6 +220,12 @@ export default function Launchpad() {
     personName?: string;
     setter?: React.Dispatch<React.SetStateAction<Person[]>>;
   }>({ open: false });
+
+  // Unsaved changes dialog state
+  const [unsavedChangesDialog, setUnsavedChangesDialog] = useState<{
+    open: boolean;
+  }>({ open: false });
+
   const previousOrgIdRef = useRef<number | undefined>(undefined);
 
   const resetLaunchpadState = () => {
@@ -233,12 +257,381 @@ export default function Launchpad() {
     setPatientIntakeTeamReporting(undefined);
     setRcmTeamReporting(undefined);
     setLocations([]);
-    setFormErrors({});
+    setFormValidation({
+      isValid: true,
+      errors: [],
+      warnings: [],
+      hasErrors: false,
+      hasWarnings: false,
+    });
+    setFieldValidations({});
     setSpecialties([]);
     setInsurance({ is_active: true });
+    setHasUnsavedChanges(false);
     originalLocationsRef.current = [];
     originalSpecialtiesRef.current = [];
   };
+
+  // Function to detect if there are unsaved changes
+  const checkForUnsavedChanges = useCallback(() => {
+    if (!typedData) return false;
+
+    const ad = typedData.account_details;
+
+    // Check account details
+    if (ad) {
+      if (accountName !== (ad.account_name ?? "")) return true;
+      if (websiteAddress !== (ad.website_address ?? "")) return true;
+      if (headquartersAddress !== (ad.headquarters_address ?? "")) return true;
+      if (schedulingStructure !== (ad.scheduling_structure ?? "")) return true;
+      if (rcmStructure !== (ad.rcm_structure ?? "")) return true;
+      if (orderEntryTeamSize !== (ad.order_entry_team_size ?? undefined)) return true;
+      if (schedulingTeamSize !== (ad.scheduling_team_size ?? undefined)) return true;
+      if (patientIntakeTeamSize !== (ad.patient_intake_team_size ?? undefined)) return true;
+      if (rcmTeamSize !== (ad.rcm_team_size ?? undefined)) return true;
+
+      // Check opportunity sizing
+      const currentOpp = {
+        monthly_orders_count: opportunitySizing.monthly_orders_count,
+        monthly_patients_scheduled: opportunitySizing.monthly_patients_scheduled,
+        monthly_patients_checked_in: opportunitySizing.monthly_patients_checked_in,
+      };
+      const originalOpp = {
+        monthly_orders_count: ad.monthly_orders_count,
+        monthly_patients_scheduled: ad.monthly_patients_scheduled,
+        monthly_patients_checked_in: ad.monthly_patients_checked_in,
+      };
+      if (JSON.stringify(currentOpp) !== JSON.stringify(originalOpp)) return true;
+
+      // Check arrays
+      if (JSON.stringify(emrSystems) !== JSON.stringify(ad.emr_ris_systems || [])) return true;
+      if (JSON.stringify(telephonySystems) !== JSON.stringify(ad.telephony_ccas_systems || [])) return true;
+      if (JSON.stringify(schedulingPhoneNumbers) !== JSON.stringify(ad.scheduling_phone_numbers || [])) return true;
+      if (insuranceVerificationSystem !== (ad.insurance_verification_system ?? "")) return true;
+      if (insuranceVerificationDetails !== (ad.insurance_verification_details ?? "")) return true;
+      if (additionalInfo !== (ad.additional_info ?? "")) return true;
+      if (clinicalNotes !== (ad.clinical_notes ?? "")) return true;
+
+      // Check people arrays
+      const peopleArrays = [
+        { current: decisionMakers, original: ad.decision_makers },
+        { current: influencers, original: ad.influencers },
+        { current: orderEntryTeam, original: ad.order_entry_team },
+        { current: schedulingTeam, original: ad.scheduling_team },
+        { current: patientIntakeTeam, original: ad.patient_intake_team },
+        { current: rcmTeam, original: ad.rcm_team },
+      ];
+
+      for (const { current, original } of peopleArrays) {
+        if (current.length !== (original || []).length) return true;
+        for (let i = 0; i < current.length; i++) {
+          const curr = current[i];
+          const orig = (original || [])[i];
+          if (!orig) return true;
+          if (curr.title !== (orig.title || "")) return true;
+          if (curr.name !== (orig.name || "")) return true;
+          if (curr.email !== (orig.email || "")) return true;
+          if (curr.phone !== (orig.phone || "")) return true;
+        }
+      }
+    }
+
+    // Check locations
+    if (locations.length !== (typedData.locations || []).length) return true;
+    for (let i = 0; i < locations.length; i++) {
+      const curr = locations[i];
+      const orig = typedData.locations?.[i];
+      if (!orig) return true;
+      if (curr.name !== orig.name) return true;
+      if (curr.location_id !== orig.location_id) return true;
+      if (curr.address_line1 !== (orig.address_line1 ?? "")) return true;
+      if (curr.address_line2 !== orig.address_line2) return true;
+      if (curr.city !== (orig.city ?? "")) return true;
+      if (curr.state !== (orig.state ?? "")) return true;
+      if (curr.zip_code !== (orig.zip_code ?? "")) return true;
+      if (curr.weekday_hours !== (orig.weekday_hours ?? "")) return true;
+      if (curr.weekend_hours !== (orig.weekend_hours ?? "")) return true;
+      if (curr.parking_directions !== (orig.parking_directions ?? "")) return true;
+      if (curr.is_active !== !!orig.is_active) return true;
+    }
+
+    // Check specialties
+    if (specialties.length !== (typedData.speciality_services || []).length) return true;
+    for (let i = 0; i < specialties.length; i++) {
+      const curr = specialties[i];
+      const orig = typedData.speciality_services?.[i];
+      if (!orig) return true;
+      if (curr.specialty_name !== (orig.specialty_name ?? "")) return true;
+      if (JSON.stringify(curr.location_ids.sort()) !== JSON.stringify((orig.location_ids || []).sort())) return true;
+      if (curr.physician_names_source_type !== (orig.physician_names_source_type ?? null)) return true;
+      if (curr.physician_names_source_name !== (orig.physician_names_source_name ?? null)) return true;
+      if (curr.new_patients_source_type !== (orig.new_patients_source_type ?? null)) return true;
+      if (curr.new_patients_source_name !== (orig.new_patients_source_name ?? null)) return true;
+      if (curr.physician_locations_source_type !== (orig.physician_locations_source_type ?? null)) return true;
+      if (curr.physician_locations_source_name !== (orig.physician_locations_source_name ?? null)) return true;
+      if (curr.physician_credentials_source_type !== (orig.physician_credentials_source_type ?? null)) return true;
+      if (curr.physician_credentials_source_name !== (orig.physician_credentials_source_name ?? null)) return true;
+      if (curr.services_offered_source_type !== (orig.services_offered_source_type ?? null)) return true;
+      if (curr.services_offered_source_name !== (orig.services_offered_source_name ?? null)) return true;
+      if (curr.patient_prep_source_type !== (orig.patient_prep_source_type ?? null)) return true;
+      if (curr.patient_prep_source_name !== (orig.patient_prep_source_name ?? null)) return true;
+      if (curr.patient_faqs_source_type !== (orig.patient_faqs_source_type ?? null)) return true;
+      if (curr.patient_faqs_source_name !== (orig.patient_faqs_source_name ?? null)) return true;
+      if (curr.is_active !== !!orig.is_active) return true;
+
+      // Check services array
+      if (curr.services.length !== (orig.services || []).length) return true;
+      for (let j = 0; j < curr.services.length; j++) {
+        const currSvc = curr.services[j];
+        const origSvc = orig.services?.[j];
+        if (!origSvc) return true;
+        if (currSvc.name !== (origSvc.name ?? "")) return true;
+        if (currSvc.patient_prep_requirements !== (origSvc.patient_prep_requirements ?? "")) return true;
+        if (currSvc.faq !== (origSvc.faq ?? "")) return true;
+        if (currSvc.service_information_name !== (origSvc.service_information_name ?? null)) return true;
+        if (currSvc.service_information_source !== (origSvc.service_information_source ?? null)) return true;
+      }
+    }
+
+    // Check insurance
+    if (typedData.insurance) {
+      if (insurance.accepted_payers_source !== (typedData.insurance.accepted_payers_source ?? "")) return true;
+      if (insurance.accepted_payers_source_details !== (typedData.insurance.accepted_payers_source_details ?? "")) return true;
+      if (insurance.insurance_verification_source !== (typedData.insurance.insurance_verification_source ?? "")) return true;
+      if (insurance.insurance_verification_source_details !== (typedData.insurance.insurance_verification_source_details ?? "")) return true;
+      if (insurance.patient_copay_source !== (typedData.insurance.patient_copay_source ?? "")) return true;
+      if (insurance.patient_copay_source_details !== (typedData.insurance.patient_copay_source_details ?? "")) return true;
+      if (insurance.is_active !== !!typedData.insurance.is_active) return true;
+    }
+
+    return false;
+  }, [
+    typedData,
+    accountName,
+    websiteAddress,
+    headquartersAddress,
+    schedulingStructure,
+    rcmStructure,
+    orderEntryTeamSize,
+    schedulingTeamSize,
+    patientIntakeTeamSize,
+    rcmTeamSize,
+    opportunitySizing,
+    emrSystems,
+    telephonySystems,
+    schedulingPhoneNumbers,
+    insuranceVerificationSystem,
+    insuranceVerificationDetails,
+    additionalInfo,
+    clinicalNotes,
+    decisionMakers,
+    influencers,
+    orderEntryTeam,
+    schedulingTeam,
+    patientIntakeTeam,
+    rcmTeam,
+    locations,
+    specialties,
+    insurance,
+  ]);
+
+  // Function to get which tabs have unsaved changes
+  const getUnsavedChangesTabs = useCallback(() => {
+    if (!typedData) return [];
+
+    const tabsWithChanges = [];
+    const ad = typedData.account_details;
+
+    // Check account tab
+    let accountHasChanges = false;
+    if (ad) {
+      if (accountName !== (ad.account_name ?? "")) accountHasChanges = true;
+      if (websiteAddress !== (ad.website_address ?? "")) accountHasChanges = true;
+      if (headquartersAddress !== (ad.headquarters_address ?? "")) accountHasChanges = true;
+      if (schedulingStructure !== (ad.scheduling_structure ?? "")) accountHasChanges = true;
+      if (rcmStructure !== (ad.rcm_structure ?? "")) accountHasChanges = true;
+      if (orderEntryTeamSize !== (ad.order_entry_team_size ?? undefined)) accountHasChanges = true;
+      if (schedulingTeamSize !== (ad.scheduling_team_size ?? undefined)) accountHasChanges = true;
+      if (patientIntakeTeamSize !== (ad.patient_intake_team_size ?? undefined)) accountHasChanges = true;
+      if (rcmTeamSize !== (ad.rcm_team_size ?? undefined)) accountHasChanges = true;
+
+      // Check opportunity sizing
+      const currentOpp = {
+        monthly_orders_count: opportunitySizing.monthly_orders_count,
+        monthly_patients_scheduled: opportunitySizing.monthly_patients_scheduled,
+        monthly_patients_checked_in: opportunitySizing.monthly_patients_checked_in,
+      };
+      const originalOpp = {
+        monthly_orders_count: ad.monthly_orders_count,
+        monthly_patients_scheduled: ad.monthly_patients_scheduled,
+        monthly_patients_checked_in: ad.monthly_patients_checked_in,
+      };
+      if (JSON.stringify(currentOpp) !== JSON.stringify(originalOpp)) accountHasChanges = true;
+
+      // Check arrays
+      if (JSON.stringify(emrSystems) !== JSON.stringify(ad.emr_ris_systems || [])) accountHasChanges = true;
+      if (JSON.stringify(telephonySystems) !== JSON.stringify(ad.telephony_ccas_systems || [])) accountHasChanges = true;
+      if (JSON.stringify(schedulingPhoneNumbers) !== JSON.stringify(ad.scheduling_phone_numbers || [])) accountHasChanges = true;
+      if (insuranceVerificationSystem !== (ad.insurance_verification_system ?? "")) accountHasChanges = true;
+      if (insuranceVerificationDetails !== (ad.insurance_verification_details ?? "")) accountHasChanges = true;
+      if (additionalInfo !== (ad.additional_info ?? "")) accountHasChanges = true;
+      if (clinicalNotes !== (ad.clinical_notes ?? "")) accountHasChanges = true;
+
+      // Check people arrays
+      const peopleArrays = [
+        { current: decisionMakers, original: ad.decision_makers },
+        { current: influencers, original: ad.influencers },
+        { current: orderEntryTeam, original: ad.order_entry_team },
+        { current: schedulingTeam, original: ad.scheduling_team },
+        { current: patientIntakeTeam, original: ad.patient_intake_team },
+        { current: rcmTeam, original: ad.rcm_team },
+      ];
+
+      for (const { current, original } of peopleArrays) {
+        if (current.length !== (original || []).length) {
+          accountHasChanges = true;
+          break;
+        }
+        for (let i = 0; i < current.length; i++) {
+          const curr = current[i];
+          const orig = (original || [])[i];
+          if (!orig) {
+            accountHasChanges = true;
+            break;
+          }
+          if (curr.title !== (orig.title || "")) accountHasChanges = true;
+          if (curr.name !== (orig.name || "")) accountHasChanges = true;
+          if (curr.email !== (orig.email || "")) accountHasChanges = true;
+          if (curr.phone !== (orig.phone || "")) accountHasChanges = true;
+          if (accountHasChanges) break;
+        }
+        if (accountHasChanges) break;
+      }
+    }
+    if (accountHasChanges) tabsWithChanges.push("Account");
+
+    // Check locations tab
+    let locationsHasChanges = false;
+    if (locations.length !== (typedData.locations || []).length) locationsHasChanges = true;
+    else {
+      for (let i = 0; i < locations.length; i++) {
+        const curr = locations[i];
+        const orig = typedData.locations?.[i];
+        if (!orig) {
+          locationsHasChanges = true;
+          break;
+        }
+        if (curr.name !== orig.name) locationsHasChanges = true;
+        if (curr.location_id !== orig.location_id) locationsHasChanges = true;
+        if (curr.address_line1 !== (orig.address_line1 ?? "")) locationsHasChanges = true;
+        if (curr.address_line2 !== orig.address_line2) locationsHasChanges = true;
+        if (curr.city !== (orig.city ?? "")) locationsHasChanges = true;
+        if (curr.state !== (orig.state ?? "")) locationsHasChanges = true;
+        if (curr.zip_code !== (orig.zip_code ?? "")) locationsHasChanges = true;
+        if (curr.weekday_hours !== (orig.weekday_hours ?? "")) locationsHasChanges = true;
+        if (curr.weekend_hours !== (orig.weekend_hours ?? "")) locationsHasChanges = true;
+        if (curr.parking_directions !== (orig.parking_directions ?? "")) locationsHasChanges = true;
+        if (curr.is_active !== !!orig.is_active) locationsHasChanges = true;
+        if (locationsHasChanges) break;
+      }
+    }
+    if (locationsHasChanges) tabsWithChanges.push("Locations");
+
+    // Check specialties tab
+    let specialtiesHasChanges = false;
+    if (specialties.length !== (typedData.speciality_services || []).length) specialtiesHasChanges = true;
+    else {
+      for (let i = 0; i < specialties.length; i++) {
+        const curr = specialties[i];
+        const orig = typedData.speciality_services?.[i];
+        if (!orig) {
+          specialtiesHasChanges = true;
+          break;
+        }
+        if (curr.specialty_name !== (orig.specialty_name ?? "")) specialtiesHasChanges = true;
+        if (JSON.stringify(curr.location_ids.sort()) !== JSON.stringify((orig.location_ids || []).sort())) specialtiesHasChanges = true;
+        if (curr.physician_names_source_type !== (orig.physician_names_source_type ?? null)) specialtiesHasChanges = true;
+        if (curr.physician_names_source_name !== (orig.physician_names_source_name ?? null)) specialtiesHasChanges = true;
+        if (curr.new_patients_source_type !== (orig.new_patients_source_type ?? null)) specialtiesHasChanges = true;
+        if (curr.new_patients_source_name !== (orig.new_patients_source_name ?? null)) specialtiesHasChanges = true;
+        if (curr.physician_locations_source_type !== (orig.physician_locations_source_type ?? null)) specialtiesHasChanges = true;
+        if (curr.physician_locations_source_name !== (orig.physician_locations_source_name ?? null)) specialtiesHasChanges = true;
+        if (curr.physician_credentials_source_type !== (orig.physician_credentials_source_type ?? null)) specialtiesHasChanges = true;
+        if (curr.physician_credentials_source_name !== (orig.physician_credentials_source_name ?? null)) specialtiesHasChanges = true;
+        if (curr.services_offered_source_type !== (orig.services_offered_source_type ?? null)) specialtiesHasChanges = true;
+        if (curr.services_offered_source_name !== (orig.services_offered_source_name ?? null)) specialtiesHasChanges = true;
+        if (curr.patient_prep_source_type !== (orig.patient_prep_source_type ?? null)) specialtiesHasChanges = true;
+        if (curr.patient_prep_source_name !== (orig.patient_prep_source_name ?? null)) specialtiesHasChanges = true;
+        if (curr.patient_faqs_source_type !== (orig.patient_faqs_source_type ?? null)) specialtiesHasChanges = true;
+        if (curr.patient_faqs_source_name !== (orig.patient_faqs_source_name ?? null)) specialtiesHasChanges = true;
+        if (curr.is_active !== !!orig.is_active) specialtiesHasChanges = true;
+
+        // Check services array
+        if (curr.services.length !== (orig.services || []).length) specialtiesHasChanges = true;
+        else {
+          for (let j = 0; j < curr.services.length; j++) {
+            const currSvc = curr.services[j];
+            const origSvc = orig.services?.[j];
+            if (!origSvc) {
+              specialtiesHasChanges = true;
+              break;
+            }
+            if (currSvc.name !== (origSvc.name ?? "")) specialtiesHasChanges = true;
+            if (currSvc.patient_prep_requirements !== (origSvc.patient_prep_requirements ?? "")) specialtiesHasChanges = true;
+            if (currSvc.faq !== (origSvc.faq ?? "")) specialtiesHasChanges = true;
+            if (currSvc.service_information_name !== (origSvc.service_information_name ?? null)) specialtiesHasChanges = true;
+            if (currSvc.service_information_source !== (origSvc.service_information_source ?? null)) specialtiesHasChanges = true;
+            if (specialtiesHasChanges) break;
+          }
+        }
+        if (specialtiesHasChanges) break;
+      }
+    }
+    if (specialtiesHasChanges) tabsWithChanges.push("Specialties");
+
+    // Check insurance tab
+    let insuranceHasChanges = false;
+    if (typedData.insurance) {
+      if (insurance.accepted_payers_source !== (typedData.insurance.accepted_payers_source ?? "")) insuranceHasChanges = true;
+      if (insurance.accepted_payers_source_details !== (typedData.insurance.accepted_payers_source_details ?? "")) insuranceHasChanges = true;
+      if (insurance.insurance_verification_source !== (typedData.insurance.insurance_verification_source ?? "")) insuranceHasChanges = true;
+      if (insurance.insurance_verification_source_details !== (typedData.insurance.insurance_verification_source_details ?? "")) insuranceHasChanges = true;
+      if (insurance.patient_copay_source !== (typedData.insurance.patient_copay_source ?? "")) insuranceHasChanges = true;
+      if (insurance.patient_copay_source_details !== (typedData.insurance.patient_copay_source_details ?? "")) insuranceHasChanges = true;
+      if (insurance.is_active !== !!typedData.insurance.is_active) insuranceHasChanges = true;
+    }
+    if (insuranceHasChanges) tabsWithChanges.push("Insurance");
+
+    return tabsWithChanges;
+  }, [
+    typedData,
+    accountName,
+    websiteAddress,
+    headquartersAddress,
+    schedulingStructure,
+    rcmStructure,
+    orderEntryTeamSize,
+    schedulingTeamSize,
+    patientIntakeTeamSize,
+    rcmTeamSize,
+    opportunitySizing,
+    emrSystems,
+    telephonySystems,
+    schedulingPhoneNumbers,
+    insuranceVerificationSystem,
+    insuranceVerificationDetails,
+    additionalInfo,
+    clinicalNotes,
+    decisionMakers,
+    influencers,
+    orderEntryTeam,
+    schedulingTeam,
+    patientIntakeTeam,
+    rcmTeam,
+    locations,
+    specialties,
+    insurance,
+  ]);
 
   useEffect(() => {
     if (!orgId) return;
@@ -421,6 +814,22 @@ export default function Launchpad() {
     }
   }, [typedData]);
 
+  // Update unsaved changes state whenever form data changes
+  useEffect(() => {
+    const hasChanges = checkForUnsavedChanges();
+    setHasUnsavedChanges(hasChanges);
+  }, [checkForUnsavedChanges]);
+
+  // Handle tab changes with unsaved changes warning
+  const handleTabChange = (newTab: string) => {
+    if (hasUnsavedChanges) {
+      setPendingTabChange(newTab);
+      setUnsavedChangesDialog({ open: true });
+    } else {
+      setActiveTab(newTab);
+    }
+  };
+
   const addPerson = (setter: React.Dispatch<React.SetStateAction<Person[]>>) => {
     setter(prev => [
       ...prev,
@@ -462,6 +871,32 @@ export default function Launchpad() {
     }
   };
 
+  // Handle unsaved changes dialog
+  const handleUnsavedChangesDialogContinue = () => {
+    setUnsavedChangesDialog({ open: false });
+    if (pendingTabChange) {
+      setActiveTab(pendingTabChange);
+      setPendingTabChange(null);
+    }
+  };
+
+  const handleUnsavedChangesDialogCancel = (open: boolean = false) => {
+    setUnsavedChangesDialog({ open });
+    if (!open) {
+      setPendingTabChange(null);
+    }
+  };
+
+  // Real-time field validation
+  const validateFieldRealTime = (fieldName: string, value: string, section: string) => {
+    const result = validateField(fieldName, value, section);
+
+    setFieldValidations(prev => ({
+      ...prev,
+      [fieldName]: result.isValid ? null : result.error || null
+    }));
+  };
+
   // Save handlers (Steps 5, 6 & 8)
   const handleSaveAccount = async () => {
     try {
@@ -476,20 +911,25 @@ export default function Launchpad() {
         rcmTeam,
         schedulingPhoneNumbers,
       });
-      
+
+      // Update form validation state
+      setFormValidation(validation);
+
       if (!validation.isValid) {
-        const formattedErrors = formatValidationErrors(validation.errors);
-        setFormErrors(formattedErrors);
+        const errorCount = validation.errors.length;
+        const warningCount = validation.warnings.length;
+        const totalIssues = errorCount + warningCount;
+
         toast({
-          title: "Validation Error",
-          description: `Please fix ${validation.errors.length} validation error(s) before saving.`,
+          title: "Validation Issues Found",
+          description: `Please fix ${errorCount} error(s)${warningCount > 0 ? ` and review ${warningCount} warning(s)` : ''} before saving.`,
           variant: "destructive",
         });
         return;
       }
-      
-      // Clear any previous validation errors
-      setFormErrors({});
+
+      // Clear any previous field validations
+      setFieldValidations({});
 
       const payload = mapAccountUIToApi({
         accountName,
@@ -522,6 +962,18 @@ export default function Launchpad() {
       });
       
       await updateAccountDetails.mutateAsync({ data: payload });
+
+      // Clear validation states on success
+      setFormValidation({
+        isValid: true,
+        errors: [],
+        warnings: [],
+        hasErrors: false,
+        hasWarnings: false,
+      });
+      setFieldValidations({});
+      setHasUnsavedChanges(false);
+
       toast({
         title: "Success",
         description: "Account details saved successfully",
@@ -537,20 +989,24 @@ export default function Launchpad() {
     try {
       // Step 8: Client-side validation
       const validation = validateLocationsData(locations);
-      
+
+      // Update form validation state
+      setFormValidation(validation);
+
       if (!validation.isValid) {
-        const formattedErrors = formatValidationErrors(validation.errors);
-        setFormErrors(formattedErrors);
+        const errorCount = validation.errors.length;
+        const warningCount = validation.warnings.length;
+
         toast({
-          title: "Validation Error",
-          description: `Please fix ${validation.errors.length} validation error(s) before saving.`,
+          title: "Validation Issues Found",
+          description: `Please fix ${errorCount} error(s)${warningCount > 0 ? ` and review ${warningCount} warning(s)` : ''} before saving.`,
           variant: "destructive",
         });
         return;
       }
-      
-      // Clear any previous validation errors
-      setFormErrors({});
+
+      // Clear any previous field validations
+      setFieldValidations({});
       
       // Step 5: Chained locations → specialties flow
       const locationsPayload = mapLocationsUIToApi(locations);
@@ -586,6 +1042,17 @@ export default function Launchpad() {
         queryClient.invalidateQueries({ queryKey: ['launchpad', String(orgId)] });
       }
       
+      // Clear validation states on success
+      setFormValidation({
+        isValid: true,
+        errors: [],
+        warnings: [],
+        hasErrors: false,
+        hasWarnings: false,
+      });
+      setFieldValidations({});
+      setHasUnsavedChanges(false);
+
       toast({
         title: "Success",
         description: "Locations saved successfully" + (codeChanges.size > 0 || hasRemovedLocations ? " (specialties updated automatically)" : ""),
@@ -602,41 +1069,44 @@ export default function Launchpad() {
       console.log('handleSaveSpecialties: Starting save process');
       console.log('handleSaveSpecialties: Current specialties state:', specialties);
 
-      // Check for duplicate specialty_name
-      const specialtyNames = specialties.map(s => s.specialty_name.trim().toLowerCase());
-      const duplicateNames = specialtyNames.filter((name, index) => specialtyNames.indexOf(name) !== index);
-      if (duplicateNames.length > 0) {
-        setFormErrors({ 'specialty_name': `Duplicate specialty names found: ${Array.from(new Set(duplicateNames)).join(', ')}` });
-        toast({
-          title: "Validation Error",
-          description: "Duplicate specialty names are not allowed. Please ensure each specialty has a unique name.",
-          variant: "destructive",
-        });
-        return;
-      }
-
       // Step 8: Client-side validation
       const availableLocationCodes = locations.map(loc => loc.location_id);
       const validation = validateSpecialtiesData(specialties, availableLocationCodes);
 
+      // Update form validation state
+      setFormValidation(validation);
+
       if (!validation.isValid) {
-        const formattedErrors = formatValidationErrors(validation.errors);
-        setFormErrors(formattedErrors);
+        const errorCount = validation.errors.length;
+        const warningCount = validation.warnings.length;
+
         toast({
-          title: "Validation Error",
-          description: `Please fix ${validation.errors.length} validation error(s) before saving.`,
+          title: "Validation Issues Found",
+          description: `Please fix ${errorCount} error(s)${warningCount > 0 ? ` and review ${warningCount} warning(s)` : ''} before saving.`,
           variant: "destructive",
         });
         return;
       }
 
-      // Clear any previous validation errors
-      setFormErrors({});
+      // Clear any previous field validations
+      setFieldValidations({});
 
       const payload = mapSpecialtiesUIToApi(specialties);
       console.log('handleSaveSpecialties: Mapped payload for API:', payload);
 
       await updateSpecialties.mutateAsync({ speciality_services: payload });
+
+      // Clear validation states on success
+      setFormValidation({
+        isValid: true,
+        errors: [],
+        warnings: [],
+        hasErrors: false,
+        hasWarnings: false,
+      });
+      setFieldValidations({});
+      setHasUnsavedChanges(false);
+
       toast({
         title: "Success",
         description: "Specialties saved successfully",
@@ -659,23 +1129,39 @@ export default function Launchpad() {
     try {
       // Step 8: Client-side validation
       const validation = validateInsuranceData(insurance);
-      
+
+      // Update form validation state
+      setFormValidation(validation);
+
       if (!validation.isValid) {
-        const formattedErrors = formatValidationErrors(validation.errors);
-        setFormErrors(formattedErrors);
+        const errorCount = validation.errors.length;
+        const warningCount = validation.warnings.length;
+
         toast({
-          title: "Validation Error",
-          description: `Please fix ${validation.errors.length} validation error(s) before saving.`,
+          title: "Validation Issues Found",
+          description: `Please fix ${errorCount} error(s)${warningCount > 0 ? ` and review ${warningCount} warning(s)` : ''} before saving.`,
           variant: "destructive",
         });
         return;
       }
-      
-      // Clear any previous validation errors
-      setFormErrors({});
-      
+
+      // Clear any previous field validations
+      setFieldValidations({});
+
       const payload = mapInsuranceUIToApi(insurance);
       await updateInsurance.mutateAsync({ insurance: payload });
+
+      // Clear validation states on success
+      setFormValidation({
+        isValid: true,
+        errors: [],
+        warnings: [],
+        hasErrors: false,
+        hasWarnings: false,
+      });
+      setFieldValidations({});
+      setHasUnsavedChanges(false);
+
       toast({
         title: "Success",
         description: "Insurance settings saved successfully",
@@ -720,11 +1206,15 @@ export default function Launchpad() {
       )}
       {/* Organization data loaded successfully */}
 
-      {Object.keys(formErrors).length > 0 && (
-        <FormSummary errors={formErrors} />
+      {(formValidation.hasErrors || formValidation.hasWarnings) && (
+        <FormValidationSummary
+          errors={formValidation.errors}
+          warnings={formValidation.warnings}
+          showSectionBreakdown={true}
+        />
       )}
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
         <TabsList className="w-full flex gap-0 rounded-3xl outline outline-offset-[-1px] bg-muted p-1 overflow-hidden">
           <TabsTrigger
             value="account"
@@ -845,11 +1335,15 @@ export default function Launchpad() {
                       websiteAddress={websiteAddress}
                       headquartersAddress={headquartersAddress}
                       onChange={(field, value) => {
-                        if (field === "accountName") setAccountName(value);
+                        if (field === "accountName") {
+                          setAccountName(value);
+                          validateFieldRealTime('accountName', value, 'overview');
+                        }
                         if (field === "websiteAddress") setWebsiteAddress(value);
                         if (field === "headquartersAddress") setHeadquartersAddress(value);
                       }}
-                      readOnly={isReadOnly}
+                      fieldErrors={fieldValidations}
+                      errors={formatValidationErrors(formValidation.errors)}
                     />
                   </CardContent>
                 )}
@@ -874,19 +1368,6 @@ export default function Launchpad() {
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      {!isReadOnly && (
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            addPerson(setDecisionMakers);
-                          }}
-                          className="min-h-[36px] bg-[#f49024] hover:bg-[#d87f1f] text-white focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
-                        >
-                          + Add Person
-                        </Button>
-                      )}
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -916,9 +1397,13 @@ export default function Launchpad() {
                   <CardContent className="px-5 py-4">
                     <DecisionMakersCard
                       decisionMakers={decisionMakers}
+                      onAdd={() => addPerson(setDecisionMakers)}
                       onUpdate={(id, field, value) => updatePerson(setDecisionMakers, id, field, value)}
                       onRemove={(id, personName) => handleDeletePerson(setDecisionMakers, id, personName)}
-                      readOnly={isReadOnly}
+                      errors={formatValidationErrors(formValidation.errors)}
+                      formErrors={formValidation.errors}
+                      formWarnings={formValidation.warnings}
+                      onValidateField={validateFieldRealTime}
                     />
                   </CardContent>
                 )}
@@ -943,19 +1428,6 @@ export default function Launchpad() {
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      {!isReadOnly && (
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            addPerson(setInfluencers);
-                          }}
-                          className="min-h-[36px] bg-[#f49024] hover:bg-[#d87f1f] text-white focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
-                        >
-                          + Add Person
-                        </Button>
-                      )}
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -985,9 +1457,13 @@ export default function Launchpad() {
                   <CardContent className="px-5 py-4">
                     <InfluencersCard
                       influencers={influencers}
+                      onAdd={() => addPerson(setInfluencers)}
                       onUpdate={(id, field, value) => updatePerson(setInfluencers, id, field, value)}
                       onRemove={(id, personName) => handleDeletePerson(setInfluencers, id, personName)}
-                      readOnly={isReadOnly}
+                      errors={formatValidationErrors(formValidation.errors)}
+                      formErrors={formValidation.errors}
+                      formWarnings={formValidation.warnings}
+                      onValidateField={validateFieldRealTime}
                     />
                   </CardContent>
                 )}
@@ -1041,7 +1517,6 @@ export default function Launchpad() {
                         if (field === "schedulingStructure") setSchedulingStructure(value);
                         if (field === "rcmStructure") setRcmStructure(value);
                       }}
-                      readOnly={isReadOnly}
                     />
                   </CardContent>
                 )}
@@ -1088,13 +1563,21 @@ export default function Launchpad() {
                 </CardHeader>
                 {!minimizedCards['team-reporting'] && (
                   <CardContent className="px-5 py-4 space-y-4">
+                  <SectionErrorSummary
+                    errors={formValidation.errors}
+                    warnings={formValidation.warnings}
+                    sectionName="team-reporting"
+                  />
                   <TeamReportingSection
                     title="Order Entry Team Reporting"
                     team={orderEntryTeam}
                     onAdd={() => addPerson(setOrderEntryTeam)}
                     onUpdate={(id, field, value) => updatePerson(setOrderEntryTeam, id, field, value)}
                     onRemove={(id, personName) => handleDeletePerson(setOrderEntryTeam, id, personName)}
-                    readOnly={isReadOnly}
+                    formErrors={formValidation.errors}
+                    formWarnings={formValidation.warnings}
+                    errors={formatValidationErrors(formValidation.errors)}
+                    onValidateField={validateFieldRealTime}
                   />
                   <TeamReportingSection
                     title="Scheduling Team Reporting"
@@ -1102,7 +1585,10 @@ export default function Launchpad() {
                     onAdd={() => addPerson(setSchedulingTeam)}
                     onUpdate={(id, field, value) => updatePerson(setSchedulingTeam, id, field, value)}
                     onRemove={(id, personName) => handleDeletePerson(setSchedulingTeam, id, personName)}
-                    readOnly={isReadOnly}
+                    formErrors={formValidation.errors}
+                    formWarnings={formValidation.warnings}
+                    errors={formatValidationErrors(formValidation.errors)}
+                    onValidateField={validateFieldRealTime}
                   />
                   <TeamReportingSection
                     title="Patient Intake Team Reporting"
@@ -1110,7 +1596,10 @@ export default function Launchpad() {
                     onAdd={() => addPerson(setPatientIntakeTeam)}
                     onUpdate={(id, field, value) => updatePerson(setPatientIntakeTeam, id, field, value)}
                     onRemove={(id, personName) => handleDeletePerson(setPatientIntakeTeam, id, personName)}
-                    readOnly={isReadOnly}
+                    formErrors={formValidation.errors}
+                    formWarnings={formValidation.warnings}
+                    errors={formatValidationErrors(formValidation.errors)}
+                    onValidateField={validateFieldRealTime}
                   />
                   <TeamReportingSection
                     title="RCM Team Reporting"
@@ -1118,7 +1607,10 @@ export default function Launchpad() {
                     onAdd={() => addPerson(setRcmTeam)}
                     onUpdate={(id, field, value) => updatePerson(setRcmTeam, id, field, value)}
                     onRemove={(id, personName) => handleDeletePerson(setRcmTeam, id, personName)}
-                    readOnly={isReadOnly}
+                    formErrors={formValidation.errors}
+                    formWarnings={formValidation.warnings}
+                    errors={formatValidationErrors(formValidation.errors)}
+                    onValidateField={validateFieldRealTime}
                   />
                   </CardContent>
                 )}
@@ -1178,7 +1670,6 @@ export default function Launchpad() {
                       if (field === "patientIntakeTeamSize") setPatientIntakeTeamSize(value);
                       if (field === "rcmTeamSize") setRcmTeamSize(value);
                     }}
-                    readOnly={isReadOnly}
                   />
                   </CardContent>
                 )}
@@ -1228,7 +1719,6 @@ export default function Launchpad() {
                   <OpportunitySizingCard
                     opportunitySizing={opportunitySizing}
                     onChange={(updates) => setOpportunitySizing(prev => ({ ...prev, ...updates }))}
-                    readOnly={isReadOnly}
                   />
                   </CardContent>
                 )}
@@ -1299,7 +1789,10 @@ export default function Launchpad() {
                       if (field === "additionalInfo") setAdditionalInfo(value);
                       if (field === "clinicalNotes") setClinicalNotes(value);
                     }}
-                    readOnly={isReadOnly}
+                    errors={formatValidationErrors(formValidation.errors)}
+                    formErrors={formValidation.errors}
+                    formWarnings={formValidation.warnings}
+                    onValidateField={validateFieldRealTime}
                   />
                   </CardContent>
                 )}
@@ -1314,7 +1807,7 @@ export default function Launchpad() {
                   onDelete={deleteAccountDocument.mutateAsync}
                   isUploading={uploadAccountDocument.isPending}
                   isDeleting={deleteAccountDocument.isPending}
-                  readOnly={isReadOnly}
+                  readOnly={!canWriteLaunchpad}
                 />
               </div>
 
@@ -1347,7 +1840,6 @@ export default function Launchpad() {
             onRemove={(id) => setLocations(prev => prev.filter(l => l.id !== id))}
             onSave={handleSaveLocations}
             isSaving={updateLocations.isPending || updateSpecialties.isPending}
-            readOnly={isReadOnly}
           />
 
 
@@ -1360,7 +1852,7 @@ export default function Launchpad() {
               onDelete={deleteLocationsDocument.mutateAsync}
               isUploading={uploadLocationsDocument.isPending}
               isDeleting={deleteLocationsDocument.isPending}
-              readOnly={isReadOnly}
+              readOnly={!canWriteLaunchpad}
             />
           </div>
 
@@ -1410,7 +1902,6 @@ export default function Launchpad() {
             onRemove={(id) => setSpecialties(prev => prev.filter(s => s.id !== id))}
             onSave={handleSaveSpecialties}
             isSaving={updateSpecialties.isPending}
-            readOnly={isReadOnly}
           />
 
           {/* Specialties Documents */}
@@ -1422,7 +1913,7 @@ export default function Launchpad() {
               onDelete={deleteSpecialtiesDocument.mutateAsync}
               isUploading={uploadSpecialtiesDocument.isPending}
               isDeleting={deleteSpecialtiesDocument.isPending}
-              readOnly={isReadOnly}
+              readOnly={!canWriteLaunchpad}
             />
           </div>
 
@@ -1476,7 +1967,6 @@ export default function Launchpad() {
               <InsuranceModule
                 insurance={insurance}
                 onChange={(updates) => setInsurance(prev => ({ ...prev, ...updates }))}
-                readOnly={isReadOnly}
               />
             </CardContent>
           </Card>
@@ -1490,7 +1980,7 @@ export default function Launchpad() {
               onDelete={deleteInsuranceDocument.mutateAsync}
               isUploading={uploadInsuranceDocument.isPending}
               isDeleting={deleteInsuranceDocument.isPending}
-              readOnly={isReadOnly}
+              readOnly={!canWriteLaunchpad}
             />
           </div>
 
@@ -1503,7 +1993,6 @@ export default function Launchpad() {
             orgId={orgId}
             curatedKb={typedData?.curated_kb}
             curatedKbCount={typedData?.metadata?.curated_kb_count}
-            readOnly={isReadOnly}
           />
 
           {/* Scroll to Top Button */}
@@ -1528,6 +2017,29 @@ export default function Launchpad() {
               className="bg-red-600 hover:bg-red-700"
             >
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Unsaved Changes Warning Dialog */}
+      <AlertDialog open={unsavedChangesDialog.open} onOpenChange={handleUnsavedChangesDialogCancel}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
+            <AlertDialogDescription>
+              Unsaved changes in {getUnsavedChangesTabs().length === 1 ? 'tab' : 'tabs'}: <strong>{getUnsavedChangesTabs().join(", ")}</strong>. Switching tabs will keep your changes—they will not be lost. Please save before leaving launchpad page.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => handleUnsavedChangesDialogCancel(false)}>
+              Stay in Current Tab
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleUnsavedChangesDialogContinue}
+              className="bg-[#1C275E] hover:bg-[#233072]"
+            >
+              Continue Anyway
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

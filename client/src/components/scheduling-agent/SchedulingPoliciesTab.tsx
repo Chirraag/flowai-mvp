@@ -1,109 +1,36 @@
-import React, { useImperativeHandle, forwardRef, useEffect } from "react";
+import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { IOSSwitch } from "@/components/ui/ios-switch";
-import { Clock, Users, Calendar, AlertCircle } from "lucide-react";
+import { Clock, Users, Calendar, AlertCircle, Save, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { usePermissions } from "@/context/AuthContext";
 import type { SchedulingPoliciesValues } from "@/types/schedulingAgent";
 
 /**
  * SchedulingPoliciesTab
  * - Walk-ins, same-day, and cancellation policies configuration
  * - Mirrors the launchpad tab styling and structure
+ * - Controlled component: receives values and onChange handler
  */
 export type SchedulingPoliciesTabProps = {
-  initialValues?: SchedulingPoliciesValues;
-  onSave?: (values: SchedulingPoliciesValues) => Promise<void>;
+  values: SchedulingPoliciesValues;
+  onChange: (values: SchedulingPoliciesValues) => void;
+  onSave?: () => Promise<void>;
   isSaving?: boolean;
   readOnly?: boolean;
 };
 
-export type SchedulingPoliciesTabHandle = {
-  /**
-   * Returns the current values held by the tab.
-   */
-  getValues: () => SchedulingPoliciesValues;
-  /**
-   * Lightweight validation for the tab.
-   */
-  validate: () => { valid: boolean; errors: string[] };
-};
-
-const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, SchedulingPoliciesTabProps>(({ initialValues, onSave, isSaving = false, readOnly = false }, ref) => {
-  // Walk-in Policy state
-  const [acceptWalkIns, setAcceptWalkIns] = React.useState(true);
-  const [allowSameDayAppointments, setAllowSameDayAppointments] = React.useState(true);
-  const [sameDayCutoffTime, setSameDayCutoffTime] = React.useState("15:00");
-
-  // Cancellation Policy state
-  const [minimumCancellationNotice, setMinimumCancellationNotice] = React.useState("24");
-  const [noShowFee, setNoShowFee] = React.useState("50");
-
-  // Track unsaved changes
-  const [hasUnsavedChanges, setHasUnsavedChanges] = React.useState(false);
-
-  // Set initial values when props change
-  useEffect(() => {
-    if (initialValues) {
-      setAcceptWalkIns(initialValues.walkInPolicy.acceptWalkIns);
-      setAllowSameDayAppointments(initialValues.walkInPolicy.allowSameDayAppointments);
-      setSameDayCutoffTime(initialValues.walkInPolicy.sameDayCutoffTime);
-      setMinimumCancellationNotice(initialValues.cancellationPolicy.minimumCancellationNotice);
-      setNoShowFee(initialValues.cancellationPolicy.noShowFee);
-      setHasUnsavedChanges(false);
-    }
-  }, [initialValues]);
-
-  // Track changes
-  const handleFieldChange = () => {
-    setHasUnsavedChanges(true);
-  };
+const SchedulingPoliciesTab = ({ values, onChange, onSave, isSaving = false, readOnly: readOnlyProp }: SchedulingPoliciesTabProps) => {
+  const { canEditSchedulingAgent } = usePermissions();
+  const readOnly = readOnlyProp ?? !canEditSchedulingAgent;
 
   // Save handler
   const handleSave = async () => {
     if (!onSave) return;
-
-    const currentRef = (ref as React.MutableRefObject<SchedulingPoliciesTabHandle | null>).current;
-    const currentValues = currentRef?.getValues();
-    if (currentValues) {
-      await onSave(currentValues);
-      setHasUnsavedChanges(false);
-    }
+    await onSave();
   };
-
-  // Expose values and validation to parent page
-  useImperativeHandle(ref, () => ({
-    getValues: () => ({
-      walkInPolicy: {
-        acceptWalkIns,
-        allowSameDayAppointments,
-        sameDayCutoffTime,
-      },
-      cancellationPolicy: {
-        minimumCancellationNotice,
-        noShowFee,
-      },
-    }),
-    validate: () => {
-      const errors: string[] = [];
-
-      if (!minimumCancellationNotice || parseInt(minimumCancellationNotice) <= 0) {
-        errors.push("Minimum cancellation notice must be a positive number");
-      }
-
-      if (!noShowFee || parseFloat(noShowFee) < 0) {
-        errors.push("No-show fee must be a non-negative number");
-      }
-
-      // Validate time format (HH:MM)
-      if (!sameDayCutoffTime || !/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(sameDayCutoffTime)) {
-        errors.push("Same-day cutoff time must be in HH:MM format");
-      }
-
-      return { valid: errors.length === 0, errors };
-    },
-  }));
 
   return (
     <div className="space-y-6">
@@ -121,21 +48,23 @@ const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, Scheduling
               </div>
             </div>
             {onSave && !readOnly && (
-              <div className="flex items-center gap-3">
-                {hasUnsavedChanges && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <div className="w-2 h-2 bg-[#f48024] rounded-full animate-pulse"></div>
-                    <span className="text-gray-200">Unsaved changes</span>
-                  </div>
+              <Button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="bg-white hover:bg-slate-400 active:bg-slate-500 text-[#1c275e] border-[#1c275e] px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save
+                  </>
                 )}
-                <Button
-                  onClick={handleSave}
-                  disabled={isSaving || !hasUnsavedChanges}
-                  className="bg-white hover:bg-slate-400 active:bg-slate-500 text-[#1c275e] border-[#1c275e] px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
-                >
-                  {isSaving ? "Saving..." : "Save"}
-                </Button>
-              </div>
+              </Button>
             )}
           </div>
         </CardHeader>
@@ -152,11 +81,17 @@ const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, Scheduling
               </div>
               <IOSSwitch
                 id="accept-walk-ins"
-                checked={acceptWalkIns}
+                checked={values.walkInPolicy.acceptWalkIns}
                 onCheckedChange={(checked) => {
                   if (!readOnly) {
-                    setAcceptWalkIns(checked);
-                    handleFieldChange();
+                    onChange({
+                      ...values,
+                      walkInPolicy: {
+                        ...values.walkInPolicy,
+                        acceptWalkIns: checked
+                      }
+                    });
+
                   }
                 }}
                 disabled={readOnly}
@@ -172,11 +107,17 @@ const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, Scheduling
               </div>
               <IOSSwitch
                 id="same-day-appointments"
-                checked={allowSameDayAppointments}
+                checked={values.walkInPolicy.allowSameDayAppointments}
                 onCheckedChange={(checked) => {
                   if (!readOnly) {
-                    setAllowSameDayAppointments(checked);
-                    handleFieldChange();
+                    onChange({
+                      ...values,
+                      walkInPolicy: {
+                        ...values.walkInPolicy,
+                        allowSameDayAppointments: checked
+                      }
+                    });
+
                   }
                 }}
                 disabled={readOnly}
@@ -190,11 +131,17 @@ const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, Scheduling
                 <Input
                   id="cutoff-time"
                   type="time"
-                  value={sameDayCutoffTime}
+                  value={values.walkInPolicy.sameDayCutoffTime}
                   onChange={(e) => {
                     if (!readOnly) {
-                      setSameDayCutoffTime(e.target.value);
-                      handleFieldChange();
+                      onChange({
+                        ...values,
+                        walkInPolicy: {
+                          ...values.walkInPolicy,
+                          sameDayCutoffTime: e.target.value
+                        }
+                      });
+
                     }
                   }}
                   readOnly={readOnly}
@@ -232,11 +179,17 @@ const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, Scheduling
                   type="number"
                   min="1"
                   placeholder="24"
-                  value={minimumCancellationNotice}
+                  value={values.cancellationPolicy.minimumCancellationNotice}
                   onChange={(e) => {
                     if (!readOnly) {
-                      setMinimumCancellationNotice(e.target.value);
-                      handleFieldChange();
+                      onChange({
+                        ...values,
+                        cancellationPolicy: {
+                          ...values.cancellationPolicy,
+                          minimumCancellationNotice: e.target.value
+                        }
+                      });
+
                     }
                   }}
                   readOnly={readOnly}
@@ -254,11 +207,17 @@ const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, Scheduling
                     min="0"
                     step="0.01"
                     placeholder="50.00"
-                    value={noShowFee}
+                    value={values.cancellationPolicy.noShowFee}
                     onChange={(e) => {
                       if (!readOnly) {
-                        setNoShowFee(e.target.value);
-                        handleFieldChange();
+                        onChange({
+                          ...values,
+                          cancellationPolicy: {
+                            ...values.cancellationPolicy,
+                            noShowFee: e.target.value
+                          }
+                        });
+
                       }
                     }}
                     readOnly={readOnly}
@@ -272,6 +231,6 @@ const SchedulingPoliciesTab = forwardRef<SchedulingPoliciesTabHandle, Scheduling
       </Card>
     </div>
   );
-});
+};
 
 export default SchedulingPoliciesTab;

@@ -11,17 +11,29 @@ import type {
 } from './launchpad.types';
 
 // =============================================================================
-// VALIDATION FUNCTIONS (from original launchpad.validation.ts)
+// VALIDATION FUNCTIONS (enhanced for modern dashboard UX)
 // =============================================================================
 
 export interface ValidationError {
   field: string;
   message: string;
+  severity: 'error' | 'warning' | 'info';
+  section?: string;
+  suggestion?: string;
 }
 
 export interface ValidationResult {
   isValid: boolean;
   errors: ValidationError[];
+  warnings: ValidationError[];
+  hasErrors: boolean;
+  hasWarnings: boolean;
+}
+
+export interface FieldValidationResult {
+  isValid: boolean;
+  error?: ValidationError;
+  warning?: ValidationError;
 }
 
 // Utility functions
@@ -31,95 +43,323 @@ const isValidEmail = (email: string): boolean => {
 };
 
 const isValidPhoneNumber = (phone: string): boolean => {
-  // Basic phone validation: 10-15 digits, optional +, spaces, dashes, parentheses
-  const phoneRegex = /^[\+]?[\d\s\-\(\)]{10,15}$/;
-  return phoneRegex.test(phone.replace(/\s/g, ''));
+  // US phone validation: exactly 10 digits (no country code for now)
+  const digitsOnly = phone.replace(/\D/g, '');
+  return digitsOnly.length === 10;
 };
 
-const validatePerson = (person: { title: string; name: string; email: string; phone: string }, prefix: string): ValidationError[] => {
+const validatePerson = (
+  person: { title: string; name: string; email: string; phone: string },
+  prefix: string,
+  section: string
+): ValidationError[] => {
   const errors: ValidationError[] = [];
 
-  // Name is now optional - no validation
-  // Title is optional - no validation
+  // Split name into first and last for validation
+  const nameParts = person.name.trim().split(' ');
+  const firstName = nameParts[0] || '';
+
+  // First name validation - required and reasonable length
+  if (!firstName.trim()) {
+    errors.push({
+      field: `${prefix}-firstName`,
+      message: 'First name is required',
+      severity: 'error',
+      section,
+      suggestion: 'Please enter a first name'
+    });
+  } else if (firstName.length < 2) {
+    errors.push({
+      field: `${prefix}-firstName`,
+      message: 'First name must be at least 2 characters',
+      severity: 'error',
+      section,
+      suggestion: 'Please enter a valid first name'
+    });
+  }
 
   // Email validation - more lenient, only check if provided
   if (person.email.trim() && !isValidEmail(person.email.trim())) {
-    errors.push({ field: `${prefix}.email`, message: 'Invalid email format' });
+    errors.push({
+      field: `${prefix}-email`,
+      message: 'Please enter a valid email address',
+      severity: 'error',
+      section,
+      suggestion: 'Format: user@domain.com'
+    });
   }
 
-  // Phone validation removed - handled by formatting logic in UI components
+  // Phone validation - require exactly 10 digits for US phone numbers
+  if (person.phone.trim() && !isValidPhoneNumber(person.phone.trim())) {
+    errors.push({
+      field: `${prefix}-phone`,
+      message: 'Please enter a complete 10-digit phone number',
+      severity: 'error',
+      section,
+      suggestion: 'Format: 123-456-7890 (10 digits required)'
+    });
+  }
 
   return errors;
 };
 
-// Account validation
+// Real-time validation for individual fields
+export const validateField = (
+  fieldName: string,
+  value: string | number | undefined,
+  section: string,
+  options?: {
+    required?: boolean;
+    minLength?: number;
+    maxLength?: number;
+    pattern?: RegExp;
+    customValidator?: (value: string) => string | null;
+  }
+): FieldValidationResult => {
+  const { required = false, minLength, maxLength, pattern, customValidator } = options || {};
+
+  // Handle empty/undefined values
+  if (value === undefined || value === null) {
+    if (required) {
+      return {
+        isValid: false,
+        error: {
+          field: fieldName,
+          message: 'This field is required',
+          severity: 'error',
+          section,
+          suggestion: 'Please fill in this required field'
+        }
+      };
+    }
+    return { isValid: true };
+  }
+
+  const stringValue = String(value).trim();
+
+  // Required validation
+  if (required && !stringValue) {
+    return {
+      isValid: false,
+      error: {
+        field: fieldName,
+        message: 'This field is required',
+        severity: 'error',
+        section,
+        suggestion: 'Please fill in this required field'
+      }
+    };
+  }
+
+  // Skip further validation if empty and not required
+  if (!stringValue && !required) {
+    return { isValid: true };
+  }
+
+  // Phone validation for phone fields
+  if (fieldName.toLowerCase().includes('phone') && !isValidPhoneNumber(stringValue)) {
+    return {
+      isValid: false,
+      error: {
+        field: fieldName,
+        message: 'Please enter a complete 10-digit phone number',
+        severity: 'error',
+        section,
+        suggestion: 'Format: 123-456-7890 (10 digits required)'
+      }
+    };
+  }
+
+  // Length validations
+  if (minLength && stringValue.length < minLength) {
+    return {
+      isValid: false,
+      error: {
+        field: fieldName,
+        message: `Minimum ${minLength} characters required`,
+        severity: 'error',
+        section,
+        suggestion: `Please enter at least ${minLength} characters`
+      }
+    };
+  }
+
+  if (maxLength && stringValue.length > maxLength) {
+    return {
+      isValid: false,
+      error: {
+        field: fieldName,
+        message: `Maximum ${maxLength} characters allowed`,
+        severity: 'error',
+        section,
+        suggestion: `Please limit to ${maxLength} characters`
+      }
+    };
+  }
+
+  // Pattern validation
+  if (pattern && !pattern.test(stringValue)) {
+    return {
+      isValid: false,
+      error: {
+        field: fieldName,
+        message: 'Invalid format',
+        severity: 'error',
+        section,
+        suggestion: 'Please check the format and try again'
+      }
+    };
+  }
+
+  // Custom validation
+  if (customValidator) {
+    const customError = customValidator(stringValue);
+    if (customError) {
+      return {
+        isValid: false,
+        error: {
+          field: fieldName,
+          message: customError,
+          severity: 'error',
+          section,
+          suggestion: 'Please correct this field'
+        }
+      };
+    }
+  }
+
+  return { isValid: true };
+};
+
+// Account validation with enhanced structure
 export const validateAccountData = (data: {
   accountName: string;
-  decisionMakers: Array<{ title: string; name: string; email: string; phone: string }>;
-  influencers: Array<{ title: string; name: string; email: string; phone: string }>;
-  orderEntryTeam: Array<{ title: string; name: string; email: string; phone: string }>;
-  schedulingTeam: Array<{ title: string; name: string; email: string; phone: string }>;
-  patientIntakeTeam: Array<{ title: string; name: string; email: string; phone: string }>;
-  rcmTeam: Array<{ title: string; name: string; email: string; phone: string }>;
+  decisionMakers: Array<{ id: string; title: string; name: string; email: string; phone: string }>;
+  influencers: Array<{ id: string; title: string; name: string; email: string; phone: string }>;
+  orderEntryTeam: Array<{ id: string; title: string; name: string; email: string; phone: string }>;
+  schedulingTeam: Array<{ id: string; title: string; name: string; email: string; phone: string }>;
+  patientIntakeTeam: Array<{ id: string; title: string; name: string; email: string; phone: string }>;
+  rcmTeam: Array<{ id: string; title: string; name: string; email: string; phone: string }>;
   schedulingPhoneNumbers: string[];
 }): ValidationResult => {
   const errors: ValidationError[] = [];
+  const warnings: ValidationError[] = [];
 
   // Required: account_name
   if (!data.accountName.trim()) {
-    errors.push({ field: 'accountName', message: 'Account name is required' });
+    errors.push({
+      field: 'accountName',
+      message: 'Account name is required',
+      severity: 'error',
+      section: 'overview',
+      suggestion: 'Please enter the practice name'
+    });
   }
 
-  // Validate all people arrays
-  data.decisionMakers.forEach((person, index) => {
-    errors.push(...validatePerson(person, `decisionMakers[${index}]`));
+  // Validate all people arrays with section-specific errors
+  data.decisionMakers.forEach((person) => {
+    errors.push(...validatePerson(person, `dm-${person.id}`, 'decision-makers'));
   });
 
-  data.influencers.forEach((person, index) => {
-    errors.push(...validatePerson(person, `influencers[${index}]`));
+  data.influencers.forEach((person) => {
+    errors.push(...validatePerson(person, `inf-${person.id}`, 'influencers'));
   });
 
-  data.orderEntryTeam.forEach((person, index) => {
-    errors.push(...validatePerson(person, `orderEntryTeam[${index}]`));
+  data.orderEntryTeam.forEach((person) => {
+    errors.push(...validatePerson(person, `team-${person.id}`, 'team-reporting'));
   });
 
-  data.schedulingTeam.forEach((person, index) => {
-    errors.push(...validatePerson(person, `schedulingTeam[${index}]`));
+  data.schedulingTeam.forEach((person) => {
+    errors.push(...validatePerson(person, `team-${person.id}`, 'team-reporting'));
   });
 
-  data.patientIntakeTeam.forEach((person, index) => {
-    errors.push(...validatePerson(person, `patientIntakeTeam[${index}]`));
+  data.patientIntakeTeam.forEach((person) => {
+    errors.push(...validatePerson(person, `team-${person.id}`, 'team-reporting'));
   });
 
-  data.rcmTeam.forEach((person, index) => {
-    errors.push(...validatePerson(person, `rcmTeam[${index}]`));
+  data.rcmTeam.forEach((person) => {
+    errors.push(...validatePerson(person, `team-${person.id}`, 'team-reporting'));
   });
 
-  // Phone number validation removed - handled by formatting logic in UI components
+  // Validate scheduling phone numbers
+  data.schedulingPhoneNumbers.forEach((phone, index) => {
+    if (phone.trim() && !isValidPhoneNumber(phone.trim())) {
+      errors.push({
+        field: `schedulingPhoneNumbers[${index}]`,
+        message: 'Please enter a complete 10-digit phone number',
+        severity: 'error',
+        section: 'systems-integration',
+        suggestion: 'Format: 123-456-7890 (10 digits required)'
+      });
+    }
+  });
+
+  // Check for empty sections and add warnings
+  if (data.decisionMakers.length === 0) {
+    warnings.push({
+      field: 'decisionMakers',
+      message: 'No decision makers added',
+      severity: 'warning',
+      section: 'decision-makers',
+      suggestion: 'Consider adding key decision makers for better account management'
+    });
+  }
+
+  if (data.influencers.length === 0) {
+    warnings.push({
+      field: 'influencers',
+      message: 'No influencers added',
+      severity: 'warning',
+      section: 'influencers',
+      suggestion: 'Consider adding key influencers for comprehensive account coverage'
+    });
+  }
 
   return {
     isValid: errors.length === 0,
     errors,
+    warnings,
+    hasErrors: errors.length > 0,
+    hasWarnings: warnings.length > 0,
   };
 };
 
 // Locations validation
 export const validateLocationsData = (locations: OrgLocation[]): ValidationResult => {
   const errors: ValidationError[] = [];
+  const warnings: ValidationError[] = [];
   const locationCodes = new Set<string>();
 
   locations.forEach((location, index) => {
     // Required: location.name
     if (!location.name.trim()) {
-      errors.push({ field: `locations[${index}].name`, message: 'Location name is required' });
+      errors.push({
+        field: `locations[${index}].name`,
+        message: 'Location name is required',
+        severity: 'error',
+        section: 'locations',
+        suggestion: 'Please enter a name for this location'
+      });
     }
 
     // Required: location_id and must be unique
     if (!location.location_id.trim()) {
-      errors.push({ field: `locations[${index}].location_id`, message: 'Location ID is required' });
+      errors.push({
+        field: `locations[${index}].location_id`,
+        message: 'Location ID is required',
+        severity: 'error',
+        section: 'locations',
+        suggestion: 'Please enter a unique identifier for this location'
+      });
     } else {
       if (locationCodes.has(location.location_id.trim())) {
-        errors.push({ field: `locations[${index}].location_id`, message: 'Location ID must be unique' });
+        errors.push({
+          field: `locations[${index}].location_id`,
+          message: 'Location ID must be unique',
+          severity: 'error',
+          section: 'locations',
+          suggestion: 'Each location must have a unique ID'
+        });
       }
       locationCodes.add(location.location_id.trim());
     }
@@ -128,6 +368,9 @@ export const validateLocationsData = (locations: OrgLocation[]): ValidationResul
   return {
     isValid: errors.length === 0,
     errors,
+    warnings,
+    hasErrors: errors.length > 0,
+    hasWarnings: warnings.length > 0,
   };
 };
 
@@ -137,20 +380,30 @@ export const validateSpecialtiesData = (
   availableLocationCodes: string[]
 ): ValidationResult => {
   const errors: ValidationError[] = [];
+  const warnings: ValidationError[] = [];
   const availableCodesSet = new Set(availableLocationCodes);
   const specialtyNames = new Set<string>();
 
   specialties.forEach((specialty, index) => {
     // Required: specialty_name
     if (!specialty.specialty_name.trim()) {
-      errors.push({ field: `specialties[${index}].specialty_name`, message: 'Specialty name is required' });
+      errors.push({
+        field: `specialties[${index}].specialty_name`,
+        message: 'Specialty name is required',
+        severity: 'error',
+        section: 'specialties',
+        suggestion: 'Please enter a name for this specialty'
+      });
     } else {
       // Check for duplicate specialty names (case-insensitive)
       const normalizedName = specialty.specialty_name.trim().toLowerCase();
       if (specialtyNames.has(normalizedName)) {
         errors.push({
           field: `specialties[${index}].specialty_name`,
-          message: `Duplicate specialty name: "${specialty.specialty_name.trim()}"`
+          message: `Duplicate specialty name: "${specialty.specialty_name.trim()}"`,
+          severity: 'error',
+          section: 'specialties',
+          suggestion: 'Each specialty must have a unique name'
         });
       }
       specialtyNames.add(normalizedName);
@@ -160,7 +413,10 @@ export const validateSpecialtiesData = (
     if (specialty.location_ids.length === 0) {
       errors.push({
         field: `specialties[${index}].location_ids`,
-        message: 'At least one location must be selected'
+        message: 'At least one location must be selected',
+        severity: 'error',
+        section: 'specialties',
+        suggestion: 'Select at least one location where this specialty is offered'
       });
     }
 
@@ -169,7 +425,10 @@ export const validateSpecialtiesData = (
       if (locationId.trim() && !availableCodesSet.has(locationId.trim())) {
         errors.push({
           field: `specialties[${index}].location_ids[${locIndex}]`,
-          message: `Location code "${locationId}" does not exist`
+          message: `Location code "${locationId}" does not exist`,
+          severity: 'error',
+          section: 'specialties',
+          suggestion: 'Please select from available locations only'
         });
       }
     });
@@ -179,7 +438,10 @@ export const validateSpecialtiesData = (
       if (!service.name.trim()) {
         errors.push({
           field: `specialties[${index}].services[${serviceIndex}].name`,
-          message: 'Service name is required'
+          message: 'Service name is required',
+          severity: 'error',
+          section: 'specialties',
+          suggestion: 'Please enter a name for this service'
         });
       }
     });
@@ -188,12 +450,16 @@ export const validateSpecialtiesData = (
   return {
     isValid: errors.length === 0,
     errors,
+    warnings,
+    hasErrors: errors.length > 0,
+    hasWarnings: warnings.length > 0,
   };
 };
 
 // Insurance validation (minimal - mostly optional fields)
 export const validateInsuranceData = (insurance: OrgInsurance): ValidationResult => {
   const errors: ValidationError[] = [];
+  const warnings: ValidationError[] = [];
 
   // No required fields for insurance, just format validation if provided
   // Could add URL validation for source links if needed
@@ -201,16 +467,62 @@ export const validateInsuranceData = (insurance: OrgInsurance): ValidationResult
   return {
     isValid: errors.length === 0,
     errors,
+    warnings,
+    hasErrors: errors.length > 0,
+    hasWarnings: warnings.length > 0,
   };
 };
 
-// Helper to format validation errors for display
+// Helper functions for error handling and display
 export const formatValidationErrors = (errors: ValidationError[]): Record<string, string> => {
   const formatted: Record<string, string> = {};
   errors.forEach(error => {
     formatted[error.field] = error.message;
   });
   return formatted;
+};
+
+// Group errors by section for better organization
+export const groupErrorsBySection = (errors: ValidationError[]): Record<string, ValidationError[]> => {
+  const grouped: Record<string, ValidationError[]> = {};
+  errors.forEach(error => {
+    const section = error.section || 'general';
+    if (!grouped[section]) {
+      grouped[section] = [];
+    }
+    grouped[section].push(error);
+  });
+  return grouped;
+};
+
+// Get field-specific error for real-time validation
+export const getFieldError = (fieldName: string, errors: ValidationError[]): ValidationError | undefined => {
+  return errors.find(error => error.field === fieldName);
+};
+
+// Check if a section has errors
+export const sectionHasErrors = (section: string, errors: ValidationError[]): boolean => {
+  return errors.some(error => error.section === section);
+};
+
+// Check if a section has warnings
+export const sectionHasWarnings = (section: string, warnings: ValidationError[]): boolean => {
+  return warnings.some(warning => warning.section === section);
+};
+
+// Get validation status for a field (valid, invalid, warning, neutral)
+export const getFieldValidationStatus = (
+  fieldName: string,
+  errors: ValidationError[],
+  warnings: ValidationError[]
+): 'valid' | 'invalid' | 'warning' | 'neutral' => {
+  const error = getFieldError(fieldName, errors);
+  if (error) return 'invalid';
+
+  const warning = warnings.find(w => w.field === fieldName);
+  if (warning) return 'warning';
+
+  return 'neutral'; // No validation status yet
 };
 
 // =============================================================================

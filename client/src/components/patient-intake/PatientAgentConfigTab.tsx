@@ -49,9 +49,6 @@ const PatientAgentConfigTab = forwardRef<PatientAgentConfigTabHandle, PatientAge
   const [agentInstructions, setAgentInstructions] = useState("");
   const [humanTransferCriteria, setHumanTransferCriteria] = useState("");
 
-  // Change tracking
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-
   // Populate state from initialData if provided
   useEffect(() => {
     if (initialData) {
@@ -60,14 +57,8 @@ const PatientAgentConfigTab = forwardRef<PatientAgentConfigTabHandle, PatientAge
       setVoice(initialData.voice || "alloy");
       setAgentInstructions(initialData.agentInstructions || "");
       setHumanTransferCriteria(initialData.humanTransferCriteria || "");
-      setHasUnsavedChanges(false);
     }
   }, [initialData]);
-
-  // Track changes
-  const handleFieldChange = () => {
-    setHasUnsavedChanges(true);
-  };
 
   // Save handler
   const handleSave = async () => {
@@ -83,7 +74,6 @@ const PatientAgentConfigTab = forwardRef<PatientAgentConfigTabHandle, PatientAge
     const currentValues = currentRef?.getValues();
     if (currentValues) {
       await onSave(currentValues);
-      setHasUnsavedChanges(false);
     }
   };
 
@@ -123,31 +113,23 @@ const PatientAgentConfigTab = forwardRef<PatientAgentConfigTabHandle, PatientAge
               </div>
             </div>
             {onSave && (
-              <div className="flex items-center gap-3">
-                {hasUnsavedChanges && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <div className="w-2 h-2 bg-[#f48024] rounded-full animate-pulse"></div>
-                    <span className="text-gray-200">Unsaved changes</span>
-                  </div>
+              <Button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="bg-white hover:bg-slate-400 active:bg-slate-500 text-[#1c275e] border-[#1c275e] px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save
+                  </>
                 )}
-                <Button
-                  onClick={handleSave}
-                  disabled={isSaving || !hasUnsavedChanges}
-                  className="bg-white hover:bg-slate-400 active:bg-slate-500 text-[#1c275e] border-[#1c275e] px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="mr-2 h-4 w-4" />
-                      Save
-                    </>
-                  )}
-                </Button>
-              </div>
+              </Button>
             )}
           </div>
         </CardHeader>
@@ -162,7 +144,7 @@ const PatientAgentConfigTab = forwardRef<PatientAgentConfigTabHandle, PatientAge
                 value={agentName}
                 onChange={readOnly ? undefined : (e) => {
                   setAgentName(e.target.value);
-                  handleFieldChange();
+                  
                 }}
                 readOnly={readOnly}
                 className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
@@ -177,7 +159,7 @@ const PatientAgentConfigTab = forwardRef<PatientAgentConfigTabHandle, PatientAge
                 value={language}
                 onChange={readOnly ? undefined : (e) => {
                   setLanguage(e.target.value);
-                  handleFieldChange();
+                  
                 }}
                 readOnly={readOnly}
                 className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
@@ -192,7 +174,7 @@ const PatientAgentConfigTab = forwardRef<PatientAgentConfigTabHandle, PatientAge
                 value={voice}
                 onChange={readOnly ? undefined : (e) => {
                   setVoice(e.target.value);
-                  handleFieldChange();
+                  
                 }}
                 readOnly={readOnly}
                 className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
@@ -209,7 +191,7 @@ const PatientAgentConfigTab = forwardRef<PatientAgentConfigTabHandle, PatientAge
               value={agentInstructions}
               onChange={readOnly ? undefined : (e) => {
                 setAgentInstructions(e.target.value);
-                handleFieldChange();
+                
               }}
               readOnly={readOnly}
               className="min-h-[400px] resize-none border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"
@@ -225,7 +207,7 @@ const PatientAgentConfigTab = forwardRef<PatientAgentConfigTabHandle, PatientAge
               value={humanTransferCriteria}
               onChange={readOnly ? undefined : (e) => {
                 setHumanTransferCriteria(e.target.value);
-                handleFieldChange();
+                
               }}
               readOnly={readOnly}
               className="min-h-32 resize-none border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]"

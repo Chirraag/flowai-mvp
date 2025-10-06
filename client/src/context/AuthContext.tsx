@@ -49,6 +49,17 @@ interface AuthContextType {
   canAccessPage: (page: string) => boolean;
   isReadOnlyFor: (feature: string) => boolean;
   userRole?: UserRole;
+  // Granular Launchpad permissions
+  canEditLocations: boolean;
+  canEditSpecialties: boolean;
+  canEditInsurance: boolean;
+  canEditAccountDetails: boolean;
+  canEditKnowledgeBase: boolean;
+  canAddTeamMember: boolean;
+  // Granular AI Agents permissions
+  canEditSchedulingAgent: boolean;
+  canEditPatientIntakeAgent: boolean;
+  canEditCustomerSupportAgent: boolean;
   // Member management permissions
   canAddMembers: () => boolean;
   canChangeRoles: () => boolean;
@@ -66,6 +77,8 @@ export const useAuth = () => {
   }
   return context;
 };
+
+export const usePermissions = () => useAuth();
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -497,6 +510,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     canAccessPage: canAccess,
     isReadOnlyFor,
     userRole,
+    // Granular Launchpad permissions
+    canEditLocations: hasWriteAccess("launchpad"),
+    canEditSpecialties: hasWriteAccess("launchpad"),
+    canEditInsurance: hasWriteAccess("launchpad"),
+    canEditAccountDetails: hasWriteAccess("launchpad"),
+    canEditKnowledgeBase: hasWriteAccess("launchpad"),
+    canAddTeamMember: hasWriteAccess("launchpad"),
+    // Granular AI Agents permissions
+    canEditSchedulingAgent: hasWriteAccess("ai-agents"),
+    canEditPatientIntakeAgent: hasWriteAccess("ai-agents"),
+    canEditCustomerSupportAgent: hasWriteAccess("ai-agents"),
     // Member management permissions
     canAddMembers: canAddMembersCheck,
     canChangeRoles: canChangeRolesCheck,

@@ -4,6 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { FieldError } from "@/components/ui/form-error";
+import { SectionErrorSummary } from "@/components/ui/validation-components";
+import { usePermissions } from "@/context/AuthContext";
+import type { ValidationError } from "@/lib/launchpad.utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Trash2 } from "lucide-react";
 
@@ -21,16 +24,25 @@ interface InfluencersCardProps {
   onUpdate: (id: string, field: keyof Person, value: string) => void;
   onRemove?: (id: string, personName: string) => void;
   errors?: Record<string, string>;
+  formErrors?: ValidationError[];
+  formWarnings?: ValidationError[];
+  onValidateField?: (fieldName: string, value: string, section: string) => void;
   readOnly?: boolean;
 }
 
 export default function InfluencersCard({
   influencers,
+  onAdd,
   onUpdate,
   onRemove,
   errors = {},
-  readOnly = false,
+  formErrors = [],
+  formWarnings = [],
+  onValidateField,
+  readOnly: readOnlyProp,
 }: InfluencersCardProps) {
+  const { canAddTeamMember } = usePermissions();
+  const readOnly = readOnlyProp ?? !canAddTeamMember;
   // Phone number formatting for display
   const formatPhoneNumber = (value: string): string => {
     // Remove all non-digits
@@ -53,6 +65,9 @@ export default function InfluencersCard({
     // Format for display, but store only digits (no hyphens)
     const digitsOnly = rawValue.replace(/\D/g, '').slice(0, 10);
     onUpdate(id, 'phone', digitsOnly);
+
+    // Trigger real-time validation if available
+    onValidateField?.(`inf-${id}-phone`, digitsOnly, 'influencers');
   };
 
   const handleTextOnlyChange = (id: string, field: 'title' | 'name', rawValue: string) => {
@@ -109,18 +124,43 @@ export default function InfluencersCard({
   }
 
   return (
-    <div className="overflow-x-auto">
-      <Table className="min-w-[800px]">
-        <TableHeader>
-          <TableRow>
-            <TableHead className="text-black font-semibold text-sm">Title</TableHead>
-            <TableHead className="text-black font-semibold text-sm">First Name</TableHead>
-            <TableHead className="text-black font-semibold text-sm">Last Name</TableHead>
-            <TableHead className="text-black font-semibold text-sm">Email</TableHead>
-            <TableHead className="text-black font-semibold text-sm">Phone</TableHead>
-            <TableHead className="text-black font-semibold text-sm w-16">Action</TableHead>
-          </TableRow>
-        </TableHeader>
+    <div className="space-y-4">
+      <SectionErrorSummary
+        errors={formErrors}
+        warnings={formWarnings}
+        sectionName="influencers"
+      />
+
+      {/* Add Person Button */}
+      {!readOnly && onAdd && (
+        <div className="flex justify-end">
+          <Button
+            variant="default"
+            size="sm"
+            onClick={onAdd}
+            className="bg-[#F48024] hover:bg-[#F48024]/90 text-white px-4 py-2 rounded-lg shadow-sm"
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+            </svg>
+            Add Person
+          </Button>
+        </div>
+      )}
+
+      <div className="bg-slate-50 rounded-lg border border-slate-100 overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+        <Table className="min-w-[800px]">
+          <TableHeader>
+            <TableRow className="bg-white border-b border-slate-200">
+              <TableHead className="text-black font-semibold text-sm py-3 px-4">Title</TableHead>
+              <TableHead className="text-black font-semibold text-sm py-3 px-4">First Name</TableHead>
+              <TableHead className="text-black font-semibold text-sm py-3 px-4">Last Name</TableHead>
+              <TableHead className="text-black font-semibold text-sm py-3 px-4">Email</TableHead>
+              <TableHead className="text-black font-semibold text-sm py-3 px-4">Phone</TableHead>
+              <TableHead className="text-black font-semibold text-sm py-3 px-4 w-16">Action</TableHead>
+            </TableRow>
+          </TableHeader>
         <TableBody>
           {influencers.map((inf) => (
             <TableRow key={inf.id} className="hover:bg-[#1C275E]/5">
@@ -137,7 +177,9 @@ export default function InfluencersCard({
               <TableCell className="p-2">
                 <div className="space-y-1">
                   <Input
-                    className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
+                    className={`h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition ${
+                      errors[`inf-${inf.id}-firstName`] ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''
+                    }`}
                     placeholder="First name"
                     value={getNameParts(inf.name).firstName}
                     onChange={readOnly ? undefined : (e) => handleFirstNameChange(inf.id, e.target.value)}
@@ -148,22 +190,21 @@ export default function InfluencersCard({
                 </div>
               </TableCell>
               <TableCell className="p-2">
-                <div className="space-y-1">
-                  <Input
-                    className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
-                    placeholder="Last name"
-                    value={getNameParts(inf.name).lastName}
-                    onChange={readOnly ? undefined : (e) => handleLastNameChange(inf.id, e.target.value)}
-                    readOnly={readOnly}
-                    aria-label="Last Name"
-                  />
-                  <FieldError error={errors[`inf-${inf.id}-lastName`]} />
-                </div>
+                <Input
+                  className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
+                  placeholder="Last name"
+                  value={getNameParts(inf.name).lastName}
+                  onChange={readOnly ? undefined : (e) => handleLastNameChange(inf.id, e.target.value)}
+                  readOnly={readOnly}
+                  aria-label="Last Name"
+                />
               </TableCell>
               <TableCell className="p-2">
                 <div className="space-y-1">
                   <Input
-                    className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
+                    className={`h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition ${
+                      errors[`inf-${inf.id}-email`] ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''
+                    }`}
                     placeholder="email@practice.com"
                     value={inf.email}
                     onChange={readOnly ? undefined : (e) => onUpdate(inf.id, 'email', e.target.value)}
@@ -174,14 +215,19 @@ export default function InfluencersCard({
                 </div>
               </TableCell>
               <TableCell className="p-2">
-                <Input
-                  className="h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
-                  placeholder="123-456-7890"
-                  value={formatPhoneNumber(inf.phone)}
-                  onChange={readOnly ? undefined : (e) => handlePhoneChange(inf.id, e.target.value)}
-                  readOnly={readOnly}
-                  aria-label="Phone"
-                />
+                <div className="space-y-1">
+                  <Input
+                    className={`h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition ${
+                      errors[`inf-${inf.id}-phone`] ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''
+                    }`}
+                    placeholder="123-456-7890"
+                    value={formatPhoneNumber(inf.phone)}
+                    onChange={readOnly ? undefined : (e) => handlePhoneChange(inf.id, e.target.value)}
+                    readOnly={readOnly}
+                    aria-label="Phone"
+                  />
+                  <FieldError error={errors[`inf-${inf.id}-phone`]} />
+                </div>
               </TableCell>
               <TableCell className="p-2">
                 {!readOnly && (
@@ -200,6 +246,8 @@ export default function InfluencersCard({
           ))}
         </TableBody>
       </Table>
+        </div>
+      </div>
     </div>
   );
 }
