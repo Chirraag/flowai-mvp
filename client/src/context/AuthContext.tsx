@@ -32,6 +32,7 @@ interface User {
   workspaceName?: string;
   is_active: boolean;
   last_login: string;
+  force_password_reset: boolean;
 }
 
 interface AuthContextType {
@@ -66,6 +67,8 @@ interface AuthContextType {
   canDeleteMembers: () => boolean;
   // Organization management permissions
   canCreateOrganizations: () => boolean;
+  // Force password reset state
+  forcePasswordReset: boolean | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -88,6 +91,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [forcePasswordReset, setForcePasswordReset] = useState<boolean | null>(null);
   const prevOrgIdRef = useRef<number | null>(null);
 
   // Initialize auth state from localStorage
@@ -138,6 +142,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
                 workspaceName: data.user.orgName,
                 is_active: data.user.isActive,
                 last_login: new Date().toISOString(), // API doesn't provide this
+                force_password_reset: data.user.force_password_reset || false, // Default to false if not provided
               };
               console.log("Mapped user:", mappedUser);
               setToken(storedToken);
@@ -183,6 +188,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const clearAuth = () => {
     setUser(null);
     setToken(null);
+    setForcePasswordReset(null);
     localStorage.removeItem("auth_token");
     localStorage.removeItem("refresh_token");
     try {
@@ -250,6 +256,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
                 workspaceName: validateData.user.orgName,
                 is_active: validateData.user.isActive,
                 last_login: new Date().toISOString(),
+                force_password_reset: validateData.user.force_password_reset,
               };
               setUser(mappedUser);
             }
@@ -307,8 +314,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           workspaceName: data.user.orgName,
           is_active: data.user.isActive,
           last_login: new Date().toISOString(),
+          force_password_reset: data.user.force_password_reset,
         };
+        console.log("🔍 DEBUG: Mapped user object:", mappedUser);
         setUser(mappedUser);
+
+        // Set force password reset state from login response
+        setForcePasswordReset(data.user.force_password_reset);
 
         // Store tokens in localStorage
         localStorage.setItem("auth_token", data.token);
@@ -316,8 +328,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           localStorage.setItem("refresh_token", data.refreshToken);
         }
 
-        // Navigate to dashboard after successful login
-        window.location.href = "/";
+        // Only navigate if force_password_reset is not true
+        // If it is true, let the LoginForm show the dialog first
+        if (!data.user.force_password_reset) {
+          window.location.href = "/";
+        }
       } else {
         throw new Error("Invalid response from server");
       }
@@ -405,6 +420,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           workspaceName: response.user.org_name,
           is_active: response.user.is_active,
           last_login: new Date().toISOString(),
+          force_password_reset: response.user.force_password_reset,
         };
         setUser(mappedUser);
 
@@ -453,6 +469,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
               workspaceName: data.user.org_name,
               is_active: data.user.is_active,
               last_login: new Date().toISOString(),
+              force_password_reset: data.user.force_password_reset,
             };
             setUser(mappedUser);
           }
@@ -527,6 +544,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     canDeleteMembers: canDeleteMembersCheck,
     // Organization management permissions
     canCreateOrganizations: () => !!(userRole && canCreateOrganizations(userRole)),
+    // Force password reset state
+    forcePasswordReset,
   };
 
   // Clear query cache when org switches to avoid cross-tenant leakage

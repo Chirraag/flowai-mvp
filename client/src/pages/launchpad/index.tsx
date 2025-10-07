@@ -278,6 +278,11 @@ export default function Launchpad() {
 
     const ad = typedData.account_details;
 
+    // Helper to normalize values for comparison (treat undefined as null)
+    const normalizeForComparison = (value: number | null | undefined): number | null => {
+      return value === undefined ? null : value;
+    };
+
     // Check account details
     if (ad) {
       if (accountName !== (ad.account_name ?? "")) return true;
@@ -292,14 +297,14 @@ export default function Launchpad() {
 
       // Check opportunity sizing
       const currentOpp = {
-        monthly_orders_count: opportunitySizing.monthly_orders_count,
-        monthly_patients_scheduled: opportunitySizing.monthly_patients_scheduled,
-        monthly_patients_checked_in: opportunitySizing.monthly_patients_checked_in,
+        monthly_orders_count: normalizeForComparison(opportunitySizing.monthly_orders_count),
+        monthly_patients_scheduled: normalizeForComparison(opportunitySizing.monthly_patients_scheduled),
+        monthly_patients_checked_in: normalizeForComparison(opportunitySizing.monthly_patients_checked_in),
       };
       const originalOpp = {
-        monthly_orders_count: ad.monthly_orders_count,
-        monthly_patients_scheduled: ad.monthly_patients_scheduled,
-        monthly_patients_checked_in: ad.monthly_patients_checked_in,
+        monthly_orders_count: normalizeForComparison(ad.monthly_orders_count),
+        monthly_patients_scheduled: normalizeForComparison(ad.monthly_patients_scheduled),
+        monthly_patients_checked_in: normalizeForComparison(ad.monthly_patients_checked_in),
       };
       if (JSON.stringify(currentOpp) !== JSON.stringify(originalOpp)) return true;
 
@@ -715,9 +720,9 @@ export default function Launchpad() {
       setRcmTeamSize(ad.rcm_team_size ?? undefined);
 
       setOpportunitySizing({
-        monthly_orders_count: ad.monthly_orders_count ?? undefined,
-        monthly_patients_scheduled: ad.monthly_patients_scheduled ?? undefined,
-        monthly_patients_checked_in: ad.monthly_patients_checked_in ?? undefined,
+        monthly_orders_count: ad.monthly_orders_count ?? null,
+        monthly_patients_scheduled: ad.monthly_patients_scheduled ?? null,
+        monthly_patients_checked_in: ad.monthly_patients_checked_in ?? null,
       });
 
       setEmrSystems(ad.emr_ris_systems || []);

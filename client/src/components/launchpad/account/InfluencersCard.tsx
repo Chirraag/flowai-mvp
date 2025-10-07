@@ -109,20 +109,6 @@ export default function InfluencersCard({
       handleTextOnlyChange(id, 'name', combinedName);
     }
   };
-  if (influencers.length === 0) {
-    return (
-      <div className="text-center py-12 px-6 bg-gradient-to-br from-[#1C275E]/5 to-[#1C275E]/3 rounded-xl border-2 border-dashed border-[#1C275E]/30">
-        <div className="w-16 h-16 bg-[#1C275E]/20 rounded-full flex items-center justify-center mx-auto mb-4">
-          <svg className="w-8 h-8 text-[#1C275E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-          </svg>
-        </div>
-        <h3 className="text-lg font-medium text-[#1C275E] mb-2">No influencers added yet</h3>
-        <p className="text-[#1C275E]/70 mb-4">Get started by adding your first influencer</p>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-4">
       <SectionErrorSummary
@@ -138,7 +124,7 @@ export default function InfluencersCard({
             variant="default"
             size="sm"
             onClick={onAdd}
-            className="bg-[#F48024] hover:bg-[#F48024]/90 text-white px-4 py-2 rounded-lg shadow-sm"
+            className="bg-[#F48024] hover:bg-[#F48024]/90 text-white px-4 py-2 rounded-lg shadow-sm transition-all duration-200 hover:shadow-md"
           >
             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
@@ -147,8 +133,9 @@ export default function InfluencersCard({
           </Button>
         </div>
       )}
-
-      <div className="bg-slate-50 rounded-lg border border-slate-100 overflow-hidden shadow-sm">
+      <div className="space-y-2">
+        {influencers.length > 0 ? (
+          <div className="bg-slate-50 rounded-lg border border-slate-100 overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
         <Table className="min-w-[800px]">
           <TableHeader>
@@ -247,6 +234,22 @@ export default function InfluencersCard({
         </TableBody>
       </Table>
         </div>
+      </div>
+        ) : (
+          <div className="bg-slate-50 rounded-lg border border-slate-100 overflow-hidden shadow-sm">
+            <div className="text-center py-16 px-8 bg-gradient-to-br from-[#1C275E]/3 to-[#1C275E]/1 rounded-xl border-2 border-dashed border-[#1C275E]/20 mx-6 my-6">
+              <div className="w-20 h-20 bg-[#1C275E]/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg className="w-10 h-10 text-[#1C275E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                </svg>
+              </div>
+              <h4 className="text-xl font-semibold text-[#1C275E] mb-3">No influencers yet</h4>
+              <p className="text-[#1C275E]/70 mb-6 max-w-sm mx-auto">
+                Add the first influencer to get started with your organization structure.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

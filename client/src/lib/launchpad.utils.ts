@@ -535,8 +535,8 @@ const normalizeString = (str: string): string | null => {
   const trimmed = str.trim();
   return trimmed === '' ? null : trimmed;
 };
-const normalizeNumber = (num: number | undefined): number | null => {
-  return num === undefined || isNaN(num) ? null : num;
+const normalizeNumber = (num: number | null | undefined): number | null => {
+  return num === undefined || num === null || isNaN(num) ? null : num;
 };
 const filterEmptyStrings = (arr: string[]): string[] => {
   return arr.map(trimString).filter(str => str !== '');
@@ -568,9 +568,9 @@ export const mapAccountUIToApi = (state: {
   patientIntakeTeamSize?: number;
   rcmTeamSize?: number;
   opportunitySizing: {
-    monthly_orders_count?: number;
-    monthly_patients_scheduled?: number;
-    monthly_patients_checked_in?: number;
+    monthly_orders_count?: number | null;
+    monthly_patients_scheduled?: number | null;
+    monthly_patients_checked_in?: number | null;
   };
   emrSystems: string[];
   telephonySystems: string[];
