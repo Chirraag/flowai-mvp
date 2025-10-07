@@ -64,6 +64,12 @@ export interface VerifyPatientResponse {
   success: boolean;
   verified: boolean;
   message: string;
+  patientData?: {
+    phone?: string;
+    email?: string;
+    firstName?: string;
+    lastName?: string;
+  };
 }
 
 export async function fetchIntakeData(hash: string): Promise<IntakeResponse> {

@@ -17,7 +17,7 @@ export default function VerificationPage({ organization }: VerificationPageProps
   const { hash } = useParams<{ hash: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { setIsVerified } = useIntakeContext();
+  const { setIsVerified, setPatientData } = useIntakeContext();
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -64,6 +64,9 @@ export default function VerificationPage({ organization }: VerificationPageProps
 
       if (response.verified) {
         setIsVerified(true);
+        if (response.patientData) {
+          setPatientData(response.patientData);
+        }
         navigate(`/intake/${hash}/form`);
       } else {
         toast({

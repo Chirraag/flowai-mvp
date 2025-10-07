@@ -7,6 +7,13 @@ import IntakeFormPage from './form';
 interface IntakeContextType {
   isVerified: boolean;
   setIsVerified: (verified: boolean) => void;
+  patientData: {
+    phone?: string;
+    email?: string;
+    firstName?: string;
+    lastName?: string;
+  } | null;
+  setPatientData: (data: IntakeContextType['patientData']) => void;
 }
 
 const IntakeContext = createContext<IntakeContextType | null>(null);
@@ -25,6 +32,12 @@ export default function IntakePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isVerified, setIsVerified] = useState(false);
+  const [patientData, setPatientData] = useState<{
+    phone?: string;
+    email?: string;
+    firstName?: string;
+    lastName?: string;
+  } | null>(null);
 
   useEffect(() => {
     if (!hash) return;
@@ -88,7 +101,7 @@ export default function IntakePage() {
   }
 
   return (
-    <IntakeContext.Provider value={{ isVerified, setIsVerified }}>
+    <IntakeContext.Provider value={{ isVerified, setIsVerified, patientData, setPatientData }}>
       <Routes>
         <Route path="/" element={<VerificationPage organization={intakeData.organization} />} />
         <Route

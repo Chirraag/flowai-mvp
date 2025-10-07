@@ -20,8 +20,17 @@ export default function IntakeFormPage({ organization, intakeForm }: IntakeFormP
   const navigate = useNavigate();
   const { hash } = useParams<{ hash: string }>();
   const { toast } = useToast();
-  const { isVerified } = useIntakeContext();
+  const { isVerified, patientData } = useIntakeContext();
   const [formData, setFormData] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    if (patientData) {
+      const initialData: Record<string, any> = {};
+      if (patientData.phone) initialData['phone'] = patientData.phone;
+      if (patientData.email) initialData['email'] = patientData.email;
+      setFormData(initialData);
+    }
+  }, [patientData]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -82,7 +91,7 @@ export default function IntakeFormPage({ organization, intakeForm }: IntakeFormP
       case 'email':
         return (
           <div key={field.id}>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-base font-medium text-gray-700 mb-1">
               {field.label}
               {field.required && <span className="text-red-500 ml-1">*</span>}
             </label>
@@ -93,7 +102,8 @@ export default function IntakeFormPage({ organization, intakeForm }: IntakeFormP
               value={value}
               onChange={(e) => handleFieldChange(field.id, e.target.value)}
               required={field.required}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+              disabled={(field as any).disabled}
+              className="w-full px-3 py-3 border border-gray-300 rounded-md text-base focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
             />
           </div>
         );
@@ -101,7 +111,7 @@ export default function IntakeFormPage({ organization, intakeForm }: IntakeFormP
       case 'textarea':
         return (
           <div key={field.id}>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-base font-medium text-gray-700 mb-1">
               {field.label}
               {field.required && <span className="text-red-500 ml-1">*</span>}
             </label>
@@ -112,7 +122,7 @@ export default function IntakeFormPage({ organization, intakeForm }: IntakeFormP
               onChange={(e) => handleFieldChange(field.id, e.target.value)}
               required={field.required}
               rows={field.rows || 3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 resize-none"
+              className="w-full px-3 py-3 border border-gray-300 rounded-md text-base focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 resize-none"
             />
           </div>
         );
@@ -126,9 +136,9 @@ export default function IntakeFormPage({ organization, intakeForm }: IntakeFormP
               checked={value}
               onChange={(e) => handleFieldChange(field.id, e.target.checked)}
               required={field.required}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
             />
-            <label htmlFor={field.id} className="ml-2 text-sm text-gray-700">
+            <label htmlFor={field.id} className="ml-2 text-base text-gray-700">
               {field.label}
               {field.required && <span className="text-red-500 ml-1">*</span>}
             </label>
@@ -138,7 +148,7 @@ export default function IntakeFormPage({ organization, intakeForm }: IntakeFormP
       case 'checkbox_group':
         return (
           <div key={field.id}>
-            <label className="block text-sm font-medium text-gray-700 mb-3">
+            <label className="block text-base font-medium text-gray-700 mb-3">
               {field.label}
               {field.required && <span className="text-red-500 ml-1">*</span>}
             </label>
@@ -152,11 +162,11 @@ export default function IntakeFormPage({ organization, intakeForm }: IntakeFormP
                     onChange={(e) =>
                       handleCheckboxGroupChange(field.id, option.value, e.target.checked)
                     }
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   />
                   <label
                     htmlFor={`${field.id}-${option.value}`}
-                    className="ml-2 text-sm text-gray-700"
+                    className="ml-2 text-base text-gray-700"
                   >
                     {option.label}
                   </label>
@@ -169,7 +179,7 @@ export default function IntakeFormPage({ organization, intakeForm }: IntakeFormP
       case 'select':
         return (
           <div key={field.id}>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-base font-medium text-gray-700 mb-1">
               {field.label}
               {field.required && <span className="text-red-500 ml-1">*</span>}
             </label>
@@ -177,7 +187,7 @@ export default function IntakeFormPage({ organization, intakeForm }: IntakeFormP
               value={value || ''}
               onChange={(e) => handleFieldChange(field.id, e.target.value)}
               required={field.required}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-3 border border-gray-300 rounded-md text-base focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">{field.placeholder || 'Select an option'}</option>
               {field.options?.filter(opt => opt.value).map((option) => (
@@ -197,6 +207,42 @@ export default function IntakeFormPage({ organization, intakeForm }: IntakeFormP
     }
   };
 
+  const processFormSections = (sections: FormSection[]) => {
+    return sections
+      .filter(section => {
+        const lowerTitle = section.title.toLowerCase();
+        return !lowerTitle.includes('prep checklist') &&
+               !lowerTitle.includes('authorized contact for care communication');
+      })
+      .map(section => ({
+        ...section,
+        fields: section.fields.map(field => {
+          if (field.id === 'emergency_contact' && field.type === 'text') {
+            return [
+              {
+                id: 'emergency_contact_name',
+                type: 'text' as const,
+                label: 'Emergency Contact Name',
+                required: field.required,
+                placeholder: 'Enter emergency contact name'
+              },
+              {
+                id: 'emergency_contact_phone',
+                type: 'text' as const,
+                label: 'Emergency Contact Phone',
+                required: field.required,
+                placeholder: 'Enter emergency contact phone'
+              }
+            ];
+          }
+          if ((field.id === 'phone' || field.id === 'email') && patientData) {
+            return { ...field, disabled: true };
+          }
+          return field;
+        }).flat()
+      }));
+  };
+
   const renderFieldsInGrid = (fields: FormField[]) => {
     const result: JSX.Element[] = [];
     let i = 0;
@@ -214,7 +260,7 @@ export default function IntakeFormPage({ organization, intakeForm }: IntakeFormP
         result.push(
           <div key={field.id} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-base font-medium text-gray-700 mb-1">
                 {field.label}
                 {field.required && <span className="text-red-500 ml-1">*</span>}
               </label>
@@ -224,7 +270,8 @@ export default function IntakeFormPage({ organization, intakeForm }: IntakeFormP
                 value={formData[field.id] || ''}
                 onChange={(e) => handleFieldChange(field.id, e.target.value)}
                 required={field.required}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                disabled={(field as any).disabled}
+                className="w-full px-3 py-3 border border-gray-300 rounded-md text-base focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
               />
             </div>
             <div className="flex items-center pt-6">
@@ -233,9 +280,9 @@ export default function IntakeFormPage({ organization, intakeForm }: IntakeFormP
                 id={nextField.id}
                 checked={formData[nextField.id] || false}
                 onChange={(e) => handleFieldChange(nextField.id, e.target.checked)}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
               />
-              <label htmlFor={nextField.id} className="ml-2 text-sm text-gray-700">
+              <label htmlFor={nextField.id} className="ml-2 text-base text-gray-700">
                 {nextField.label}
               </label>
             </div>
@@ -281,7 +328,7 @@ export default function IntakeFormPage({ organization, intakeForm }: IntakeFormP
               alt={organization.orgName}
               className="h-12 w-auto mx-auto mb-2"
             />
-            <h1 className="text-base font-medium text-gray-900">{organization.orgName}</h1>
+            <h1 className="text-lg font-medium text-gray-900">{organization.orgName}</h1>
           </div>
         </div>
       </div>
@@ -292,8 +339,8 @@ export default function IntakeFormPage({ organization, intakeForm }: IntakeFormP
             <div className="flex items-center space-x-3">
               <FileText className="h-5 w-5 text-blue-600" />
               <div>
-                <h1 className="text-lg font-semibold text-gray-900">{intakeForm.formTitle}</h1>
-                <p className="text-sm text-gray-600 mt-1">
+                <h1 className="text-xl font-semibold text-gray-900">{intakeForm.formTitle}</h1>
+                <p className="text-base text-gray-600 mt-1">
                   Please complete all sections of this intake form
                 </p>
               </div>
@@ -302,11 +349,11 @@ export default function IntakeFormPage({ organization, intakeForm }: IntakeFormP
 
           <form onSubmit={handleSubmit} className="p-6">
             <div className="space-y-8">
-              {intakeForm.sections.map((section) => (
+              {processFormSections(intakeForm.sections).map((section) => (
                 <section key={section.id}>
-                  <h2 className="text-base font-semibold text-gray-900 mb-4">{section.title}</h2>
+                  <h2 className="text-lg font-semibold text-gray-900 mb-4">{section.title}</h2>
                   {section.description && (
-                    <p className="text-sm text-gray-600 mb-4">{section.description}</p>
+                    <p className="text-base text-gray-600 mb-4">{section.description}</p>
                   )}
                   <div className="space-y-4">
                     {renderFieldsInGrid(section.fields)}
@@ -319,10 +366,10 @@ export default function IntakeFormPage({ organization, intakeForm }: IntakeFormP
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full bg-blue-600 text-white py-3 px-4 rounded-md text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-blue-600 text-white py-3 px-4 rounded-md text-base font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Send className="h-4 w-4 mr-2" />
-                {isSubmitting ? 'Submitting...' : 'Submit Healthcare Form'}
+                {isSubmitting ? 'Submitting...' : 'Submit Intake Form'}
               </button>
             </div>
           </form>
