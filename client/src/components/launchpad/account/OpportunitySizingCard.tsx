@@ -29,7 +29,7 @@ export default function OpportunitySizingCard({
             placeholder="Total monthly orders"
             value={opportunitySizing.monthly_orders_count ?? ""}
             onChange={readOnly ? undefined : (e) => onChange({
-              monthly_orders_count: e.target.value === "" ? undefined : Number(e.target.value)
+              monthly_orders_count: e.target.value === "" ? null : Number(e.target.value)
             })}
             readOnly={readOnly}
           />
@@ -43,7 +43,7 @@ export default function OpportunitySizingCard({
             placeholder="Total monthly scheduled patients"
             value={opportunitySizing.monthly_patients_scheduled ?? ""}
             onChange={readOnly ? undefined : (e) => onChange({
-              monthly_patients_scheduled: e.target.value === "" ? undefined : Number(e.target.value)
+              monthly_patients_scheduled: e.target.value === "" ? null : Number(e.target.value)
             })}
             readOnly={readOnly}
           />
@@ -57,7 +57,7 @@ export default function OpportunitySizingCard({
             placeholder="Total monthly check-ins"
             value={opportunitySizing.monthly_patients_checked_in ?? ""}
             onChange={readOnly ? undefined : (e) => onChange({
-              monthly_patients_checked_in: e.target.value === "" ? undefined : Number(e.target.value)
+              monthly_patients_checked_in: e.target.value === "" ? null : Number(e.target.value)
             })}
             readOnly={readOnly}
           />

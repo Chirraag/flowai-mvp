@@ -43,9 +43,9 @@ export type SpecialtyServiceEntry = {
 export type ServiceInformationSource = "EMR" | "Website" | "Clinical Guidelines" | "Department Protocol" | "Other";
 
 export type AccountOpportunitySizing = {
-  monthly_orders_count?: number;
-  monthly_patients_scheduled?: number;
-  monthly_patients_checked_in?: number;
+  monthly_orders_count?: number | null;
+  monthly_patients_scheduled?: number | null;
+  monthly_patients_checked_in?: number | null;
 };
 
 export type OrgSpecialityService = {

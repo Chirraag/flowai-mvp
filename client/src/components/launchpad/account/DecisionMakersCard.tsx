@@ -109,20 +109,6 @@ export default function DecisionMakersCard({
       handleTextOnlyChange(id, 'name', combinedName);
     }
   };
-  if (decisionMakers.length === 0) {
-    return (
-      <div className="text-center py-12 px-6 bg-gradient-to-br from-[#1C275E]/5 to-[#1C275E]/3 rounded-xl border-2 border-dashed border-[#1C275E]/30">
-        <div className="w-16 h-16 bg-[#1C275E]/20 rounded-full flex items-center justify-center mx-auto mb-4">
-          <svg className="w-8 h-8 text-[#1C275E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
-          </svg>
-        </div>
-        <h3 className="text-lg font-medium text-[#1C275E] mb-2">No decision makers added yet</h3>
-        <p className="text-[#1C275E]/70 mb-4">Get started by adding your first decision maker</p>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-4">
         <SectionErrorSummary
@@ -147,8 +133,9 @@ export default function DecisionMakersCard({
             </Button>
           </div>
         )}
-
-        <div className="bg-slate-50 rounded-lg border border-slate-100 overflow-hidden shadow-sm">
+        <div className="space-y-2">
+          {decisionMakers.length > 0 ? (
+            <div className="bg-slate-50 rounded-lg border border-slate-100 overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <Table className="min-w-[800px]">
               <TableHeader>
@@ -247,6 +234,22 @@ export default function DecisionMakersCard({
         </TableBody>
       </Table>
         </div>
+      </div>
+        ) : (
+          <div className="bg-slate-50 rounded-lg border border-slate-100 overflow-hidden shadow-sm">
+            <div className="text-center py-16 px-8 bg-gradient-to-br from-[#1C275E]/3 to-[#1C275E]/1 rounded-xl border-2 border-dashed border-[#1C275E]/20 mx-6 my-6">
+              <div className="w-20 h-20 bg-[#1C275E]/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg className="w-10 h-10 text-[#1C275E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+                </svg>
+              </div>
+              <h4 className="text-xl font-semibold text-[#1C275E] mb-3">No decision makers yet</h4>
+              <p className="text-[#1C275E]/70 mb-6 max-w-sm mx-auto">
+                Add the first decision maker to get started with your organization structure.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
