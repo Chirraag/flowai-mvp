@@ -116,12 +116,8 @@ export const apiToUi = {
         medicaid: api.patient_types_accepted?.medicaid ?? false,
       },
       referralRequirements: {
-        servicesRequiringReferrals: textareaHelpers.arrayToTextarea(
-          api.referral_requirements?.services_requiring_referrals || []
-        ),
-        insurancePlansRequiringReferrals: textareaHelpers.arrayToTextarea(
-          api.referral_requirements?.insurance_plans_requiring_referrals || []
-        ),
+        servicesRequiringReferrals: api.referral_requirements?.services_requiring_referrals || [],
+        insurancePlansRequiringReferrals: api.referral_requirements?.insurance_plans_requiring_referrals || [],
       },
     };
   },
@@ -148,9 +144,7 @@ export const apiToUi = {
    */
   providerPreferences(api: SchedulingAgent): ProviderPreferencesValues {
     return {
-      providerBlackoutDates: textareaHelpers.arrayToTextarea(
-        api.provider_preferences?.blackout_dates || []
-      ),
+      providerBlackoutDates: api.provider_preferences?.blackout_dates || [],
       establishedPatientsOnlyDays: api.provider_preferences?.established_patients_only_days || '',
       customSchedulingRules: api.provider_preferences?.custom_scheduling_rules || '',
     };
@@ -196,12 +190,8 @@ export const uiToApi = {
         medicaid: values.patientTypes.medicaid,
       },
       referral_requirements: {
-        services_requiring_referrals: textareaHelpers.textareaToArray(
-          values.referralRequirements.servicesRequiringReferrals
-        ),
-        insurance_plans_requiring_referrals: textareaHelpers.textareaToArray(
-          values.referralRequirements.insurancePlansRequiringReferrals
-        ),
+        services_requiring_referrals: values.referralRequirements.servicesRequiringReferrals,
+        insurance_plans_requiring_referrals: values.referralRequirements.insurancePlansRequiringReferrals,
       },
     };
   },
@@ -231,7 +221,7 @@ export const uiToApi = {
   providerPreferences(values: ProviderPreferencesValues) {
     return {
       provider_preferences: {
-        blackout_dates: textareaHelpers.textareaToArray(values.providerBlackoutDates),
+        blackout_dates: values.providerBlackoutDates,
         established_patients_only_days: values.establishedPatientsOnlyDays,
         custom_scheduling_rules: values.customSchedulingRules,
       },

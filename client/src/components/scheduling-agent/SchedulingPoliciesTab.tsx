@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { IOSSwitch } from "@/components/ui/ios-switch";
-import { Clock, Users, Calendar, AlertCircle, Save, Loader2 } from "lucide-react";
+import { Clock, Users, Calendar, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePermissions } from "@/context/AuthContext";
 import type { SchedulingPoliciesValues } from "@/types/schedulingAgent";
@@ -17,20 +17,13 @@ import type { SchedulingPoliciesValues } from "@/types/schedulingAgent";
 export type SchedulingPoliciesTabProps = {
   values: SchedulingPoliciesValues;
   onChange: (values: SchedulingPoliciesValues) => void;
-  onSave?: () => Promise<void>;
-  isSaving?: boolean;
   readOnly?: boolean;
 };
 
-const SchedulingPoliciesTab = ({ values, onChange, onSave, isSaving = false, readOnly: readOnlyProp }: SchedulingPoliciesTabProps) => {
+const SchedulingPoliciesTab = ({ values, onChange, readOnly: readOnlyProp }: SchedulingPoliciesTabProps) => {
   const { canEditSchedulingAgent } = usePermissions();
   const readOnly = readOnlyProp ?? !canEditSchedulingAgent;
 
-  // Save handler
-  const handleSave = async () => {
-    if (!onSave) return;
-    await onSave();
-  };
 
   return (
     <div className="space-y-6">
@@ -47,25 +40,6 @@ const SchedulingPoliciesTab = ({ values, onChange, onSave, isSaving = false, rea
                 <p className="text-gray-200 text-sm mt-1">Configure policies for urgent and same-day appointments</p>
               </div>
             </div>
-            {onSave && !readOnly && (
-              <Button
-                onClick={handleSave}
-                disabled={isSaving}
-                className="bg-white hover:bg-slate-400 active:bg-slate-500 text-[#1c275e] border-[#1c275e] px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Save
-                  </>
-                )}
-              </Button>
-            )}
           </div>
         </CardHeader>
         <CardContent className="p-6">

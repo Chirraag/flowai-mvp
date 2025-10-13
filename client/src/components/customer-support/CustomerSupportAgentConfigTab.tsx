@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Bot, Save, Loader2 } from "lucide-react";
+import { Bot } from "lucide-react";
 import type { CustomerSupportAgentConfig } from "@/lib/customer-support.types";
 
 /**
@@ -25,12 +25,10 @@ export type CustomerSupportAgentConfigTabHandle = {
 
 export interface CustomerSupportAgentConfigTabProps {
   initialData?: CustomerSupportAgentConfig;
-  onSave?: (values: CustomerSupportAgentConfig) => Promise<void>;
-  isSaving?: boolean;
   readOnly?: boolean;
 }
 
-const CustomerSupportAgentConfigTab = forwardRef<CustomerSupportAgentConfigTabHandle, CustomerSupportAgentConfigTabProps>(({ initialData, onSave, isSaving = false, readOnly = false }, ref) => {
+const CustomerSupportAgentConfigTab = forwardRef<CustomerSupportAgentConfigTabHandle, CustomerSupportAgentConfigTabProps>(({ initialData, readOnly = false }, ref) => {
   // Local state synced with initialData
   const [agentName, setAgentName] = useState("");
   const [language, setLanguage] = useState("");
@@ -56,25 +54,6 @@ const CustomerSupportAgentConfigTab = forwardRef<CustomerSupportAgentConfigTabHa
     setHasUnsavedChanges(true);
   };
 
-  // Save handler
-  const handleSave = async () => {
-    if (!onSave) return;
-
-    const currentValues = {
-      agent_name: agentName,
-      language,
-      voice,
-      agent_instructions: agentInstructions,
-      human_transfer_criteria: humanTransferCriteria,
-    };
-
-    try {
-      await onSave(currentValues);
-      setHasUnsavedChanges(false);
-    } catch (error) {
-      console.error('Failed to save agent config:', error);
-    }
-  };
 
   // Expose values and validation to parent page
   useImperativeHandle(ref, () => ({
@@ -116,23 +95,6 @@ const CustomerSupportAgentConfigTab = forwardRef<CustomerSupportAgentConfigTabHa
                 <p className="text-gray-200 text-sm mt-1">Configure the basic settings and instructions for the customer support agent</p>
               </div>
             </div>
-            {onSave && (
-              <div className="flex items-center gap-3">
-                {hasUnsavedChanges && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <div className="w-2 h-2 bg-[#f48024] rounded-full animate-pulse"></div>
-                    <span className="text-gray-200">Unsaved changes</span>
-                  </div>
-                )}
-                <Button
-                  onClick={handleSave}
-                  disabled={isSaving || !hasUnsavedChanges}
-                  className="bg-white hover:bg-slate-400 active:bg-slate-500 text-[#1c275e] border-[#1c275e] px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
-                >
-                  {isSaving ? "Saving..." : "Save"}
-                </Button>
-              </div>
-            )}
           </div>
         </CardHeader>
         <CardContent className="p-6">

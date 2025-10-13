@@ -5,9 +5,10 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Check, X } from "lucide-react";
+import { Check, X, AlertCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
+import { ValidationInput } from "@/components/ui/validation-components";
 import { usePermissions } from "@/context/AuthContext";
 import { OrgSpecialityService, SpecialtyServiceEntry, OrgLocation } from "@/components/launchpad/types";
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -21,6 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import type { ValidationError } from "@/lib/launchpad.utils";
 
 interface SpecialtyRefs {
   [key: string]: React.RefObject<HTMLDivElement>;
@@ -38,6 +40,7 @@ interface SpecialtiesModuleProps {
   onSave?: () => void;
   isSaving?: boolean;
   readOnly?: boolean;
+  fieldErrors?: Record<string, ValidationError | null>;
 }
 
 export default function SpecialtiesModule({
@@ -52,6 +55,7 @@ export default function SpecialtiesModule({
   onSave,
   isSaving = false,
   readOnly: readOnlyProp,
+  fieldErrors = {},
 }: SpecialtiesModuleProps) {
   const { canEditSpecialties } = usePermissions();
   const readOnly = readOnlyProp ?? !canEditSpecialties;
@@ -355,7 +359,18 @@ export default function SpecialtiesModule({
                       <div className="flex-1 space-y-4">
                         <div className="flex-1">
                           <Label className="text-sm font-semibold text-black uppercase tracking-wide">Specialty Name</Label>
-                          <Input className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition" placeholder="e.g., Cardiology" value={spec.specialty_name} onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { specialty_name: e.target.value })} readOnly={readOnly} />
+                          <ValidationInput
+                            className="mt-2"
+                            placeholder="e.g., Cardiology"
+                            value={spec.specialty_name}
+                            onChange={readOnly ? undefined : (e) => onUpdate(spec.id, { specialty_name: e.target.value })}
+                            readOnly={readOnly}
+                            error={fieldErrors[`specialties[${specialties.findIndex(s => s.id === spec.id)}].specialty_name`] || undefined}
+                            validationStatus={fieldErrors[`specialties[${specialties.findIndex(s => s.id === spec.id)}].specialty_name`] ? 'invalid' : (spec.specialty_name.trim() ? 'valid' : 'neutral')}
+                            showValidationIcon={!readOnly}
+                            showErrorMessage={!readOnly}
+                            showSuggestion={!readOnly}
+                          />
                         </div>
 
                         <div className="space-y-3">
@@ -428,6 +443,18 @@ export default function SpecialtiesModule({
                                     e.preventDefault();
                                     onSwitchTab?.('locations');
                                   }}>Add location</a>
+                                </div>
+                              );
+                            })()}
+
+                            {/* Location selection validation error */}
+                            {(() => {
+                              const locationError = fieldErrors[`specialties[${specialties.findIndex(s => s.id === spec.id)}].location_ids`];
+                              if (!locationError) return null;
+                              return (
+                                <div className="flex items-center gap-1 text-sm text-red-600">
+                                  <AlertCircle className="w-4 h-4" />
+                                  <span>{locationError.message}</span>
                                 </div>
                               );
                             })()}
@@ -698,12 +725,17 @@ export default function SpecialtiesModule({
                                     <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
                                       <div className="flex-1 md:mr-4">
                                         <Label className="text-xs font-semibold text-[#1C275E] uppercase tracking-wide">Service Name</Label>
-                                        <Input
-                                          className="mt-2 h-10 text-sm border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20"
+                                        <ValidationInput
+                                          className="mt-2 text-sm"
                                           placeholder="e.g., MRI Scan, Blood Test"
                                           value={selectedService.name}
                                           onChange={readOnly ? undefined : (e) => handleServiceFieldChange('name', e.target.value)}
                                           readOnly={readOnly}
+                                          error={fieldErrors[`specialties[${specialties.findIndex(s => s.id === spec.id)}].services[${selectedIndex}].name`] || undefined}
+                                          validationStatus={fieldErrors[`specialties[${specialties.findIndex(s => s.id === spec.id)}].services[${selectedIndex}].name`] ? 'invalid' : (selectedService.name.trim() ? 'valid' : 'neutral')}
+                                          showValidationIcon={!readOnly}
+                                          showErrorMessage={!readOnly}
+                                          showSuggestion={!readOnly}
                                         />
                                       </div>
                                       {!readOnly && (

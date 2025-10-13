@@ -1,9 +1,10 @@
-import React, { Suspense, lazy, useState, useEffect, useMemo } from "react";
+import React, { Suspense, lazy, useState, useEffect, useMemo, useRef } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { handleApiError } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
+import { useNavigationBlocker } from "@/context/NavigationBlockerContext";
 import { schedulingAgentApi } from "@/api/schedulingAgent";
 import { apiToUi, uiToApi } from "@/lib/schedulingAgent.mappers";
 import {
@@ -11,8 +12,6 @@ import {
   validatePatientEligibility,
   validateSchedulingPolicies,
   validateProviderPreferences,
-  type ValidationResult,
-  type ValidationError,
 } from "@/lib/scheduling-validation.utils";
 import type {
   SchedulingAgent,
@@ -22,6 +21,26 @@ import type {
   ProviderPreferencesValues,
 } from "@/types/schedulingAgent";
 
+// Import shared AI agents utilities
+import {
+  createInitialState,
+  stateHelpers,
+  validateAllTabs,
+  executeBulkSave,
+  createSaveTasks,
+  generateSaveResultMessage,
+  getSaveResultVariant,
+  retryWithBackoff,
+  handleApiError,
+  hasUnsavedChanges,
+  getUnsavedTabNames,
+  hasChanges,
+  type LoadingState,
+  type ValidationResult as SharedValidationResult,
+  type ValidationError,
+  type BaseTabHandle
+} from "@/lib/ai-agents";
+
 // Lazy-load tab sections so future heavy UIs don't bloat initial load.
 const AppointmentSetupTab = lazy(() => import("@/components/scheduling-agent/AppointmentSetupTab"));
 const PatientEligibilityTab = lazy(() => import("@/components/scheduling-agent/PatientEligibilityTab"));
@@ -29,20 +48,42 @@ const SchedulingPoliciesTab = lazy(() => import("@/components/scheduling-agent/S
 const ProviderPreferencesTab = lazy(() => import("@/components/scheduling-agent/ProviderPreferencesTab"));
 const WorkflowsTab = lazy(() => import("@/components/scheduling-agent/WorkflowsTab"));
 
+// Helper to adapt scheduling validation results to shared validation format
+const adaptValidationResult = (
+  schedulingResult: { isValid: boolean; errors: any[]; warnings?: any[] },
+  section: string
+): SharedValidationResult => {
+  return {
+    valid: schedulingResult.isValid,
+    errors: schedulingResult.errors.map((err: any) => ({
+      message: typeof err === 'string' ? err : (err.message || 'Validation error'),
+      field: err.field || '',
+      section,
+      type: err.type || 'error' as const
+    })),
+    warnings: schedulingResult.warnings?.map((warn: any) => ({
+      message: typeof warn === 'string' ? warn : (warn.message || 'Validation warning'),
+      field: warn.field || '',
+      section,
+      type: warn.type || 'warning' as const
+    })) || []
+  };
+};
+
 export default function SchedulingAgent() {
   const { toast } = useToast();
   const { user, hasWriteAccess } = useAuth();
-  
+  const { setHasUnsavedChanges, setUnsavedTabs } = useNavigationBlocker();
+
   // RBAC Permission check for save button visibility
   const canWriteAgents = hasWriteAccess("ai-agents");
 
-  // Loading and data state
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+  // Loading and data state using shared utilities
+  const [loadingState, setLoadingState] = useState<LoadingState>(createInitialState());
   const [agentData, setAgentData] = useState<SchedulingAgent | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
-  const [dirtyTabs, setDirtyTabs] = useState<Set<string>>(new Set());
-  const [savingTabs, setSavingTabs] = useState<Set<string>>(new Set());
+
+  // Validation state using shared types
+  const [formValidation, setFormValidation] = useState<SharedValidationResult | null>(null);
 
   // Centralized tab states (Phase 1: Lift State to Parent)
   interface SchedulingTabStates {
@@ -53,49 +94,16 @@ export default function SchedulingAgent() {
   }
   const [tabStates, setTabStates] = useState<SchedulingTabStates | null>(null);
 
-  // Validation state
-  const [formValidation, setFormValidation] = useState<ValidationResult>({
-    isValid: true,
-    errors: [],
-    warnings: [],
-    hasErrors: false,
-    hasWarnings: false,
-  });
-  const [fieldValidations, setFieldValidations] = useState<Record<string, ValidationError | null>>({});
 
   // Ref for workflows tab (others no longer needed with lifted state)
   const workflowsRef = React.useRef<any>(null);
 
-  // Retry utility with exponential backoff
-  const retryWithBackoff = async <T,>(
-    fn: () => Promise<T>,
-    maxRetries: number = 2,
-    baseDelay: number = 1000
-  ): Promise<T> => {
-    let lastError: Error = new Error('Unknown error');
-
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      try {
-        return await fn();
-      } catch (error) {
-        lastError = error as Error;
-
-        if (attempt < maxRetries) {
-          const delay = baseDelay * Math.pow(2, attempt);
-          console.log(`Attempt ${attempt + 1} failed, retrying in ${delay}ms...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-        }
-      }
-    }
-
-    throw lastError;
-  };
 
   // Fetch agent data on mount with retry
   useEffect(() => {
     const fetchAgentData = async () => {
       if (!user?.org_id) {
-        setIsLoading(false);
+        setLoadingState(prevState => stateHelpers.setLoading(prevState, false));
         toast({
           title: "Error",
           description: "User organization not found",
@@ -111,7 +119,7 @@ export default function SchedulingAgent() {
           1000
         );
         setAgentData(data);
-        
+
         // Initialize tab states from fetched data (Phase 1)
         setTabStates({
           appointmentSetup: apiToUi.appointmentSetup(data),
@@ -119,29 +127,27 @@ export default function SchedulingAgent() {
           schedulingPolicies: apiToUi.schedulingPolicies(data),
           providerPreferences: apiToUi.providerPreferences(data),
         });
-        
-        setRetryCount(0); // Reset retry count on success
+
+        setLoadingState(prevState => stateHelpers.resetRetryCount(stateHelpers.setLoading(prevState, false)));
       } catch (error) {
         console.error('Failed to fetch scheduling agent:', error);
-        const errorToast = handleApiError(error, { 
+        toast(handleApiError(error, {
           action: "load scheduling agent configuration",
           fallbackMessage: "Failed to load scheduling agent configuration after retries"
-        });
-        toast(errorToast);
-      } finally {
-        setIsLoading(false);
+        }));
+        setLoadingState(prevState => stateHelpers.setLoading(prevState, false));
       }
     };
 
     fetchAgentData();
   }, [user?.org_id, toast]);
 
-  // Handle save all configurations with enhanced error handling
+  // Handle save all configurations using shared utilities
   const handleSaveAll = async () => {
     if (!agentData || !user?.org_id || !tabStates) return;
 
-    setIsSaving(true);
-    setSavingTabs(new Set());
+    setLoadingState(prevState => stateHelpers.setSaving(prevState, true));
+    setLoadingState(prevState => stateHelpers.clearSavingTabs(prevState));
 
     try {
       // Get values from centralized tab state
@@ -152,136 +158,108 @@ export default function SchedulingAgent() {
         providerPreferences: tabStates.providerPreferences,
       };
 
-      // Validate all tabs at page level
-      const validations = [
-        validateAppointmentSetup(tabValues.appointmentSetup),
-        validatePatientEligibility(tabValues.patientEligibility),
-        validateSchedulingPolicies(tabValues.schedulingPolicies),
-        validateProviderPreferences(tabValues.providerPreferences),
-      ];
+      // Perform page-level validation using shared utilities
+      const validation = validateAllTabs({
+        'appointment-setup': () =>
+          adaptValidationResult(validateAppointmentSetup(tabValues.appointmentSetup), 'appointment-setup'),
+        'patient-eligibility': () =>
+          adaptValidationResult(validatePatientEligibility(tabValues.patientEligibility), 'patient-eligibility'),
+        'scheduling-policies': () =>
+          adaptValidationResult(validateSchedulingPolicies(tabValues.schedulingPolicies), 'scheduling-policies'),
+        'provider-preferences': () =>
+          adaptValidationResult(validateProviderPreferences(tabValues.providerPreferences), 'provider-preferences'),
+      });
 
-      // Check if any validation failed
-      const failedValidations = validations.filter(v => !v.isValid);
-      if (failedValidations.length > 0) {
-        // Aggregate all errors
-        const allErrors = failedValidations.flatMap(v => v.errors);
-        const allWarnings = failedValidations.flatMap(v => v.warnings);
-        
-        setFormValidation({
-          isValid: false,
-          errors: allErrors,
-          warnings: allWarnings,
-          hasErrors: true,
-          hasWarnings: allWarnings.length > 0,
-        });
-
+      // If validation fails, show errors and prevent API calls
+      if (!validation.valid) {
+        setFormValidation(validation);
         toast({
           title: "Validation Errors Found",
-          description: `Please fix ${allErrors.length} error(s) before saving.`,
+          description: `Please fix ${validation.errors.length} error(s) before saving.`,
           variant: "destructive",
         });
-        setIsSaving(false);
-        return; // Prevent all API calls
+        setLoadingState(prevState => stateHelpers.setSaving(prevState, false));
+        return;
       }
 
       // Clear validation state on success
-      setFormValidation({
-        isValid: true,
-        errors: [],
-        warnings: [],
-        hasErrors: false,
-        hasWarnings: false,
-      });
+      setFormValidation(null);
 
-      // Build update tasks with metadata
-      const updateTasks: Array<{
-        promise: Promise<any>;
-        name: string;
-        key: string;
-      }> = [];
-
+      // Build update tasks using shared utilities
       const tabConfigs = [
         {
-          key: 'appointmentSetup',
+          key: 'appointment-setup',
           name: 'Appointment Setup',
-          apiFn: () => schedulingAgentApi.updateAppointmentSetup(String(user.org_id), uiToApi.appointmentSetup(tabValues.appointmentSetup)),
-          currentValues: apiToUi.appointmentSetup(agentData),
-          newValues: tabValues.appointmentSetup,
+          apiFn: () => retryWithBackoff(
+            () => schedulingAgentApi.updateAppointmentSetup(String(user.org_id), uiToApi.appointmentSetup(tabValues.appointmentSetup)),
+            1,
+            500
+          ),
+          hasChanges: hasChanges(tabValues.appointmentSetup, apiToUi.appointmentSetup(agentData)),
         },
         {
-          key: 'patientEligibility',
+          key: 'patient-eligibility',
           name: 'Patient & Eligibility',
-          apiFn: () => schedulingAgentApi.updatePatientEligibility(String(user.org_id), uiToApi.patientEligibility(tabValues.patientEligibility)),
-          currentValues: apiToUi.patientEligibility(agentData),
-          newValues: tabValues.patientEligibility,
+          apiFn: () => retryWithBackoff(
+            () => schedulingAgentApi.updatePatientEligibility(String(user.org_id), uiToApi.patientEligibility(tabValues.patientEligibility)),
+            1,
+            500
+          ),
+          hasChanges: hasChanges(tabValues.patientEligibility, apiToUi.patientEligibility(agentData)),
         },
         {
-          key: 'schedulingPolicies',
+          key: 'scheduling-policies',
           name: 'Scheduling Policies',
-          apiFn: () => schedulingAgentApi.updateSchedulingPolicies(String(user.org_id), uiToApi.schedulingPolicies(tabValues.schedulingPolicies)),
-          currentValues: apiToUi.schedulingPolicies(agentData),
-          newValues: tabValues.schedulingPolicies,
+          apiFn: () => retryWithBackoff(
+            () => schedulingAgentApi.updateSchedulingPolicies(String(user.org_id), uiToApi.schedulingPolicies(tabValues.schedulingPolicies)),
+            1,
+            500
+          ),
+          hasChanges: hasChanges(tabValues.schedulingPolicies, apiToUi.schedulingPolicies(agentData)),
         },
         {
-          key: 'providerPreferences',
+          key: 'provider-preferences',
           name: 'Provider Preferences',
-          apiFn: () => schedulingAgentApi.updateProviderPreferences(String(user.org_id), uiToApi.providerPreferences(tabValues.providerPreferences)),
-          currentValues: apiToUi.providerPreferences(agentData),
-          newValues: tabValues.providerPreferences,
+          apiFn: () => retryWithBackoff(
+            () => schedulingAgentApi.updateProviderPreferences(String(user.org_id), uiToApi.providerPreferences(tabValues.providerPreferences)),
+            1,
+            500
+          ),
+          hasChanges: hasChanges(tabValues.providerPreferences, apiToUi.providerPreferences(agentData)),
         },
       ];
 
-      // Only add tasks for tabs that have changes
-      for (const config of tabConfigs) {
-        if (config.newValues) {
-          const hasChanges = JSON.stringify(config.newValues) !== JSON.stringify(config.currentValues);
-          if (hasChanges) {
-            updateTasks.push({
-              promise: retryWithBackoff(config.apiFn, 1, 500), // 1 retry with shorter delay for saves
-              name: config.name,
-              key: config.key,
-            });
-          }
-        }
-      }
+      // Create save tasks using shared utilities
+      const saveTasks = createSaveTasks(tabConfigs);
 
-      if (updateTasks.length === 0) {
+      if (saveTasks.length === 0) {
         toast({
           title: "No Changes",
           description: "No changes detected to save",
         });
-        setIsSaving(false);
+        setLoadingState(prevState => stateHelpers.setSaving(prevState, false));
         return;
       }
 
       // Track which tabs are being saved
-      const savingTabKeys = new Set(updateTasks.map(task => task.key));
-      setSavingTabs(savingTabKeys);
-
-      // Execute all updates with individual error handling
-      const results = await Promise.allSettled(updateTasks.map(task => task.promise));
-
-      const successfulUpdates: string[] = [];
-      const failedUpdates: string[] = [];
-
-      results.forEach((result, index) => {
-        const task = updateTasks[index];
-        if (result.status === 'fulfilled') {
-          successfulUpdates.push(task.name);
-        } else {
-          failedUpdates.push(task.name);
-          console.error(`Failed to update ${task.name}:`, result.reason);
-        }
+      const savingTabKeys = new Set(saveTasks.map(task => task.key));
+        setLoadingState(prevState => stateHelpers.clearSavingTabs(prevState));
+      savingTabKeys.forEach(key => {
+        setLoadingState(prevState => stateHelpers.addSavingTab(prevState, key));
       });
 
-      // Show appropriate toast based on results
-      if (successfulUpdates.length > 0 && failedUpdates.length === 0) {
-        toast({
-          title: "Success",
-          description: `Updated: ${successfulUpdates.join(", ")}`,
-        });
+      // Execute all updates using shared utilities
+      const result = await executeBulkSave(saveTasks);
 
-        // Refetch data to get updated state
+      // Show appropriate toast based on results
+      toast({
+        title: result.allSuccessful ? "Success" : "Partial Success",
+        description: generateSaveResultMessage(result),
+        variant: getSaveResultVariant(result),
+      });
+
+      // Refetch data to get updated state on success
+      if (result.successful.length > 0) {
         try {
           const updatedData = await retryWithBackoff(
             () => schedulingAgentApi.getSchedulingAgent(String(user.org_id)),
@@ -289,7 +267,8 @@ export default function SchedulingAgent() {
             500
           );
           setAgentData(updatedData);
-          setDirtyTabs(new Set()); // Clear dirty flags on success
+          console.log('Scheduling Agent - Clearing dirty tabs after successful save');
+          setLoadingState(prevState => stateHelpers.clearDirtyTabs(prevState)); // Clear dirty flags on success
         } catch (refetchError) {
           console.error('Failed to refetch data:', refetchError);
           toast({
@@ -298,18 +277,6 @@ export default function SchedulingAgent() {
             variant: "destructive",
           });
         }
-      } else if (successfulUpdates.length > 0) {
-        toast({
-          title: "Partial Success",
-          description: `Updated: ${successfulUpdates.join(", ")}. Failed: ${failedUpdates.join(", ")}`,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Save Failed",
-          description: `Failed to update: ${failedUpdates.join(", ")}`,
-          variant: "destructive",
-        });
       }
 
     } catch (error) {
@@ -317,235 +284,103 @@ export default function SchedulingAgent() {
       const errorToast = handleApiError(error, { action: "save scheduling agent configuration" });
       toast(errorToast);
     } finally {
-      setIsSaving(false);
-      setSavingTabs(new Set());
+      setLoadingState(prevState => stateHelpers.setSaving(prevState, false));
+      setLoadingState(prevState => stateHelpers.clearSavingTabs(prevState));
     }
   };
 
-  // Individual save handlers for each tab with validation
-  const handleSaveAppointmentSetup = async () => {
-    if (!agentData || !user?.org_id || !tabStates) return;
 
-    try {
-      // Validate before API call
-      const validation = validateAppointmentSetup(tabStates.appointmentSetup);
-      setFormValidation(validation);
-
-      if (!validation.isValid) {
-        toast({
-          title: "Validation Error",
-          description: validation.errors[0]?.message || "Please fix validation errors before saving.",
-          variant: "destructive",
-        });
-        // Return early - validation error is already shown to the user
-        return;
-      }
-
-      // Clear validation state
-      setFormValidation({
-        isValid: true,
-        errors: [],
-        warnings: [],
-        hasErrors: false,
-        hasWarnings: false,
-      });
-      setFieldValidations({});
-
-      await schedulingAgentApi.updateAppointmentSetup(String(user.org_id), uiToApi.appointmentSetup(tabStates.appointmentSetup));
-      toast({ title: "Success", description: "Appointment setup saved successfully." });
-      await refetchAgentData();
-    } catch (error) {
-      console.error('Failed to save appointment setup:', error);
-      const errorToast = handleApiError(error, { action: "save appointment setup" });
-      toast(errorToast);
-    }
-  };
-
-  const handleSavePatientEligibility = async () => {
-    if (!agentData || !user?.org_id || !tabStates) return;
-
-    try {
-      // Validate before API call
-      const validation = validatePatientEligibility(tabStates.patientEligibility);
-      setFormValidation(validation);
-
-      if (!validation.isValid) {
-        toast({
-          title: "Validation Error",
-          description: validation.errors[0]?.message || "Please fix validation errors before saving.",
-          variant: "destructive",
-        });
-        // Return early - validation error is already shown to the user
-        return;
-      }
-
-      // Clear validation state
-      setFormValidation({
-        isValid: true,
-        errors: [],
-        warnings: [],
-        hasErrors: false,
-        hasWarnings: false,
-      });
-      setFieldValidations({});
-
-      await schedulingAgentApi.updatePatientEligibility(String(user.org_id), uiToApi.patientEligibility(tabStates.patientEligibility));
-      toast({ title: "Success", description: "Patient eligibility settings saved successfully." });
-      await refetchAgentData();
-    } catch (error) {
-      console.error('Failed to save patient eligibility:', error);
-      const errorToast = handleApiError(error, { action: "save patient eligibility" });
-      toast(errorToast);
-    }
-  };
-
-  const handleSaveSchedulingPolicies = async () => {
-    if (!agentData || !user?.org_id || !tabStates) return;
-
-    try {
-      // Validate before API call
-      const validation = validateSchedulingPolicies(tabStates.schedulingPolicies);
-      setFormValidation(validation);
-
-      if (!validation.isValid) {
-        toast({
-          title: "Validation Error",
-          description: validation.errors[0]?.message || "Please fix validation errors before saving.",
-          variant: "destructive",
-        });
-        // Return early - validation error is already shown to the user
-        return;
-      }
-
-      // Clear validation state
-      setFormValidation({
-        isValid: true,
-        errors: [],
-        warnings: [],
-        hasErrors: false,
-        hasWarnings: false,
-      });
-      setFieldValidations({});
-
-      await schedulingAgentApi.updateSchedulingPolicies(String(user.org_id), uiToApi.schedulingPolicies(tabStates.schedulingPolicies));
-      toast({ title: "Success", description: "Scheduling policies saved successfully." });
-      await refetchAgentData();
-    } catch (error) {
-      console.error('Failed to save scheduling policies:', error);
-      const errorToast = handleApiError(error, { action: "save scheduling policies" });
-      toast(errorToast);
-    }
-  };
-
-  const handleSaveProviderPreferences = async () => {
-    if (!agentData || !user?.org_id || !tabStates) return;
-
-    try {
-      // Validate before API call
-      const validation = validateProviderPreferences(tabStates.providerPreferences);
-      setFormValidation(validation);
-
-      if (!validation.isValid) {
-        toast({
-          title: "Validation Error",
-          description: validation.errors[0]?.message || "Please fix validation errors before saving.",
-          variant: "destructive",
-        });
-        // Return early - validation error is already shown to the user
-        return;
-      }
-
-      // Clear validation state
-      setFormValidation({
-        isValid: true,
-        errors: [],
-        warnings: [],
-        hasErrors: false,
-        hasWarnings: false,
-      });
-      setFieldValidations({});
-
-      await schedulingAgentApi.updateProviderPreferences(String(user.org_id), uiToApi.providerPreferences(tabStates.providerPreferences));
-      toast({ title: "Success", description: "Provider preferences saved successfully." });
-      await refetchAgentData();
-    } catch (error) {
-      console.error('Failed to save provider preferences:', error);
-      const errorToast = handleApiError(error, { action: "save provider preferences" });
-      toast(errorToast);
-    }
-  };
-
-  // Change handlers for tab states (Phase 1)
+  // Change handlers for tab states using shared utilities
   const handleAppointmentSetupChange = (newValues: AppointmentSetupValues) => {
-    setTabStates(prev => prev ? {
-      ...prev,
-      appointmentSetup: newValues
-    } : null);
-    setDirtyTabs(prev => new Set(Array.from(prev).concat('appointment-setup')));
+    setTabStates(prev => {
+      if (!prev) {
+        console.warn('tabStates was null, this should not happen');
+        return null;
+      }
+      return {
+        ...prev,
+        appointmentSetup: newValues
+      };
+    });
+    setLoadingState(prevState => stateHelpers.addDirtyTab(prevState, 'appointment-setup'));
+    console.log('Scheduling Agent - Added dirty tab: appointment-setup');
   };
 
   const handlePatientEligibilityChange = (newValues: PatientEligibilityValues) => {
-    setTabStates(prev => prev ? {
-      ...prev,
-      patientEligibility: newValues
-    } : null);
-    setDirtyTabs(prev => new Set(Array.from(prev).concat('patient-eligibility')));
+    setTabStates(prev => {
+      if (!prev) {
+        console.warn('tabStates was null, this should not happen');
+        return null;
+      }
+      return {
+        ...prev,
+        patientEligibility: newValues
+      };
+    });
+    setLoadingState(prevState => stateHelpers.addDirtyTab(prevState, 'patient-eligibility'));
+    console.log('Scheduling Agent - Added dirty tab: patient-eligibility');
   };
 
   const handleSchedulingPoliciesChange = (newValues: SchedulingPoliciesValues) => {
-    setTabStates(prev => prev ? {
-      ...prev,
-      schedulingPolicies: newValues
-    } : null);
-    setDirtyTabs(prev => new Set(Array.from(prev).concat('scheduling-policies')));
+    setTabStates(prev => {
+      if (!prev) {
+        console.warn('tabStates was null, this should not happen');
+        return null;
+      }
+      return {
+        ...prev,
+        schedulingPolicies: newValues
+      };
+    });
+    setLoadingState(prevState => stateHelpers.addDirtyTab(prevState, 'scheduling-policies'));
+    console.log('Scheduling Agent - Added dirty tab: scheduling-policies');
   };
 
   const handleProviderPreferencesChange = (newValues: ProviderPreferencesValues) => {
-    setTabStates(prev => prev ? {
-      ...prev,
-      providerPreferences: newValues
-    } : null);
-    setDirtyTabs(prev => new Set(Array.from(prev).concat('provider-preferences')));
+    setTabStates(prev => {
+      if (!prev) {
+        console.warn('tabStates was null, this should not happen');
+        return null;
+      }
+      return {
+        ...prev,
+        providerPreferences: newValues
+      };
+    });
+    setLoadingState(prevState => stateHelpers.addDirtyTab(prevState, 'provider-preferences'));
+    console.log('Scheduling Agent - Added dirty tab: provider-preferences');
   };
 
-  // Function to refetch agent data after save
-  const refetchAgentData = async () => {
-    if (!user?.org_id) return;
-    try {
-      const data = await schedulingAgentApi.getSchedulingAgent(String(user.org_id));
-      setAgentData(data);
-      
-      // Update tab states from refetched data (Phase 1)
-      setTabStates({
-        appointmentSetup: apiToUi.appointmentSetup(data),
-        patientEligibility: apiToUi.patientEligibility(data),
-        schedulingPolicies: apiToUi.schedulingPolicies(data),
-        providerPreferences: apiToUi.providerPreferences(data),
+  // Update navigation blocker when unsaved changes change
+  useEffect(() => {
+    const hasChanges = hasUnsavedChanges(loadingState);
+    console.log('Scheduling Agent - Navigation Blocker Update:', {
+      dirtyTabs: Array.from(loadingState.dirtyTabs),
+      hasChanges,
+      timestamp: new Date().toISOString()
+    });
+    setHasUnsavedChanges(hasChanges);
+
+    if (hasChanges) {
+      const unsavedTabs = getUnsavedTabNames(loadingState, {
+        'appointment-setup': 'Appointment Setup',
+        'patient-eligibility': 'Patient & Eligibility',
+        'scheduling-policies': 'Scheduling Policies',
+        'provider-preferences': 'Provider Preferences',
       });
-    } catch (error) {
-      console.error('Failed to refetch agent data:', error);
-      toast({
-        title: "Warning",
-        description: "Settings saved, but failed to refresh data. Please reload the page.",
-        variant: "destructive",
-      });
+      console.log('Scheduling Agent - Setting unsaved tabs:', unsavedTabs);
+      setUnsavedTabs(unsavedTabs);
+    } else {
+      console.log('Scheduling Agent - Clearing unsaved tabs');
+      setUnsavedTabs([]);
     }
-  };
+  }, [loadingState, setHasUnsavedChanges, setUnsavedTabs]);
 
-  // Prepare initial values for tabs
-  const initialValues = useMemo(() => {
-    if (!agentData) return null;
-    return {
-      appointmentSetup: apiToUi.appointmentSetup(agentData),
-      patientEligibility: apiToUi.patientEligibility(agentData),
-      schedulingPolicies: apiToUi.schedulingPolicies(agentData),
-      providerPreferences: apiToUi.providerPreferences(agentData),
-    };
-  }, [agentData]);
+
 
 
   // Show loading state
-  if (isLoading) {
+  if (loadingState.isLoading) {
     return (
       <div className="container mx-auto p-4 sm:p-6 space-y-6">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
@@ -571,6 +406,49 @@ export default function SchedulingAgent() {
 
   return (
     <div className="container mx-auto p-4 sm:p-6 space-y-6">
+      {/* Header with save button */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 truncate flex items-center gap-3">
+            <Calendar className="h-8 w-8 text-blue-600" />
+            Scheduling Agent
+          </h1>
+          <p className="text-gray-600 mt-1 sm:mt-2 text-sm sm:text-base">
+            Configure appointment scheduling and patient management
+          </p>
+        </div>
+        {canWriteAgents && (
+          <Button
+            onClick={handleSaveAll}
+            disabled={loadingState.isSaving}
+            className="bg-gray-100 hover:bg-gray-200 text-[#1c275e] px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+          >
+            {loadingState.isSaving ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 mr-2"></div>
+                Saving...
+              </>
+            ) : (
+              <>
+                Save Configuration
+              </>
+            )}
+          </Button>
+        )}
+      </div>
+
+      {/* Validation Summary */}
+      {formValidation && !formValidation.valid && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <h3 className="text-sm font-semibold text-red-800 mb-2">Validation Errors</h3>
+          <ul className="text-sm text-red-700 space-y-1">
+            {formValidation.errors.map((error, index) => (
+              <li key={index}>• {error.message}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {/* Tabbed layout */}
       <Tabs defaultValue="appointment-setup" className="w-full">
         {/* Improved tab navigation with brand styling */}
@@ -625,8 +503,6 @@ export default function SchedulingAgent() {
                 }
               }}
               onChange={handleAppointmentSetupChange}
-              onSave={handleSaveAppointmentSetup}
-              isSaving={isSaving}
               readOnly={!canWriteAgents}
             />
           </Suspense>
@@ -647,13 +523,11 @@ export default function SchedulingAgent() {
                   medicaid: false
                 },
                 referralRequirements: {
-                  servicesRequiringReferrals: "",
-                  insurancePlansRequiringReferrals: ""
+                  servicesRequiringReferrals: [],
+                  insurancePlansRequiringReferrals: []
                 }
               }}
               onChange={handlePatientEligibilityChange}
-              onSave={handleSavePatientEligibility}
-              isSaving={isSaving}
               readOnly={!canWriteAgents}
             />
           </Suspense>
@@ -675,8 +549,6 @@ export default function SchedulingAgent() {
                 }
               }}
               onChange={handleSchedulingPoliciesChange}
-              onSave={handleSaveSchedulingPolicies}
-              isSaving={isSaving}
               readOnly={!canWriteAgents}
             />
           </Suspense>
@@ -687,13 +559,11 @@ export default function SchedulingAgent() {
           <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
             <ProviderPreferencesTab
               values={tabStates?.providerPreferences || {
-                providerBlackoutDates: "",
+                providerBlackoutDates: [],
                 establishedPatientsOnlyDays: "",
                 customSchedulingRules: ""
               }}
               onChange={handleProviderPreferencesChange}
-              onSave={handleSaveProviderPreferences}
-              isSaving={isSaving}
               readOnly={!canWriteAgents}
             />
           </Suspense>

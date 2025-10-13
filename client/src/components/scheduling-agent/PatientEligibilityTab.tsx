@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { IOSSwitch } from "@/components/ui/ios-switch";
-import { Users, FileText, User, CreditCard, Shield, Save, Loader2 } from "lucide-react";
+import { Users, FileText, User, CreditCard, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePermissions } from "@/context/AuthContext";
 import {
@@ -27,22 +27,17 @@ import type { PatientEligibilityValues } from "@/types/schedulingAgent";
 export type PatientEligibilityTabProps = {
   values: PatientEligibilityValues;
   onChange: (values: PatientEligibilityValues) => void;
-  onSave?: () => Promise<void>;
-  isSaving?: boolean;
   readOnly?: boolean;
 };
 
-const PatientEligibilityTab = ({ values, onChange, onSave, isSaving = false, readOnly: readOnlyProp }: PatientEligibilityTabProps) => {
+const PatientEligibilityTab = ({ values, onChange, readOnly: readOnlyProp }: PatientEligibilityTabProps) => {
   const { canEditSchedulingAgent } = usePermissions();
   const readOnly = readOnlyProp ?? !canEditSchedulingAgent;
 
   // Helper functions for working with referral requirements
-  const servicesArray = values.referralRequirements.servicesRequiringReferrals
-    ? values.referralRequirements.servicesRequiringReferrals.split('\n')
-    : [];
-  const insurancePlansArray = values.referralRequirements.insurancePlansRequiringReferrals
-    ? values.referralRequirements.insurancePlansRequiringReferrals.split('\n')
-    : [];
+  const servicesArray = values.referralRequirements.servicesRequiringReferrals;
+  const insurancePlansArray = values.referralRequirements.insurancePlansRequiringReferrals;
+
 
   // Referral management handlers
   const handleAddService = () => {
@@ -51,7 +46,7 @@ const PatientEligibilityTab = ({ values, onChange, onSave, isSaving = false, rea
       ...values,
       referralRequirements: {
         ...values.referralRequirements,
-        servicesRequiringReferrals: newServices.join('\n')
+        servicesRequiringReferrals: newServices
       }
     });
   };
@@ -62,7 +57,7 @@ const PatientEligibilityTab = ({ values, onChange, onSave, isSaving = false, rea
       ...values,
       referralRequirements: {
         ...values.referralRequirements,
-        insurancePlansRequiringReferrals: newPlans.join('\n')
+        insurancePlansRequiringReferrals: newPlans
       }
     });
   };
@@ -74,7 +69,7 @@ const PatientEligibilityTab = ({ values, onChange, onSave, isSaving = false, rea
       ...values,
       referralRequirements: {
         ...values.referralRequirements,
-        servicesRequiringReferrals: updated.join('\n')
+        servicesRequiringReferrals: updated
       }
     });
   };
@@ -86,7 +81,7 @@ const PatientEligibilityTab = ({ values, onChange, onSave, isSaving = false, rea
       ...values,
       referralRequirements: {
         ...values.referralRequirements,
-        insurancePlansRequiringReferrals: updated.join('\n')
+        insurancePlansRequiringReferrals: updated
       }
     });
   };
@@ -125,7 +120,7 @@ const PatientEligibilityTab = ({ values, onChange, onSave, isSaving = false, rea
         ...values,
         referralRequirements: {
           ...values.referralRequirements,
-          servicesRequiringReferrals: updated.join('\n')
+          servicesRequiringReferrals: updated
         }
       });
     } else if (deleteDialog.type === 'insurance' && deleteDialog.index !== undefined) {
@@ -134,18 +129,13 @@ const PatientEligibilityTab = ({ values, onChange, onSave, isSaving = false, rea
         ...values,
         referralRequirements: {
           ...values.referralRequirements,
-          insurancePlansRequiringReferrals: updated.join('\n')
+          insurancePlansRequiringReferrals: updated
         }
       });
     }
     setDeleteDialog({ open: false });
   };
 
-  // Save handler
-  const handleSave = async () => {
-    if (!onSave) return;
-    await onSave();
-  };
 
   return (
     <div className="space-y-6">
@@ -162,25 +152,6 @@ const PatientEligibilityTab = ({ values, onChange, onSave, isSaving = false, rea
                 <p className="text-gray-200 text-sm mt-1">Configure which patient types can be scheduled</p>
               </div>
             </div>
-            {onSave && !readOnly && (
-              <Button
-                onClick={handleSave}
-                disabled={isSaving}
-                className="bg-white hover:bg-slate-400 active:bg-slate-500 text-[#1c275e] border-[#1c275e] px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Save
-                  </>
-                )}
-              </Button>
-            )}
           </div>
         </CardHeader>
         <CardContent className="p-6">

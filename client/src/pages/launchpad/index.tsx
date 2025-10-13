@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useRef, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useRef, useCallback, useReducer } from "react";
 import { useParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,6 +32,7 @@ import InsuranceModule from "@/components/launchpad/insurance/InsuranceModule";
 import KnowledgeModule from "@/components/launchpad/knowledge/KnowledgeModule";
 import { OrgInsurance, OrgLocation, OrgSpecialityService, AccountOpportunitySizing } from "@/components/launchpad/types";
 import { useAuth } from "@/context/AuthContext";
+import { useNavigationBlocker } from "@/context/NavigationBlockerContext";
 import { useToast } from "@/hooks/use-toast";
 import {
   useLaunchpadData,
@@ -88,22 +89,382 @@ type Person = {
   phone: string;
 };
 
+// Consolidated state management with useReducer
+interface LaunchpadState {
+  // Account Overview
+  accountName: string;
+  websiteAddress: string;
+  headquartersAddress: string;
+
+  // People
+  decisionMakers: Person[];
+  influencers: Person[];
+
+  // Team Reporting
+  orderEntryTeam: Person[];
+  schedulingTeam: Person[];
+  patientIntakeTeam: Person[];
+  rcmTeam: Person[];
+
+  // Team Sizes
+  orderEntryTeamSize: number | undefined;
+  schedulingTeamSize: number | undefined;
+  patientIntakeTeamSize: number | undefined;
+  rcmTeamSize: number | undefined;
+
+  // Systems Integration
+  emrSystems: string[];
+  telephonySystems: string[];
+  schedulingPhoneNumbers: string[];
+  insuranceVerificationSystem: string;
+  insuranceVerificationDetails: string;
+  additionalInfo: string;
+  clinicalNotes: string;
+
+  // Org Structure
+  schedulingStructure: string;
+  rcmStructure: string;
+
+  // Opportunity Sizing
+  opportunitySizing: AccountOpportunitySizing;
+
+  // Locations
+  savedLocations: OrgLocation[];
+  unsavedLocations: OrgLocation[];
+
+  // Specialties & Insurance
+  specialties: OrgSpecialityService[];
+  insurance: OrgInsurance;
+
+  // UI State
+  activeTab: string;
+  minimizedCards: Record<string, boolean>;
+  isScrolled: boolean;
+
+  // Dialogs
+  deleteDialog: {
+    open: boolean;
+    personId?: string;
+    personName?: string;
+    setter?: 'decisionMakers' | 'influencers' | 'orderEntryTeam' | 'schedulingTeam' | 'patientIntakeTeam' | 'rcmTeam';
+  };
+
+  // Validation
+  formValidation: ValidationResult;
+  fieldValidations: Record<string, ValidationError | null>;
+  hasUnsavedChangesLocal: boolean;
+  dirtyTabs: Set<string>;
+}
+
+type LaunchpadAction =
+  // Account Overview
+  | { type: 'SET_ACCOUNT_NAME'; payload: string }
+  | { type: 'SET_WEBSITE_ADDRESS'; payload: string }
+  | { type: 'SET_HEADQUARTERS_ADDRESS'; payload: string }
+
+  // People
+  | { type: 'SET_DECISION_MAKERS'; payload: Person[] }
+  | { type: 'SET_INFLUENCERS'; payload: Person[] }
+
+  // Team Reporting
+  | { type: 'SET_ORDER_ENTRY_TEAM'; payload: Person[] }
+  | { type: 'SET_SCHEDULING_TEAM'; payload: Person[] }
+  | { type: 'SET_PATIENT_INTAKE_TEAM'; payload: Person[] }
+  | { type: 'SET_RCM_TEAM'; payload: Person[] }
+
+  // Team Sizes
+  | { type: 'SET_ORDER_ENTRY_TEAM_SIZE'; payload: number | undefined }
+  | { type: 'SET_SCHEDULING_TEAM_SIZE'; payload: number | undefined }
+  | { type: 'SET_PATIENT_INTAKE_TEAM_SIZE'; payload: number | undefined }
+  | { type: 'SET_RCM_TEAM_SIZE'; payload: number | undefined }
+
+  // Systems Integration
+  | { type: 'SET_EMR_SYSTEMS'; payload: string[] }
+  | { type: 'SET_TELEPHONY_SYSTEMS'; payload: string[] }
+  | { type: 'SET_SCHEDULING_PHONE_NUMBERS'; payload: string[] }
+  | { type: 'SET_INSURANCE_VERIFICATION_SYSTEM'; payload: string }
+  | { type: 'SET_INSURANCE_VERIFICATION_DETAILS'; payload: string }
+  | { type: 'SET_ADDITIONAL_INFO'; payload: string }
+  | { type: 'SET_CLINICAL_NOTES'; payload: string }
+
+  // Org Structure
+  | { type: 'SET_SCHEDULING_STRUCTURE'; payload: string }
+  | { type: 'SET_RCM_STRUCTURE'; payload: string }
+
+  // Opportunity Sizing
+  | { type: 'SET_OPPORTUNITY_SIZING'; payload: AccountOpportunitySizing }
+
+  // Locations
+  | { type: 'SET_SAVED_LOCATIONS'; payload: OrgLocation[] }
+  | { type: 'SET_UNSAVED_LOCATIONS'; payload: OrgLocation[] }
+
+  // Specialties & Insurance
+  | { type: 'SET_SPECIALTIES'; payload: OrgSpecialityService[] }
+  | { type: 'SET_INSURANCE'; payload: OrgInsurance }
+
+  // UI State
+  | { type: 'SET_ACTIVE_TAB'; payload: string }
+  | { type: 'TOGGLE_MINIMIZED_CARD'; payload: string }
+  | { type: 'SET_IS_SCROLLED'; payload: boolean }
+
+  // Dialogs
+  | { type: 'SET_DELETE_DIALOG'; payload: LaunchpadState['deleteDialog'] }
+
+  // Validation
+  | { type: 'SET_FORM_VALIDATION'; payload: ValidationResult }
+  | { type: 'SET_FIELD_VALIDATIONS'; payload: Record<string, ValidationError | null> }
+  | { type: 'SET_HAS_UNSAVED_CHANGES_LOCAL'; payload: boolean }
+  | { type: 'SET_DIRTY_TABS'; payload: Set<string> }
+
+  // Bulk operations
+  | { type: 'RESET_LAUNCHPAD_STATE' };
+
+const initialState: LaunchpadState = {
+  // Account Overview
+  accountName: "",
+  websiteAddress: "",
+  headquartersAddress: "",
+
+  // People
+  decisionMakers: [],
+  influencers: [],
+
+  // Team Reporting
+  orderEntryTeam: [],
+  schedulingTeam: [],
+  patientIntakeTeam: [],
+  rcmTeam: [],
+
+  // Team Sizes
+  orderEntryTeamSize: undefined,
+  schedulingTeamSize: undefined,
+  patientIntakeTeamSize: undefined,
+  rcmTeamSize: undefined,
+
+  // Systems Integration
+  emrSystems: [],
+  telephonySystems: [],
+  schedulingPhoneNumbers: [],
+  insuranceVerificationSystem: "",
+  insuranceVerificationDetails: "",
+  additionalInfo: "",
+  clinicalNotes: "",
+
+  // Org Structure
+  schedulingStructure: "",
+  rcmStructure: "",
+
+  // Opportunity Sizing
+  opportunitySizing: {},
+
+  // Locations
+  savedLocations: [],
+  unsavedLocations: [],
+
+  // Specialties & Insurance
+  specialties: [],
+  insurance: { is_active: true },
+
+  // UI State
+  activeTab: "account",
+  minimizedCards: {},
+  isScrolled: false,
+
+  // Dialogs
+  deleteDialog: { open: false },
+
+  // Validation
+  formValidation: {
+    isValid: true,
+    errors: [],
+    warnings: [],
+    hasErrors: false,
+    hasWarnings: false,
+  },
+  fieldValidations: {},
+  hasUnsavedChangesLocal: false,
+  dirtyTabs: new Set(),
+};
+
+function launchpadReducer(state: LaunchpadState, action: LaunchpadAction): LaunchpadState {
+  switch (action.type) {
+    // Account Overview
+    case 'SET_ACCOUNT_NAME':
+      return { ...state, accountName: action.payload };
+    case 'SET_WEBSITE_ADDRESS':
+      return { ...state, websiteAddress: action.payload };
+    case 'SET_HEADQUARTERS_ADDRESS':
+      return { ...state, headquartersAddress: action.payload };
+
+    // People
+    case 'SET_DECISION_MAKERS':
+      return { ...state, decisionMakers: action.payload };
+    case 'SET_INFLUENCERS':
+      return { ...state, influencers: action.payload };
+
+    // Team Reporting
+    case 'SET_ORDER_ENTRY_TEAM':
+      return { ...state, orderEntryTeam: action.payload };
+    case 'SET_SCHEDULING_TEAM':
+      return { ...state, schedulingTeam: action.payload };
+    case 'SET_PATIENT_INTAKE_TEAM':
+      return { ...state, patientIntakeTeam: action.payload };
+    case 'SET_RCM_TEAM':
+      return { ...state, rcmTeam: action.payload };
+
+    // Team Sizes
+    case 'SET_ORDER_ENTRY_TEAM_SIZE':
+      return { ...state, orderEntryTeamSize: action.payload };
+    case 'SET_SCHEDULING_TEAM_SIZE':
+      return { ...state, schedulingTeamSize: action.payload };
+    case 'SET_PATIENT_INTAKE_TEAM_SIZE':
+      return { ...state, patientIntakeTeamSize: action.payload };
+    case 'SET_RCM_TEAM_SIZE':
+      return { ...state, rcmTeamSize: action.payload };
+
+    // Systems Integration
+    case 'SET_EMR_SYSTEMS':
+      return { ...state, emrSystems: action.payload };
+    case 'SET_TELEPHONY_SYSTEMS':
+      return { ...state, telephonySystems: action.payload };
+    case 'SET_SCHEDULING_PHONE_NUMBERS':
+      return { ...state, schedulingPhoneNumbers: action.payload };
+    case 'SET_INSURANCE_VERIFICATION_SYSTEM':
+      return { ...state, insuranceVerificationSystem: action.payload };
+    case 'SET_INSURANCE_VERIFICATION_DETAILS':
+      return { ...state, insuranceVerificationDetails: action.payload };
+    case 'SET_ADDITIONAL_INFO':
+      return { ...state, additionalInfo: action.payload };
+    case 'SET_CLINICAL_NOTES':
+      return { ...state, clinicalNotes: action.payload };
+
+    // Org Structure
+    case 'SET_SCHEDULING_STRUCTURE':
+      return { ...state, schedulingStructure: action.payload };
+    case 'SET_RCM_STRUCTURE':
+      return { ...state, rcmStructure: action.payload };
+
+    // Opportunity Sizing
+    case 'SET_OPPORTUNITY_SIZING':
+      return { ...state, opportunitySizing: action.payload };
+
+    // Locations
+    case 'SET_SAVED_LOCATIONS':
+      return { ...state, savedLocations: action.payload };
+    case 'SET_UNSAVED_LOCATIONS':
+      return { ...state, unsavedLocations: action.payload };
+
+    // Specialties & Insurance
+    case 'SET_SPECIALTIES':
+      return { ...state, specialties: action.payload };
+    case 'SET_INSURANCE':
+      return { ...state, insurance: action.payload };
+
+    // UI State
+    case 'SET_ACTIVE_TAB':
+      return { ...state, activeTab: action.payload };
+    case 'TOGGLE_MINIMIZED_CARD':
+      return {
+        ...state,
+        minimizedCards: {
+          ...state.minimizedCards,
+          [action.payload]: !state.minimizedCards[action.payload]
+        }
+      };
+    case 'SET_IS_SCROLLED':
+      return { ...state, isScrolled: action.payload };
+
+    // Dialogs
+    case 'SET_DELETE_DIALOG':
+      return { ...state, deleteDialog: action.payload };
+
+    // Validation
+    case 'SET_FORM_VALIDATION':
+      return { ...state, formValidation: action.payload };
+    case 'SET_FIELD_VALIDATIONS':
+      return { ...state, fieldValidations: action.payload };
+    case 'SET_HAS_UNSAVED_CHANGES_LOCAL':
+      return { ...state, hasUnsavedChangesLocal: action.payload };
+    case 'SET_DIRTY_TABS':
+      return { ...state, dirtyTabs: action.payload };
+
+    // Bulk operations
+    case 'RESET_LAUNCHPAD_STATE':
+      return {
+        ...initialState,
+        // Preserve UI state that shouldn't be reset
+        activeTab: state.activeTab,
+        minimizedCards: state.minimizedCards,
+        isScrolled: state.isScrolled,
+      };
+
+    default:
+      return state;
+  }
+}
+
 export default function Launchpad() {
-  const { user, isLoading: authLoading, hasWriteAccess } = useAuth();
+  const { user, isLoading: authLoading, hasWriteAccess, canUploadLaunchpadDocuments } = useAuth();
   const { toast } = useToast();
+  const { setHasUnsavedChanges, setUnsavedTabs } = useNavigationBlocker();
   
   // RBAC Permission check for save button visibility
   const canWriteLaunchpad = hasWriteAccess("launchpad");
   const queryClient = useQueryClient();
   const { orgId: urlOrgId } = useParams<{ orgId: string }>();
-  
+
   // Derive orgId from URL params (most reliable source) and convert to number
   const orgId = urlOrgId ? parseInt(urlOrgId, 10) : undefined;
-  
+
   const { data, isLoading, isError, refetch } = useLaunchpadData(orgId, !!orgId && !authLoading);
-  
+
   // Type assertion to help TypeScript understand the data structure
   const typedData = data as LaunchpadFetchData | undefined;
+
+  // Consolidated state management with useReducer
+  const [state, dispatch] = useReducer(launchpadReducer, initialState);
+
+  // Extract state values for easier access (computed values)
+  const {
+    accountName,
+    websiteAddress,
+    headquartersAddress,
+    decisionMakers,
+    influencers,
+    orderEntryTeam,
+    schedulingTeam,
+    patientIntakeTeam,
+    rcmTeam,
+    orderEntryTeamSize,
+    schedulingTeamSize,
+    patientIntakeTeamSize,
+    rcmTeamSize,
+    emrSystems,
+    telephonySystems,
+    schedulingPhoneNumbers,
+    insuranceVerificationSystem,
+    insuranceVerificationDetails,
+    additionalInfo,
+    clinicalNotes,
+    schedulingStructure,
+    rcmStructure,
+    opportunitySizing,
+    savedLocations,
+    unsavedLocations,
+    specialties,
+    insurance,
+    activeTab,
+    minimizedCards,
+    isScrolled,
+    deleteDialog,
+    formValidation,
+    fieldValidations,
+    hasUnsavedChangesLocal,
+    dirtyTabs,
+  } = state;
+
+  // Combined locations for UI display
+  const locations = [...savedLocations, ...unsavedLocations];
 
   // Update mutations
   const updateAccountDetails = useUpdateAccountDetails(orgId);
@@ -136,506 +497,229 @@ export default function Launchpad() {
   useEffect(() => {
     console.log('Launchpad: orgId changed to:', orgId);
   }, [orgId]);
-  // Account Overview
-  const [accountName, setAccountName] = useState("");
-  const [websiteAddress, setWebsiteAddress] = useState("");
-  const [headquartersAddress, setHeadquartersAddress] = useState("");
 
-  // People
-  const [decisionMakers, setDecisionMakers] = useState<Person[]>([]);
-  const [influencers, setInfluencers] = useState<Person[]>([]);
-
-  // Team Reporting
-  const [orderEntryTeam, setOrderEntryTeam] = useState<Person[]>([]);
-  const [schedulingTeam, setSchedulingTeam] = useState<Person[]>([]);
-  const [patientIntakeTeam, setPatientIntakeTeam] = useState<Person[]>([]);
-  const [rcmTeam, setRcmTeam] = useState<Person[]>([]);
-
-  // Team Sizes
-  const [orderEntryTeamSize, setOrderEntryTeamSize] = useState<number | undefined>(undefined);
-  const [schedulingTeamSize, setSchedulingTeamSize] = useState<number | undefined>(undefined);
-  const [patientIntakeTeamSize, setPatientIntakeTeamSize] = useState<number | undefined>(undefined);
-  const [rcmTeamSize, setRcmTeamSize] = useState<number | undefined>(undefined);
-
-  // Systems Integration
-  const [emrSystems, setEmrSystems] = useState<string[]>([]);
-  const [telephonySystems, setTelephonySystems] = useState<string[]>([]);
-  const [schedulingPhoneNumbers, setSchedulingPhoneNumbers] = useState<string[]>([]);
-  const [insuranceVerificationSystem, setInsuranceVerificationSystem] = useState("");
-  const [insuranceVerificationDetails, setInsuranceVerificationDetails] = useState("");
-  const [additionalInfo, setAdditionalInfo] = useState("");
-  const [clinicalNotes, setClinicalNotes] = useState("");
-
-  // Org Structure
-  const [schedulingStructure, setSchedulingStructure] = useState("");
-  const [rcmStructure, setRcmStructure] = useState("");
-
-  // Opportunity Sizing
-  const [opportunitySizing, setOpportunitySizing] = useState<AccountOpportunitySizing>({});
-
-  // Team Reporting (single contacts)
-  const [orderEntryTeamReporting, setOrderEntryTeamReporting] = useState<Person | undefined>(undefined);
-  const [schedulingTeamReporting, setSchedulingTeamReporting] = useState<Person | undefined>(undefined);
-  const [patientIntakeTeamReporting, setPatientIntakeTeamReporting] = useState<Person | undefined>(undefined);
-  const [rcmTeamReporting, setRcmTeamReporting] = useState<Person | undefined>(undefined);
-
-  // Systems Integration updates
-
-  // Locations (hydrated from API snapshot)
-  const [locations, setLocations] = useState<OrgLocation[]>([]);
-
-  // Enhanced form validation state
-  const [formValidation, setFormValidation] = useState<ValidationResult>({
-    isValid: true,
-    errors: [],
-    warnings: [],
-    hasErrors: false,
-    hasWarnings: false,
-  });
-
-  // Real-time validation state for individual fields
-  const [fieldValidations, setFieldValidations] = useState<Record<string, ValidationError | null>>({});
-
-  // Specialties (hydrated from API snapshot)
-  const [specialties, setSpecialties] = useState<OrgSpecialityService[]>([]);
-
-  // Insurance (hydrated from API snapshot)
-  const [insurance, setInsurance] = useState<OrgInsurance>({ is_active: true });
-
-  // Tab management
-  const [activeTab, setActiveTab] = useState("account");
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [pendingTabChange, setPendingTabChange] = useState<string | null>(null);
-
-  // Minimize state for cards
-  const [minimizedCards, setMinimizedCards] = useState<Record<string, boolean>>({});
-
-  // Scroll-aware header state
-  const [isScrolled, setIsScrolled] = useState(false);
-
-  // Deletion confirmation dialog state
-  const [deleteDialog, setDeleteDialog] = useState<{
-    open: boolean;
-    personId?: string;
-    personName?: string;
-    setter?: React.Dispatch<React.SetStateAction<Person[]>>;
-  }>({ open: false });
-
-  // Unsaved changes dialog state
-  const [unsavedChangesDialog, setUnsavedChangesDialog] = useState<{
-    open: boolean;
-  }>({ open: false });
 
   const previousOrgIdRef = useRef<number | undefined>(undefined);
+  const hasUserInteractedWithInsurance = useRef(false);
 
   const resetLaunchpadState = () => {
-    setAccountName("");
-    setWebsiteAddress("");
-    setHeadquartersAddress("");
-    setDecisionMakers([]);
-    setInfluencers([]);
-    setOrderEntryTeam([]);
-    setSchedulingTeam([]);
-    setPatientIntakeTeam([]);
-    setRcmTeam([]);
-    setOrderEntryTeamSize(undefined);
-    setSchedulingTeamSize(undefined);
-    setPatientIntakeTeamSize(undefined);
-    setRcmTeamSize(undefined);
-    setEmrSystems([]);
-    setTelephonySystems([]);
-    setSchedulingPhoneNumbers([]);
-    setInsuranceVerificationSystem("");
-    setInsuranceVerificationDetails("");
-    setAdditionalInfo("");
-    setClinicalNotes("");
-    setSchedulingStructure("");
-    setRcmStructure("");
-    setOpportunitySizing({});
-    setOrderEntryTeamReporting(undefined);
-    setSchedulingTeamReporting(undefined);
-    setPatientIntakeTeamReporting(undefined);
-    setRcmTeamReporting(undefined);
-    setLocations([]);
-    setFormValidation({
-      isValid: true,
-      errors: [],
-      warnings: [],
-      hasErrors: false,
-      hasWarnings: false,
-    });
-    setFieldValidations({});
-    setSpecialties([]);
-    setInsurance({ is_active: true });
-    setHasUnsavedChanges(false);
+    dispatch({ type: 'RESET_LAUNCHPAD_STATE' });
     originalLocationsRef.current = [];
     originalSpecialtiesRef.current = [];
+    hasUserInteractedWithInsurance.current = false;
   };
 
-  // Function to detect if there are unsaved changes
-  const checkForUnsavedChanges = useCallback(() => {
-    if (!typedData) return false;
+  // Helper to normalize values for comparison (treat undefined as null)
+  const normalizeForComparison = useCallback((value: number | null | undefined): number | null => {
+    return value === undefined ? null : value;
+  }, []);
+
+  // Memoized change detection for account tab
+  const hasAccountChanges = useMemo(() => {
+    if (!typedData?.account_details) return false;
 
     const ad = typedData.account_details;
 
-    // Helper to normalize values for comparison (treat undefined as null)
-    const normalizeForComparison = (value: number | null | undefined): number | null => {
-      return value === undefined ? null : value;
+    // Basic fields
+    if (accountName !== (ad.account_name ?? "")) return true;
+    if (websiteAddress !== (ad.website_address ?? "")) return true;
+    if (headquartersAddress !== (ad.headquarters_address ?? "")) return true;
+    if (schedulingStructure !== (ad.scheduling_structure ?? "")) return true;
+    if (rcmStructure !== (ad.rcm_structure ?? "")) return true;
+
+    // Team sizes
+    if (orderEntryTeamSize !== (ad.order_entry_team_size ?? undefined)) return true;
+    if (schedulingTeamSize !== (ad.scheduling_team_size ?? undefined)) return true;
+    if (patientIntakeTeamSize !== (ad.patient_intake_team_size ?? undefined)) return true;
+    if (rcmTeamSize !== (ad.rcm_team_size ?? undefined)) return true;
+
+    // Opportunity sizing
+    const currentOpp = {
+      monthly_orders_count: normalizeForComparison(opportunitySizing.monthly_orders_count),
+      monthly_patients_scheduled: normalizeForComparison(opportunitySizing.monthly_patients_scheduled),
+      monthly_patients_checked_in: normalizeForComparison(opportunitySizing.monthly_patients_checked_in),
     };
+    const originalOpp = {
+      monthly_orders_count: normalizeForComparison(ad.monthly_orders_count),
+      monthly_patients_scheduled: normalizeForComparison(ad.monthly_patients_scheduled),
+      monthly_patients_checked_in: normalizeForComparison(ad.monthly_patients_checked_in),
+    };
+    if (JSON.stringify(currentOpp) !== JSON.stringify(originalOpp)) return true;
 
-    // Check account details
-    if (ad) {
-      if (accountName !== (ad.account_name ?? "")) return true;
-      if (websiteAddress !== (ad.website_address ?? "")) return true;
-      if (headquartersAddress !== (ad.headquarters_address ?? "")) return true;
-      if (schedulingStructure !== (ad.scheduling_structure ?? "")) return true;
-      if (rcmStructure !== (ad.rcm_structure ?? "")) return true;
-      if (orderEntryTeamSize !== (ad.order_entry_team_size ?? undefined)) return true;
-      if (schedulingTeamSize !== (ad.scheduling_team_size ?? undefined)) return true;
-      if (patientIntakeTeamSize !== (ad.patient_intake_team_size ?? undefined)) return true;
-      if (rcmTeamSize !== (ad.rcm_team_size ?? undefined)) return true;
+    // Arrays
+    if (JSON.stringify(emrSystems) !== JSON.stringify(ad.emr_ris_systems || [])) return true;
+    if (JSON.stringify(telephonySystems) !== JSON.stringify(ad.telephony_ccas_systems || [])) return true;
+    if (JSON.stringify(schedulingPhoneNumbers) !== JSON.stringify(ad.scheduling_phone_numbers || [])) return true;
 
-      // Check opportunity sizing
-      const currentOpp = {
-        monthly_orders_count: normalizeForComparison(opportunitySizing.monthly_orders_count),
-        monthly_patients_scheduled: normalizeForComparison(opportunitySizing.monthly_patients_scheduled),
-        monthly_patients_checked_in: normalizeForComparison(opportunitySizing.monthly_patients_checked_in),
-      };
-      const originalOpp = {
-        monthly_orders_count: normalizeForComparison(ad.monthly_orders_count),
-        monthly_patients_scheduled: normalizeForComparison(ad.monthly_patients_scheduled),
-        monthly_patients_checked_in: normalizeForComparison(ad.monthly_patients_checked_in),
-      };
-      if (JSON.stringify(currentOpp) !== JSON.stringify(originalOpp)) return true;
+    // System fields
+    if (insuranceVerificationSystem !== (ad.insurance_verification_system ?? "")) return true;
+    if (insuranceVerificationDetails !== (ad.insurance_verification_details ?? "")) return true;
+    if (additionalInfo !== (ad.additional_info ?? "")) return true;
+    if (clinicalNotes !== (ad.clinical_notes ?? "")) return true;
 
-      // Check arrays
-      if (JSON.stringify(emrSystems) !== JSON.stringify(ad.emr_ris_systems || [])) return true;
-      if (JSON.stringify(telephonySystems) !== JSON.stringify(ad.telephony_ccas_systems || [])) return true;
-      if (JSON.stringify(schedulingPhoneNumbers) !== JSON.stringify(ad.scheduling_phone_numbers || [])) return true;
-      if (insuranceVerificationSystem !== (ad.insurance_verification_system ?? "")) return true;
-      if (insuranceVerificationDetails !== (ad.insurance_verification_details ?? "")) return true;
-      if (additionalInfo !== (ad.additional_info ?? "")) return true;
-      if (clinicalNotes !== (ad.clinical_notes ?? "")) return true;
+    // People arrays
+    const peopleArrays = [
+      { current: decisionMakers, original: ad.decision_makers },
+      { current: influencers, original: ad.influencers },
+      { current: orderEntryTeam, original: ad.order_entry_team },
+      { current: schedulingTeam, original: ad.scheduling_team },
+      { current: patientIntakeTeam, original: ad.patient_intake_team },
+      { current: rcmTeam, original: ad.rcm_team },
+    ];
 
-      // Check people arrays
-      const peopleArrays = [
-        { current: decisionMakers, original: ad.decision_makers },
-        { current: influencers, original: ad.influencers },
-        { current: orderEntryTeam, original: ad.order_entry_team },
-        { current: schedulingTeam, original: ad.scheduling_team },
-        { current: patientIntakeTeam, original: ad.patient_intake_team },
-        { current: rcmTeam, original: ad.rcm_team },
-      ];
-
-      for (const { current, original } of peopleArrays) {
-        if (current.length !== (original || []).length) return true;
-        for (let i = 0; i < current.length; i++) {
-          const curr = current[i];
-          const orig = (original || [])[i];
-          if (!orig) return true;
-          if (curr.title !== (orig.title || "")) return true;
-          if (curr.name !== (orig.name || "")) return true;
-          if (curr.email !== (orig.email || "")) return true;
-          if (curr.phone !== (orig.phone || "")) return true;
-        }
+    for (const { current, original } of peopleArrays) {
+      if (current.length !== (original || []).length) return true;
+      for (let i = 0; i < current.length; i++) {
+        const curr = current[i];
+        const orig = (original || [])[i];
+        if (!orig ||
+            curr.title !== (orig.title || "") ||
+            curr.name !== (orig.name || "") ||
+            curr.email !== (orig.email || "") ||
+            curr.phone !== (orig.phone || "")) return true;
       }
     }
 
-    // Check locations
-    if (locations.length !== (typedData.locations || []).length) return true;
+    return false;
+  }, [
+    typedData?.account_details,
+    accountName, websiteAddress, headquartersAddress,
+    schedulingStructure, rcmStructure,
+    orderEntryTeamSize, schedulingTeamSize, patientIntakeTeamSize, rcmTeamSize,
+    opportunitySizing, emrSystems, telephonySystems, schedulingPhoneNumbers,
+    insuranceVerificationSystem, insuranceVerificationDetails, additionalInfo, clinicalNotes,
+    decisionMakers, influencers, orderEntryTeam, schedulingTeam, patientIntakeTeam, rcmTeam,
+    normalizeForComparison
+  ]);
+
+  // Memoized change detection for locations tab
+  const hasLocationsChanges = useMemo(() => {
+    if (!typedData?.locations) return locations.length > 0;
+
+    if (locations.length !== typedData.locations.length) return true;
+
     for (let i = 0; i < locations.length; i++) {
       const curr = locations[i];
-      const orig = typedData.locations?.[i];
-      if (!orig) return true;
-      if (curr.name !== orig.name) return true;
-      if (curr.location_id !== orig.location_id) return true;
-      if (curr.address_line1 !== (orig.address_line1 ?? "")) return true;
-      if (curr.address_line2 !== orig.address_line2) return true;
-      if (curr.city !== (orig.city ?? "")) return true;
-      if (curr.state !== (orig.state ?? "")) return true;
-      if (curr.zip_code !== (orig.zip_code ?? "")) return true;
-      if (curr.weekday_hours !== (orig.weekday_hours ?? "")) return true;
-      if (curr.weekend_hours !== (orig.weekend_hours ?? "")) return true;
-      if (curr.parking_directions !== (orig.parking_directions ?? "")) return true;
-      if (curr.is_active !== !!orig.is_active) return true;
+      const orig = typedData.locations[i];
+      if (!orig ||
+          curr.name !== orig.name ||
+          curr.location_id !== orig.location_id ||
+          curr.address_line1 !== (orig.address_line1 ?? "") ||
+          curr.address_line2 !== orig.address_line2 ||
+          curr.city !== (orig.city ?? "") ||
+          curr.state !== (orig.state ?? "") ||
+          curr.zip_code !== (orig.zip_code ?? "") ||
+          curr.weekday_hours !== (orig.weekday_hours ?? "") ||
+          curr.weekend_hours !== (orig.weekend_hours ?? "") ||
+          curr.parking_directions !== (orig.parking_directions ?? "") ||
+          curr.is_active !== !!orig.is_active) return true;
     }
 
-    // Check specialties
-    if (specialties.length !== (typedData.speciality_services || []).length) return true;
+    return false;
+  }, [typedData?.locations, locations]);
+
+  // Memoized change detection for specialties tab
+  const hasSpecialtiesChanges = useMemo(() => {
+    if (!typedData?.speciality_services) return specialties.length > 0;
+
+    if (specialties.length !== typedData.speciality_services.length) return true;
+
     for (let i = 0; i < specialties.length; i++) {
       const curr = specialties[i];
-      const orig = typedData.speciality_services?.[i];
-      if (!orig) return true;
-      if (curr.specialty_name !== (orig.specialty_name ?? "")) return true;
-      if (JSON.stringify(curr.location_ids.sort()) !== JSON.stringify((orig.location_ids || []).sort())) return true;
-      if (curr.physician_names_source_type !== (orig.physician_names_source_type ?? null)) return true;
-      if (curr.physician_names_source_name !== (orig.physician_names_source_name ?? null)) return true;
-      if (curr.new_patients_source_type !== (orig.new_patients_source_type ?? null)) return true;
-      if (curr.new_patients_source_name !== (orig.new_patients_source_name ?? null)) return true;
-      if (curr.physician_locations_source_type !== (orig.physician_locations_source_type ?? null)) return true;
-      if (curr.physician_locations_source_name !== (orig.physician_locations_source_name ?? null)) return true;
-      if (curr.physician_credentials_source_type !== (orig.physician_credentials_source_type ?? null)) return true;
-      if (curr.physician_credentials_source_name !== (orig.physician_credentials_source_name ?? null)) return true;
-      if (curr.services_offered_source_type !== (orig.services_offered_source_type ?? null)) return true;
-      if (curr.services_offered_source_name !== (orig.services_offered_source_name ?? null)) return true;
-      if (curr.patient_prep_source_type !== (orig.patient_prep_source_type ?? null)) return true;
-      if (curr.patient_prep_source_name !== (orig.patient_prep_source_name ?? null)) return true;
-      if (curr.patient_faqs_source_type !== (orig.patient_faqs_source_type ?? null)) return true;
-      if (curr.patient_faqs_source_name !== (orig.patient_faqs_source_name ?? null)) return true;
-      if (curr.is_active !== !!orig.is_active) return true;
+      const orig = typedData.speciality_services[i];
+      if (!orig ||
+          curr.specialty_name !== (orig.specialty_name ?? "") ||
+          JSON.stringify(curr.location_ids.sort()) !== JSON.stringify((orig.location_ids || []).sort()) ||
+          curr.physician_names_source_type !== (orig.physician_names_source_type ?? null) ||
+          curr.physician_names_source_name !== (orig.physician_names_source_name ?? null) ||
+          curr.new_patients_source_type !== (orig.new_patients_source_type ?? null) ||
+          curr.new_patients_source_name !== (orig.new_patients_source_name ?? null) ||
+          curr.physician_locations_source_type !== (orig.physician_locations_source_type ?? null) ||
+          curr.physician_locations_source_name !== (orig.physician_locations_source_name ?? null) ||
+          curr.physician_credentials_source_type !== (orig.physician_credentials_source_type ?? null) ||
+          curr.physician_credentials_source_name !== (orig.physician_credentials_source_name ?? null) ||
+          curr.services_offered_source_type !== (orig.services_offered_source_type ?? null) ||
+          curr.services_offered_source_name !== (orig.services_offered_source_name ?? null) ||
+          curr.patient_prep_source_type !== (orig.patient_prep_source_type ?? null) ||
+          curr.patient_prep_source_name !== (orig.patient_prep_source_name ?? null) ||
+          curr.patient_faqs_source_type !== (orig.patient_faqs_source_type ?? null) ||
+          curr.patient_faqs_source_name !== (orig.patient_faqs_source_name ?? null) ||
+          curr.is_active !== !!orig.is_active) return true;
 
       // Check services array
       if (curr.services.length !== (orig.services || []).length) return true;
       for (let j = 0; j < curr.services.length; j++) {
         const currSvc = curr.services[j];
         const origSvc = orig.services?.[j];
-        if (!origSvc) return true;
-        if (currSvc.name !== (origSvc.name ?? "")) return true;
-        if (currSvc.patient_prep_requirements !== (origSvc.patient_prep_requirements ?? "")) return true;
-        if (currSvc.faq !== (origSvc.faq ?? "")) return true;
-        if (currSvc.service_information_name !== (origSvc.service_information_name ?? null)) return true;
-        if (currSvc.service_information_source !== (origSvc.service_information_source ?? null)) return true;
+        if (!origSvc ||
+            currSvc.name !== (origSvc.name ?? "") ||
+            currSvc.patient_prep_requirements !== (origSvc.patient_prep_requirements ?? "") ||
+            currSvc.faq !== (origSvc.faq ?? "") ||
+            currSvc.service_information_name !== (origSvc.service_information_name ?? null) ||
+            currSvc.service_information_source !== (origSvc.service_information_source ?? null)) return true;
       }
-    }
-
-    // Check insurance
-    if (typedData.insurance) {
-      if (insurance.accepted_payers_source !== (typedData.insurance.accepted_payers_source ?? "")) return true;
-      if (insurance.accepted_payers_source_details !== (typedData.insurance.accepted_payers_source_details ?? "")) return true;
-      if (insurance.insurance_verification_source !== (typedData.insurance.insurance_verification_source ?? "")) return true;
-      if (insurance.insurance_verification_source_details !== (typedData.insurance.insurance_verification_source_details ?? "")) return true;
-      if (insurance.patient_copay_source !== (typedData.insurance.patient_copay_source ?? "")) return true;
-      if (insurance.patient_copay_source_details !== (typedData.insurance.patient_copay_source_details ?? "")) return true;
-      if (insurance.is_active !== !!typedData.insurance.is_active) return true;
     }
 
     return false;
-  }, [
-    typedData,
-    accountName,
-    websiteAddress,
-    headquartersAddress,
-    schedulingStructure,
-    rcmStructure,
-    orderEntryTeamSize,
-    schedulingTeamSize,
-    patientIntakeTeamSize,
-    rcmTeamSize,
-    opportunitySizing,
-    emrSystems,
-    telephonySystems,
-    schedulingPhoneNumbers,
-    insuranceVerificationSystem,
-    insuranceVerificationDetails,
-    additionalInfo,
-    clinicalNotes,
-    decisionMakers,
-    influencers,
-    orderEntryTeam,
-    schedulingTeam,
-    patientIntakeTeam,
-    rcmTeam,
-    locations,
-    specialties,
-    insurance,
-  ]);
+  }, [typedData?.speciality_services, specialties]);
 
-  // Function to get which tabs have unsaved changes
+  // Memoized change detection for insurance tab
+  const hasInsuranceChanges = useMemo(() => {
+    if (!typedData?.insurance) return false;
+
+    return insurance.accepted_payers_source !== (typedData.insurance.accepted_payers_source ?? "") ||
+           insurance.accepted_payers_source_details !== (typedData.insurance.accepted_payers_source_details ?? "") ||
+           insurance.insurance_verification_source !== (typedData.insurance.insurance_verification_source ?? "") ||
+           insurance.insurance_verification_source_details !== (typedData.insurance.insurance_verification_source_details ?? "") ||
+           insurance.patient_copay_source !== (typedData.insurance.patient_copay_source ?? "") ||
+           insurance.patient_copay_source_details !== (typedData.insurance.patient_copay_source_details ?? "") ||
+           insurance.is_active !== !!typedData.insurance.is_active;
+  }, [typedData?.insurance, insurance]);
+
+  // Function to detect if there are unsaved changes (now uses memoized sub-functions)
+  const checkForUnsavedChanges = useCallback(() => {
+    return hasAccountChanges || hasLocationsChanges || hasSpecialtiesChanges || hasInsuranceChanges;
+  }, [hasAccountChanges, hasLocationsChanges, hasSpecialtiesChanges, hasInsuranceChanges]);
+
+  // Function to get which tabs have unsaved changes (now uses memoized change detection)
   const getUnsavedChangesTabs = useCallback(() => {
-    if (!typedData) return [];
-
     const tabsWithChanges = [];
-    const ad = typedData.account_details;
 
-    // Check account tab
-    let accountHasChanges = false;
-    if (ad) {
-      if (accountName !== (ad.account_name ?? "")) accountHasChanges = true;
-      if (websiteAddress !== (ad.website_address ?? "")) accountHasChanges = true;
-      if (headquartersAddress !== (ad.headquarters_address ?? "")) accountHasChanges = true;
-      if (schedulingStructure !== (ad.scheduling_structure ?? "")) accountHasChanges = true;
-      if (rcmStructure !== (ad.rcm_structure ?? "")) accountHasChanges = true;
-      if (orderEntryTeamSize !== (ad.order_entry_team_size ?? undefined)) accountHasChanges = true;
-      if (schedulingTeamSize !== (ad.scheduling_team_size ?? undefined)) accountHasChanges = true;
-      if (patientIntakeTeamSize !== (ad.patient_intake_team_size ?? undefined)) accountHasChanges = true;
-      if (rcmTeamSize !== (ad.rcm_team_size ?? undefined)) accountHasChanges = true;
-
-      // Check opportunity sizing
-      const currentOpp = {
-        monthly_orders_count: opportunitySizing.monthly_orders_count,
-        monthly_patients_scheduled: opportunitySizing.monthly_patients_scheduled,
-        monthly_patients_checked_in: opportunitySizing.monthly_patients_checked_in,
-      };
-      const originalOpp = {
-        monthly_orders_count: ad.monthly_orders_count,
-        monthly_patients_scheduled: ad.monthly_patients_scheduled,
-        monthly_patients_checked_in: ad.monthly_patients_checked_in,
-      };
-      if (JSON.stringify(currentOpp) !== JSON.stringify(originalOpp)) accountHasChanges = true;
-
-      // Check arrays
-      if (JSON.stringify(emrSystems) !== JSON.stringify(ad.emr_ris_systems || [])) accountHasChanges = true;
-      if (JSON.stringify(telephonySystems) !== JSON.stringify(ad.telephony_ccas_systems || [])) accountHasChanges = true;
-      if (JSON.stringify(schedulingPhoneNumbers) !== JSON.stringify(ad.scheduling_phone_numbers || [])) accountHasChanges = true;
-      if (insuranceVerificationSystem !== (ad.insurance_verification_system ?? "")) accountHasChanges = true;
-      if (insuranceVerificationDetails !== (ad.insurance_verification_details ?? "")) accountHasChanges = true;
-      if (additionalInfo !== (ad.additional_info ?? "")) accountHasChanges = true;
-      if (clinicalNotes !== (ad.clinical_notes ?? "")) accountHasChanges = true;
-
-      // Check people arrays
-      const peopleArrays = [
-        { current: decisionMakers, original: ad.decision_makers },
-        { current: influencers, original: ad.influencers },
-        { current: orderEntryTeam, original: ad.order_entry_team },
-        { current: schedulingTeam, original: ad.scheduling_team },
-        { current: patientIntakeTeam, original: ad.patient_intake_team },
-        { current: rcmTeam, original: ad.rcm_team },
-      ];
-
-      for (const { current, original } of peopleArrays) {
-        if (current.length !== (original || []).length) {
-          accountHasChanges = true;
-          break;
-        }
-        for (let i = 0; i < current.length; i++) {
-          const curr = current[i];
-          const orig = (original || [])[i];
-          if (!orig) {
-            accountHasChanges = true;
-            break;
-          }
-          if (curr.title !== (orig.title || "")) accountHasChanges = true;
-          if (curr.name !== (orig.name || "")) accountHasChanges = true;
-          if (curr.email !== (orig.email || "")) accountHasChanges = true;
-          if (curr.phone !== (orig.phone || "")) accountHasChanges = true;
-          if (accountHasChanges) break;
-        }
-        if (accountHasChanges) break;
-      }
-    }
-    if (accountHasChanges) tabsWithChanges.push("Account");
-
-    // Check locations tab
-    let locationsHasChanges = false;
-    if (locations.length !== (typedData.locations || []).length) locationsHasChanges = true;
-    else {
-      for (let i = 0; i < locations.length; i++) {
-        const curr = locations[i];
-        const orig = typedData.locations?.[i];
-        if (!orig) {
-          locationsHasChanges = true;
-          break;
-        }
-        if (curr.name !== orig.name) locationsHasChanges = true;
-        if (curr.location_id !== orig.location_id) locationsHasChanges = true;
-        if (curr.address_line1 !== (orig.address_line1 ?? "")) locationsHasChanges = true;
-        if (curr.address_line2 !== orig.address_line2) locationsHasChanges = true;
-        if (curr.city !== (orig.city ?? "")) locationsHasChanges = true;
-        if (curr.state !== (orig.state ?? "")) locationsHasChanges = true;
-        if (curr.zip_code !== (orig.zip_code ?? "")) locationsHasChanges = true;
-        if (curr.weekday_hours !== (orig.weekday_hours ?? "")) locationsHasChanges = true;
-        if (curr.weekend_hours !== (orig.weekend_hours ?? "")) locationsHasChanges = true;
-        if (curr.parking_directions !== (orig.parking_directions ?? "")) locationsHasChanges = true;
-        if (curr.is_active !== !!orig.is_active) locationsHasChanges = true;
-        if (locationsHasChanges) break;
-      }
-    }
-    if (locationsHasChanges) tabsWithChanges.push("Locations");
-
-    // Check specialties tab
-    let specialtiesHasChanges = false;
-    if (specialties.length !== (typedData.speciality_services || []).length) specialtiesHasChanges = true;
-    else {
-      for (let i = 0; i < specialties.length; i++) {
-        const curr = specialties[i];
-        const orig = typedData.speciality_services?.[i];
-        if (!orig) {
-          specialtiesHasChanges = true;
-          break;
-        }
-        if (curr.specialty_name !== (orig.specialty_name ?? "")) specialtiesHasChanges = true;
-        if (JSON.stringify(curr.location_ids.sort()) !== JSON.stringify((orig.location_ids || []).sort())) specialtiesHasChanges = true;
-        if (curr.physician_names_source_type !== (orig.physician_names_source_type ?? null)) specialtiesHasChanges = true;
-        if (curr.physician_names_source_name !== (orig.physician_names_source_name ?? null)) specialtiesHasChanges = true;
-        if (curr.new_patients_source_type !== (orig.new_patients_source_type ?? null)) specialtiesHasChanges = true;
-        if (curr.new_patients_source_name !== (orig.new_patients_source_name ?? null)) specialtiesHasChanges = true;
-        if (curr.physician_locations_source_type !== (orig.physician_locations_source_type ?? null)) specialtiesHasChanges = true;
-        if (curr.physician_locations_source_name !== (orig.physician_locations_source_name ?? null)) specialtiesHasChanges = true;
-        if (curr.physician_credentials_source_type !== (orig.physician_credentials_source_type ?? null)) specialtiesHasChanges = true;
-        if (curr.physician_credentials_source_name !== (orig.physician_credentials_source_name ?? null)) specialtiesHasChanges = true;
-        if (curr.services_offered_source_type !== (orig.services_offered_source_type ?? null)) specialtiesHasChanges = true;
-        if (curr.services_offered_source_name !== (orig.services_offered_source_name ?? null)) specialtiesHasChanges = true;
-        if (curr.patient_prep_source_type !== (orig.patient_prep_source_type ?? null)) specialtiesHasChanges = true;
-        if (curr.patient_prep_source_name !== (orig.patient_prep_source_name ?? null)) specialtiesHasChanges = true;
-        if (curr.patient_faqs_source_type !== (orig.patient_faqs_source_type ?? null)) specialtiesHasChanges = true;
-        if (curr.patient_faqs_source_name !== (orig.patient_faqs_source_name ?? null)) specialtiesHasChanges = true;
-        if (curr.is_active !== !!orig.is_active) specialtiesHasChanges = true;
-
-        // Check services array
-        if (curr.services.length !== (orig.services || []).length) specialtiesHasChanges = true;
-        else {
-          for (let j = 0; j < curr.services.length; j++) {
-            const currSvc = curr.services[j];
-            const origSvc = orig.services?.[j];
-            if (!origSvc) {
-              specialtiesHasChanges = true;
-              break;
-            }
-            if (currSvc.name !== (origSvc.name ?? "")) specialtiesHasChanges = true;
-            if (currSvc.patient_prep_requirements !== (origSvc.patient_prep_requirements ?? "")) specialtiesHasChanges = true;
-            if (currSvc.faq !== (origSvc.faq ?? "")) specialtiesHasChanges = true;
-            if (currSvc.service_information_name !== (origSvc.service_information_name ?? null)) specialtiesHasChanges = true;
-            if (currSvc.service_information_source !== (origSvc.service_information_source ?? null)) specialtiesHasChanges = true;
-            if (specialtiesHasChanges) break;
-          }
-        }
-        if (specialtiesHasChanges) break;
-      }
-    }
-    if (specialtiesHasChanges) tabsWithChanges.push("Specialties");
-
-    // Check insurance tab
-    let insuranceHasChanges = false;
-    if (typedData.insurance) {
-      if (insurance.accepted_payers_source !== (typedData.insurance.accepted_payers_source ?? "")) insuranceHasChanges = true;
-      if (insurance.accepted_payers_source_details !== (typedData.insurance.accepted_payers_source_details ?? "")) insuranceHasChanges = true;
-      if (insurance.insurance_verification_source !== (typedData.insurance.insurance_verification_source ?? "")) insuranceHasChanges = true;
-      if (insurance.insurance_verification_source_details !== (typedData.insurance.insurance_verification_source_details ?? "")) insuranceHasChanges = true;
-      if (insurance.patient_copay_source !== (typedData.insurance.patient_copay_source ?? "")) insuranceHasChanges = true;
-      if (insurance.patient_copay_source_details !== (typedData.insurance.patient_copay_source_details ?? "")) insuranceHasChanges = true;
-      if (insurance.is_active !== !!typedData.insurance.is_active) insuranceHasChanges = true;
-    }
-    if (insuranceHasChanges) tabsWithChanges.push("Insurance");
+    if (hasAccountChanges) tabsWithChanges.push("Account");
+    if (hasLocationsChanges) tabsWithChanges.push("Locations");
+    if (hasSpecialtiesChanges) tabsWithChanges.push("Specialties");
+    if (hasInsuranceChanges) tabsWithChanges.push("Insurance");
 
     return tabsWithChanges;
+  }, [hasAccountChanges, hasLocationsChanges, hasSpecialtiesChanges, hasInsuranceChanges]);
+
+  // Function to calculate and update both dirty tabs and unsaved tabs state
+  const updateUnsavedChangesState = useCallback(() => {
+    const hasChanges = checkForUnsavedChanges();
+    dispatch({ type: 'SET_HAS_UNSAVED_CHANGES_LOCAL', payload: hasChanges });
+
+    // Update the navigation blocker context
+    setHasUnsavedChanges(hasChanges);
+    if (hasChanges) {
+      const unsavedTabs = getUnsavedChangesTabs();
+      setUnsavedTabs(unsavedTabs);
+
+      // Update dirty tabs based on unsaved tabs
+      const newDirtyTabs = new Set<string>();
+      if (unsavedTabs.includes("Account")) newDirtyTabs.add("account");
+      if (unsavedTabs.includes("Locations")) newDirtyTabs.add("locations");
+      if (unsavedTabs.includes("Specialties")) newDirtyTabs.add("specialties");
+      if (unsavedTabs.includes("Insurance")) newDirtyTabs.add("insurance");
+      dispatch({ type: 'SET_DIRTY_TABS', payload: newDirtyTabs });
+    } else {
+      setUnsavedTabs([]);
+      dispatch({ type: 'SET_DIRTY_TABS', payload: new Set() });
+    }
   }, [
-    typedData,
-    accountName,
-    websiteAddress,
-    headquartersAddress,
-    schedulingStructure,
-    rcmStructure,
-    orderEntryTeamSize,
-    schedulingTeamSize,
-    patientIntakeTeamSize,
-    rcmTeamSize,
-    opportunitySizing,
-    emrSystems,
-    telephonySystems,
-    schedulingPhoneNumbers,
-    insuranceVerificationSystem,
-    insuranceVerificationDetails,
-    additionalInfo,
-    clinicalNotes,
-    decisionMakers,
-    influencers,
-    orderEntryTeam,
-    schedulingTeam,
-    patientIntakeTeam,
-    rcmTeam,
-    locations,
-    specialties,
-    insurance,
+    checkForUnsavedChanges,
+    setHasUnsavedChanges,
+    setUnsavedTabs,
+    getUnsavedChangesTabs,
   ]);
 
   useEffect(() => {
@@ -658,7 +742,7 @@ export default function Launchpad() {
   useEffect(() => {
     const handleScroll = () => {
       const scrollTop = window.scrollY;
-      setIsScrolled(scrollTop > 20);
+      dispatch({ type: 'SET_IS_SCROLLED', payload: scrollTop > 20 });
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -666,10 +750,7 @@ export default function Launchpad() {
   }, []);
 
   const toggleCardMinimize = (cardId: string) => {
-    setMinimizedCards(prev => ({
-      ...prev,
-      [cardId]: !prev[cardId]
-    }));
+    dispatch({ type: 'TOGGLE_MINIMIZED_CARD', payload: cardId });
   };
 
   // Original snapshot refs for diffing (step 4)
@@ -680,7 +761,7 @@ export default function Launchpad() {
   const locationCodeMap = useMemo(() => makeLocationCodeMap(locations as any), [locations]);
   const locationOptions = useMemo(() => makeLocationOptions(locations as any), [locations]);
 
-  // Hydrate UI state from API snapshot on load
+  // Hydrate UI state from API snapshot on load - SKIP dirty tabs to preserve user edits
   useEffect(() => {
     if (!typedData) {
       console.log('useEffect: No data available yet');
@@ -689,13 +770,10 @@ export default function Launchpad() {
 
     // Note: Using URL-based orgId now, so no need for org guard
     console.log('Hydrating UI state for orgId:', orgId, 'with data for org:', typedData.organization?.org_id);
-    // Account details
-    const ad = typedData.account_details;
-    if (ad) {
-      setAccountName(ad.account_name ?? "");
-      setWebsiteAddress(ad.website_address ?? "");
-      setHeadquartersAddress(ad.headquarters_address ?? "");
 
+    // Account details - ONLY hydrate if not dirty
+    const ad = typedData.account_details;
+    if (ad && !dirtyTabs.has("account")) {
       const toPerson = (p: any, idx: number): Person => ({
         id: `${idx}-${p.email || p.name || Date.now()}`,
         title: p.title || "",
@@ -704,202 +782,218 @@ export default function Launchpad() {
         phone: p.phone || "",
       });
 
-      setDecisionMakers((ad.decision_makers || []).map(toPerson));
-      setInfluencers((ad.influencers || []).map(toPerson));
-      setOrderEntryTeam((ad.order_entry_team || []).map(toPerson));
-      setSchedulingTeam((ad.scheduling_team || []).map(toPerson));
-      setPatientIntakeTeam((ad.patient_intake_team || []).map(toPerson));
-      setRcmTeam((ad.rcm_team || []).map(toPerson));
-
-      setSchedulingStructure(ad.scheduling_structure || "");
-      setRcmStructure(ad.rcm_structure || "");
-
-      setOrderEntryTeamSize(ad.order_entry_team_size ?? undefined);
-      setSchedulingTeamSize(ad.scheduling_team_size ?? undefined);
-      setPatientIntakeTeamSize(ad.patient_intake_team_size ?? undefined);
-      setRcmTeamSize(ad.rcm_team_size ?? undefined);
-
-      setOpportunitySizing({
-        monthly_orders_count: ad.monthly_orders_count ?? null,
-        monthly_patients_scheduled: ad.monthly_patients_scheduled ?? null,
-        monthly_patients_checked_in: ad.monthly_patients_checked_in ?? null,
+      dispatch({ type: 'SET_ACCOUNT_NAME', payload: ad.account_name ?? "" });
+      dispatch({ type: 'SET_WEBSITE_ADDRESS', payload: ad.website_address ?? "" });
+      dispatch({ type: 'SET_HEADQUARTERS_ADDRESS', payload: ad.headquarters_address ?? "" });
+      dispatch({ type: 'SET_DECISION_MAKERS', payload: (ad.decision_makers || []).map(toPerson) });
+      dispatch({ type: 'SET_INFLUENCERS', payload: (ad.influencers || []).map(toPerson) });
+      dispatch({ type: 'SET_ORDER_ENTRY_TEAM', payload: (ad.order_entry_team || []).map(toPerson) });
+      dispatch({ type: 'SET_SCHEDULING_TEAM', payload: (ad.scheduling_team || []).map(toPerson) });
+      dispatch({ type: 'SET_PATIENT_INTAKE_TEAM', payload: (ad.patient_intake_team || []).map(toPerson) });
+      dispatch({ type: 'SET_RCM_TEAM', payload: (ad.rcm_team || []).map(toPerson) });
+      dispatch({ type: 'SET_SCHEDULING_STRUCTURE', payload: ad.scheduling_structure || "" });
+      dispatch({ type: 'SET_RCM_STRUCTURE', payload: ad.rcm_structure || "" });
+      dispatch({ type: 'SET_ORDER_ENTRY_TEAM_SIZE', payload: ad.order_entry_team_size ?? undefined });
+      dispatch({ type: 'SET_SCHEDULING_TEAM_SIZE', payload: ad.scheduling_team_size ?? undefined });
+      dispatch({ type: 'SET_PATIENT_INTAKE_TEAM_SIZE', payload: ad.patient_intake_team_size ?? undefined });
+      dispatch({ type: 'SET_RCM_TEAM_SIZE', payload: ad.rcm_team_size ?? undefined });
+      dispatch({
+        type: 'SET_OPPORTUNITY_SIZING',
+        payload: {
+          monthly_orders_count: ad.monthly_orders_count ?? null,
+          monthly_patients_scheduled: ad.monthly_patients_scheduled ?? null,
+          monthly_patients_checked_in: ad.monthly_patients_checked_in ?? null,
+        }
       });
-
-      setEmrSystems(ad.emr_ris_systems || []);
-      setTelephonySystems(ad.telephony_ccas_systems || []);
-      setSchedulingPhoneNumbers(ad.scheduling_phone_numbers || []);
-      setInsuranceVerificationSystem(ad.insurance_verification_system || "");
-      setInsuranceVerificationDetails(ad.insurance_verification_details || "");
-      setAdditionalInfo(ad.additional_info || "");
-      setClinicalNotes(ad.clinical_notes || "");
+      dispatch({ type: 'SET_EMR_SYSTEMS', payload: ad.emr_ris_systems || [] });
+      dispatch({ type: 'SET_TELEPHONY_SYSTEMS', payload: ad.telephony_ccas_systems || [] });
+      dispatch({ type: 'SET_SCHEDULING_PHONE_NUMBERS', payload: ad.scheduling_phone_numbers || [] });
+      dispatch({ type: 'SET_INSURANCE_VERIFICATION_SYSTEM', payload: ad.insurance_verification_system || "" });
+      dispatch({ type: 'SET_INSURANCE_VERIFICATION_DETAILS', payload: ad.insurance_verification_details || "" });
+      dispatch({ type: 'SET_ADDITIONAL_INFO', payload: ad.additional_info || "" });
+      dispatch({ type: 'SET_CLINICAL_NOTES', payload: ad.clinical_notes || "" });
     }
-    // Locations
-    const mappedLocations: OrgLocation[] = (typedData.locations || []).map((loc) => ({
-      id: loc.id,
-      location_id: loc.location_id,
-      name: loc.name,
-      address_line1: loc.address_line1 ?? "",
-      address_line2: loc.address_line2,
-      city: loc.city ?? "",
-      state: loc.state ?? "",
-      zip_code: loc.zip_code ?? "",
-      weekday_hours: loc.weekday_hours ?? "",
-      weekend_hours: loc.weekend_hours ?? "",
-      specialties_text: "",
-      services_text: "",
-      parking_directions: loc.parking_directions ?? "",
-      is_active: !!loc.is_active,
-    }));
-    setLocations(mappedLocations);
 
-    // Capture original locations snapshot for diffing (step 4)
-    originalLocationsRef.current = (typedData.locations || []).map((loc) => ({
-      id: loc.id,
-      location_id: loc.location_id,
-    }));
+    // Locations - ONLY hydrate if not dirty
+    if (!dirtyTabs.has("locations")) {
+      const mappedLocations: OrgLocation[] = (typedData.locations || []).map((loc) => ({
+        id: loc.id,
+        location_id: loc.location_id,
+        name: loc.name,
+        address_line1: loc.address_line1 ?? "",
+        address_line2: loc.address_line2,
+        city: loc.city ?? "",
+        state: loc.state ?? "",
+        zip_code: loc.zip_code ?? "",
+        weekday_hours: loc.weekday_hours ?? "",
+        weekend_hours: loc.weekend_hours ?? "",
+        specialties_text: "",
+        services_text: "",
+        parking_directions: loc.parking_directions ?? "",
+        is_active: !!loc.is_active,
+      }));
+      dispatch({ type: 'SET_SAVED_LOCATIONS', payload: mappedLocations });
 
-    // Specialties
-    const mappedSpecs: OrgSpecialityService[] = (typedData.speciality_services || []).map((sp) => ({
-      id: sp.id,
-      specialty_name: sp.specialty_name ?? "",
-      location_names_text: "",
-      location_ids: Array.from(new Set(sp.location_ids ?? [])),
-      physician_names_source_type: sp.physician_names_source_type ?? null,
-      physician_names_source_name: sp.physician_names_source_name ?? null,
-      physician_names_source_link: undefined,
-      new_patients_source_type: sp.new_patients_source_type ?? null,
-      new_patients_source_name: sp.new_patients_source_name ?? null,
-      new_patients_source_link: undefined,
-      physician_locations_source_type: sp.physician_locations_source_type ?? null,
-      physician_locations_source_name: sp.physician_locations_source_name ?? null,
-      physician_locations_source_link: undefined,
-      physician_credentials_source_type: sp.physician_credentials_source_type ?? null,
-      physician_credentials_source_name: sp.physician_credentials_source_name ?? null,
-      physician_credentials_source_link: undefined,
-      services: (sp.services ?? []).map((svc) => ({
-        name: svc.name ?? "",
-        patient_prep_requirements: svc.patient_prep_requirements ?? "",
-        faq: svc.faq ?? "",
-        service_information_name: svc.service_information_name ?? null,
-        service_information_source: svc.service_information_source ?? null,
-      })),
-      services_offered_source_type: sp.services_offered_source_type ?? null,
-      services_offered_source_name: sp.services_offered_source_name ?? null,
-      services_offered_source_link: undefined,
-      patient_prep_source_type: sp.patient_prep_source_type ?? null,
-      patient_prep_source_name: sp.patient_prep_source_name ?? null,
-      patient_prep_source_link: undefined,
-      patient_faqs_source_type: sp.patient_faqs_source_type ?? null,
-      patient_faqs_source_name: sp.patient_faqs_source_name ?? null,
-      patient_faqs_source_link: undefined,
-      is_active: !!sp.is_active,
-    }));
-    setSpecialties(mappedSpecs);
+      // Capture original locations snapshot for diffing (step 4)
+      originalLocationsRef.current = (typedData.locations || []).map((loc) => ({
+        id: loc.id,
+        location_id: loc.location_id,
+      }));
+    }
 
-    // Capture original specialties snapshot for diffing (step 4)
-    originalSpecialtiesRef.current = (typedData.speciality_services || []).map((sp) => ({
-      id: sp.id,
-      location_ids: Array.from(new Set(sp.location_ids ?? [])),
-    }));
+    // Specialties - ONLY hydrate if not dirty
+    if (!dirtyTabs.has("specialties")) {
+      const mappedSpecs: OrgSpecialityService[] = (typedData.speciality_services || []).map((sp) => ({
+        id: sp.id,
+        specialty_name: sp.specialty_name ?? "",
+        location_names_text: "",
+        location_ids: Array.from(new Set(sp.location_ids ?? [])),
+        physician_names_source_type: sp.physician_names_source_type ?? null,
+        physician_names_source_name: sp.physician_names_source_name ?? null,
+        physician_names_source_link: undefined,
+        new_patients_source_type: sp.new_patients_source_type ?? null,
+        new_patients_source_name: sp.new_patients_source_name ?? null,
+        new_patients_source_link: undefined,
+        physician_locations_source_type: sp.physician_locations_source_type ?? null,
+        physician_locations_source_name: sp.physician_locations_source_name ?? null,
+        physician_locations_source_link: undefined,
+        physician_credentials_source_type: sp.physician_credentials_source_type ?? null,
+        physician_credentials_source_name: sp.physician_credentials_source_name ?? null,
+        physician_credentials_source_link: undefined,
+        services: (sp.services ?? []).map((svc) => ({
+          name: svc.name ?? "",
+          patient_prep_requirements: svc.patient_prep_requirements ?? "",
+          faq: svc.faq ?? "",
+          service_information_name: svc.service_information_name ?? null,
+          service_information_source: svc.service_information_source ?? null,
+        })),
+        services_offered_source_type: sp.services_offered_source_type ?? null,
+        services_offered_source_name: sp.services_offered_source_name ?? null,
+        services_offered_source_link: undefined,
+        patient_prep_source_type: sp.patient_prep_source_type ?? null,
+        patient_prep_source_name: sp.patient_prep_source_name ?? null,
+        patient_prep_source_link: undefined,
+        patient_faqs_source_type: sp.patient_faqs_source_type ?? null,
+        patient_faqs_source_name: sp.patient_faqs_source_name ?? null,
+        patient_faqs_source_link: undefined,
+        is_active: !!sp.is_active,
+      }));
+      dispatch({ type: 'SET_SPECIALTIES', payload: mappedSpecs });
 
-    // Insurance
-    if (typedData.insurance) {
-      setInsurance({
-        accepted_payers_source: typedData.insurance.accepted_payers_source ?? "",
-        accepted_payers_source_details: typedData.insurance.accepted_payers_source_details ?? "",
-        accepted_payers_source_link: undefined,
-        insurance_verification_source: typedData.insurance.insurance_verification_source ?? "",
-        insurance_verification_source_details: typedData.insurance.insurance_verification_source_details ?? "",
-        insurance_verification_source_link: undefined,
-        patient_copay_source: typedData.insurance.patient_copay_source ?? "",
-        patient_copay_source_details: typedData.insurance.patient_copay_source_details ?? "",
-        patient_copay_source_link: undefined,
-        is_active: !!typedData.insurance.is_active,
+      // Capture original specialties snapshot for diffing (step 4)
+      originalSpecialtiesRef.current = (typedData.speciality_services || []).map((sp) => ({
+        id: sp.id,
+        location_ids: Array.from(new Set(sp.location_ids ?? [])),
+      }));
+    }
+
+    // Insurance - ONLY hydrate if not dirty and user hasn't interacted
+    if (typedData.insurance && !dirtyTabs.has("insurance") && !hasUserInteractedWithInsurance.current) {
+      dispatch({
+        type: 'SET_INSURANCE',
+        payload: {
+          accepted_payers_source: typedData.insurance.accepted_payers_source ?? "",
+          accepted_payers_source_details: typedData.insurance.accepted_payers_source_details ?? "",
+          accepted_payers_source_link: undefined,
+          insurance_verification_source: typedData.insurance.insurance_verification_source ?? "",
+          insurance_verification_source_details: typedData.insurance.insurance_verification_source_details ?? "",
+          insurance_verification_source_link: undefined,
+          patient_copay_source: typedData.insurance.patient_copay_source ?? "",
+          patient_copay_source_details: typedData.insurance.patient_copay_source_details ?? "",
+          patient_copay_source_link: undefined,
+          is_active: !!typedData.insurance.is_active,
+        }
       });
     }
-  }, [typedData]);
+  }, [typedData, dirtyTabs]);
 
   // Update unsaved changes state whenever form data changes
   useEffect(() => {
-    const hasChanges = checkForUnsavedChanges();
-    setHasUnsavedChanges(hasChanges);
-  }, [checkForUnsavedChanges]);
+    updateUnsavedChangesState();
+  }, [updateUnsavedChangesState]);
 
-  // Handle tab changes with unsaved changes warning
+  // Handle tab changes
   const handleTabChange = (newTab: string) => {
-    if (hasUnsavedChanges) {
-      setPendingTabChange(newTab);
-      setUnsavedChangesDialog({ open: true });
-    } else {
-      setActiveTab(newTab);
-    }
+    dispatch({ type: 'SET_ACTIVE_TAB', payload: newTab });
   };
 
-  const addPerson = (setter: React.Dispatch<React.SetStateAction<Person[]>>) => {
-    setter(prev => [
-      ...prev,
-      { id: Date.now().toString(), title: "", name: "", email: "", phone: "" }
-    ]);
+
+  const addPerson = (personType: 'decisionMakers' | 'influencers' | 'orderEntryTeam' | 'schedulingTeam' | 'patientIntakeTeam' | 'rcmTeam') => {
+    dispatch({
+      type: personType === 'decisionMakers' ? 'SET_DECISION_MAKERS' :
+            personType === 'influencers' ? 'SET_INFLUENCERS' :
+            personType === 'orderEntryTeam' ? 'SET_ORDER_ENTRY_TEAM' :
+            personType === 'schedulingTeam' ? 'SET_SCHEDULING_TEAM' :
+            personType === 'patientIntakeTeam' ? 'SET_PATIENT_INTAKE_TEAM' :
+            'SET_RCM_TEAM',
+      payload: [...state[personType], { id: Date.now().toString(), title: "", name: "", email: "", phone: "" }]
+    });
   };
 
   const updatePerson = (
-    setter: React.Dispatch<React.SetStateAction<Person[]>>,
+    personType: 'decisionMakers' | 'influencers' | 'orderEntryTeam' | 'schedulingTeam' | 'patientIntakeTeam' | 'rcmTeam',
     id: string,
     field: keyof Person,
     value: string
   ) => {
-    setter(prev => prev.map(p => (p.id === id ? { ...p, [field]: value } : p)));
+    dispatch({
+      type: personType === 'decisionMakers' ? 'SET_DECISION_MAKERS' :
+            personType === 'influencers' ? 'SET_INFLUENCERS' :
+            personType === 'orderEntryTeam' ? 'SET_ORDER_ENTRY_TEAM' :
+            personType === 'schedulingTeam' ? 'SET_SCHEDULING_TEAM' :
+            personType === 'patientIntakeTeam' ? 'SET_PATIENT_INTAKE_TEAM' :
+            'SET_RCM_TEAM',
+      payload: state[personType].map(p => (p.id === id ? { ...p, [field]: value } : p))
+    });
   };
 
   const removePerson = (
-    setter: React.Dispatch<React.SetStateAction<Person[]>>,
+    personType: 'decisionMakers' | 'influencers' | 'orderEntryTeam' | 'schedulingTeam' | 'patientIntakeTeam' | 'rcmTeam',
     id: string
   ) => {
-    setter(prev => prev.filter(p => p.id !== id));
+    dispatch({
+      type: personType === 'decisionMakers' ? 'SET_DECISION_MAKERS' :
+            personType === 'influencers' ? 'SET_INFLUENCERS' :
+            personType === 'orderEntryTeam' ? 'SET_ORDER_ENTRY_TEAM' :
+            personType === 'schedulingTeam' ? 'SET_SCHEDULING_TEAM' :
+            personType === 'patientIntakeTeam' ? 'SET_PATIENT_INTAKE_TEAM' :
+            'SET_RCM_TEAM',
+      payload: state[personType].filter(p => p.id !== id)
+    });
   };
 
   // Deletion confirmation handlers
-  const handleDeletePerson = (setter: React.Dispatch<React.SetStateAction<Person[]>>, id: string, personName: string) => {
-    setDeleteDialog({
-      open: true,
-      personId: id,
-      personName,
-      setter
+  const handleDeletePerson = (personType: 'decisionMakers' | 'influencers' | 'orderEntryTeam' | 'schedulingTeam' | 'patientIntakeTeam' | 'rcmTeam', id: string, personName: string) => {
+    dispatch({
+      type: 'SET_DELETE_DIALOG',
+      payload: {
+        open: true,
+        personId: id,
+        personName,
+        setter: personType
+      }
     });
   };
 
   const handleConfirmDelete = () => {
     if (deleteDialog.personId && deleteDialog.setter) {
-      // Directly remove the person from the array
-      deleteDialog.setter(prev => prev.filter(p => p.id !== deleteDialog.personId));
-      setDeleteDialog({ open: false });
+      removePerson(deleteDialog.setter as any, deleteDialog.personId);
+      dispatch({ type: 'SET_DELETE_DIALOG', payload: { open: false } });
     }
   };
 
-  // Handle unsaved changes dialog
-  const handleUnsavedChangesDialogContinue = () => {
-    setUnsavedChangesDialog({ open: false });
-    if (pendingTabChange) {
-      setActiveTab(pendingTabChange);
-      setPendingTabChange(null);
-    }
-  };
-
-  const handleUnsavedChangesDialogCancel = (open: boolean = false) => {
-    setUnsavedChangesDialog({ open });
-    if (!open) {
-      setPendingTabChange(null);
-    }
-  };
 
   // Real-time field validation
   const validateFieldRealTime = (fieldName: string, value: string, section: string) => {
     const result = validateField(fieldName, value, section);
 
-    setFieldValidations(prev => ({
-      ...prev,
-      [fieldName]: result.isValid ? null : result.error || null
-    }));
+    dispatch({
+      type: 'SET_FIELD_VALIDATIONS',
+      payload: {
+        ...fieldValidations,
+        [fieldName]: result.isValid ? null : result.error || null
+      }
+    });
   };
 
   // Save handlers (Steps 5, 6 & 8)
@@ -918,7 +1012,7 @@ export default function Launchpad() {
       });
 
       // Update form validation state
-      setFormValidation(validation);
+      dispatch({ type: 'SET_FORM_VALIDATION', payload: validation });
 
       if (!validation.isValid) {
         const errorCount = validation.errors.length;
@@ -934,7 +1028,7 @@ export default function Launchpad() {
       }
 
       // Clear any previous field validations
-      setFieldValidations({});
+      dispatch({ type: 'SET_FIELD_VALIDATIONS', payload: {} });
 
       const payload = mapAccountUIToApi({
         accountName,
@@ -969,15 +1063,28 @@ export default function Launchpad() {
       await updateAccountDetails.mutateAsync({ data: payload });
 
       // Clear validation states on success
-      setFormValidation({
-        isValid: true,
-        errors: [],
-        warnings: [],
-        hasErrors: false,
-        hasWarnings: false,
+      dispatch({
+        type: 'SET_FORM_VALIDATION',
+        payload: {
+          isValid: true,
+          errors: [],
+          warnings: [],
+          hasErrors: false,
+          hasWarnings: false,
+        }
       });
-      setFieldValidations({});
-      setHasUnsavedChanges(false);
+      dispatch({ type: 'SET_FIELD_VALIDATIONS', payload: {} });
+      dispatch({ type: 'SET_HAS_UNSAVED_CHANGES_LOCAL', payload: false });
+
+      // Clear dirty status for saved tab
+      dispatch({
+        type: 'SET_DIRTY_TABS',
+        payload: (() => {
+          const newSet = new Set(dirtyTabs);
+          newSet.delete("account");
+          return newSet;
+        })()
+      });
 
       toast({
         title: "Success",
@@ -996,7 +1103,7 @@ export default function Launchpad() {
       const validation = validateLocationsData(locations);
 
       // Update form validation state
-      setFormValidation(validation);
+      dispatch({ type: 'SET_FORM_VALIDATION', payload: validation });
 
       if (!validation.isValid) {
         const errorCount = validation.errors.length;
@@ -1011,12 +1118,16 @@ export default function Launchpad() {
       }
 
       // Clear any previous field validations
-      setFieldValidations({});
-      
+      dispatch({ type: 'SET_FIELD_VALIDATIONS', payload: {} });
+
       // Step 5: Chained locations → specialties flow
       const locationsPayload = mapLocationsUIToApi(locations);
       await updateLocations.mutateAsync({ locations: locationsPayload });
-      
+
+      // After successful save, move all locations to saved
+      dispatch({ type: 'SET_SAVED_LOCATIONS', payload: locations });
+      dispatch({ type: 'SET_UNSAVED_LOCATIONS', payload: [] });
+
       // Compute location code changes
       const codeChanges = computeLocationIdChanges(originalLocationsRef.current, locations);
       
@@ -1039,7 +1150,7 @@ export default function Launchpad() {
         await updateSpecialties.mutateAsync({ speciality_services: specialtiesPayload });
         
         // Update local specialties state to reflect the cleaned location_ids
-        setSpecialties(cleanedSpecialties);
+        dispatch({ type: 'SET_SPECIALTIES', payload: cleanedSpecialties });
       }
       
       // Step 9: Manual cache invalidation after chained operations complete
@@ -1048,15 +1159,31 @@ export default function Launchpad() {
       }
       
       // Clear validation states on success
-      setFormValidation({
-        isValid: true,
-        errors: [],
-        warnings: [],
-        hasErrors: false,
-        hasWarnings: false,
+      dispatch({
+        type: 'SET_FORM_VALIDATION',
+        payload: {
+          isValid: true,
+          errors: [],
+          warnings: [],
+          hasErrors: false,
+          hasWarnings: false,
+        }
       });
-      setFieldValidations({});
-      setHasUnsavedChanges(false);
+      dispatch({ type: 'SET_FIELD_VALIDATIONS', payload: {} });
+      dispatch({ type: 'SET_HAS_UNSAVED_CHANGES_LOCAL', payload: false });
+
+      // Clear dirty status for saved tabs
+      dispatch({
+        type: 'SET_DIRTY_TABS',
+        payload: (() => {
+          const newSet = new Set(dirtyTabs);
+          newSet.delete("locations");
+          if (codeChanges.size > 0 || hasRemovedLocations) {
+            newSet.delete("specialties");
+          }
+          return newSet;
+        })()
+      });
 
       toast({
         title: "Success",
@@ -1079,7 +1206,7 @@ export default function Launchpad() {
       const validation = validateSpecialtiesData(specialties, availableLocationCodes);
 
       // Update form validation state
-      setFormValidation(validation);
+      dispatch({ type: 'SET_FORM_VALIDATION', payload: validation });
 
       if (!validation.isValid) {
         const errorCount = validation.errors.length;
@@ -1094,7 +1221,7 @@ export default function Launchpad() {
       }
 
       // Clear any previous field validations
-      setFieldValidations({});
+      dispatch({ type: 'SET_FIELD_VALIDATIONS', payload: {} });
 
       const payload = mapSpecialtiesUIToApi(specialties);
       console.log('handleSaveSpecialties: Mapped payload for API:', payload);
@@ -1102,15 +1229,28 @@ export default function Launchpad() {
       await updateSpecialties.mutateAsync({ speciality_services: payload });
 
       // Clear validation states on success
-      setFormValidation({
-        isValid: true,
-        errors: [],
-        warnings: [],
-        hasErrors: false,
-        hasWarnings: false,
+      dispatch({
+        type: 'SET_FORM_VALIDATION',
+        payload: {
+          isValid: true,
+          errors: [],
+          warnings: [],
+          hasErrors: false,
+          hasWarnings: false,
+        }
       });
-      setFieldValidations({});
-      setHasUnsavedChanges(false);
+      dispatch({ type: 'SET_FIELD_VALIDATIONS', payload: {} });
+      dispatch({ type: 'SET_HAS_UNSAVED_CHANGES_LOCAL', payload: false });
+
+      // Clear dirty status for saved tab
+      dispatch({
+        type: 'SET_DIRTY_TABS',
+        payload: (() => {
+          const newSet = new Set(dirtyTabs);
+          newSet.delete("specialties");
+          return newSet;
+        })()
+      });
 
       toast({
         title: "Success",
@@ -1136,7 +1276,7 @@ export default function Launchpad() {
       const validation = validateInsuranceData(insurance);
 
       // Update form validation state
-      setFormValidation(validation);
+      dispatch({ type: 'SET_FORM_VALIDATION', payload: validation });
 
       if (!validation.isValid) {
         const errorCount = validation.errors.length;
@@ -1151,21 +1291,34 @@ export default function Launchpad() {
       }
 
       // Clear any previous field validations
-      setFieldValidations({});
+      dispatch({ type: 'SET_FIELD_VALIDATIONS', payload: {} });
 
       const payload = mapInsuranceUIToApi(insurance);
       await updateInsurance.mutateAsync({ insurance: payload });
 
       // Clear validation states on success
-      setFormValidation({
-        isValid: true,
-        errors: [],
-        warnings: [],
-        hasErrors: false,
-        hasWarnings: false,
+      dispatch({
+        type: 'SET_FORM_VALIDATION',
+        payload: {
+          isValid: true,
+          errors: [],
+          warnings: [],
+          hasErrors: false,
+          hasWarnings: false,
+        }
       });
-      setFieldValidations({});
-      setHasUnsavedChanges(false);
+      dispatch({ type: 'SET_FIELD_VALIDATIONS', payload: {} });
+      dispatch({ type: 'SET_HAS_UNSAVED_CHANGES_LOCAL', payload: false });
+
+      // Clear dirty status for saved tab
+      dispatch({
+        type: 'SET_DIRTY_TABS',
+        payload: (() => {
+          const newSet = new Set(dirtyTabs);
+          newSet.delete("insurance");
+          return newSet;
+        })()
+      });
 
       toast({
         title: "Success",
@@ -1341,11 +1494,11 @@ export default function Launchpad() {
                       headquartersAddress={headquartersAddress}
                       onChange={(field, value) => {
                         if (field === "accountName") {
-                          setAccountName(value);
+                          dispatch({ type: 'SET_ACCOUNT_NAME', payload: value });
                           validateFieldRealTime('accountName', value, 'overview');
                         }
-                        if (field === "websiteAddress") setWebsiteAddress(value);
-                        if (field === "headquartersAddress") setHeadquartersAddress(value);
+                        if (field === "websiteAddress") dispatch({ type: 'SET_WEBSITE_ADDRESS', payload: value });
+                        if (field === "headquartersAddress") dispatch({ type: 'SET_HEADQUARTERS_ADDRESS', payload: value });
                       }}
                       fieldErrors={fieldValidations}
                       errors={formatValidationErrors(formValidation.errors)}
@@ -1402,9 +1555,9 @@ export default function Launchpad() {
                   <CardContent className="px-5 py-4">
                     <DecisionMakersCard
                       decisionMakers={decisionMakers}
-                      onAdd={() => addPerson(setDecisionMakers)}
-                      onUpdate={(id, field, value) => updatePerson(setDecisionMakers, id, field, value)}
-                      onRemove={(id, personName) => handleDeletePerson(setDecisionMakers, id, personName)}
+                      onAdd={() => addPerson('decisionMakers')}
+                      onUpdate={(id, field, value) => updatePerson('decisionMakers', id, field, value)}
+                      onRemove={(id, personName) => handleDeletePerson('decisionMakers', id, personName)}
                       errors={formatValidationErrors(formValidation.errors)}
                       formErrors={formValidation.errors}
                       formWarnings={formValidation.warnings}
@@ -1462,9 +1615,9 @@ export default function Launchpad() {
                   <CardContent className="px-5 py-4">
                     <InfluencersCard
                       influencers={influencers}
-                      onAdd={() => addPerson(setInfluencers)}
-                      onUpdate={(id, field, value) => updatePerson(setInfluencers, id, field, value)}
-                      onRemove={(id, personName) => handleDeletePerson(setInfluencers, id, personName)}
+                      onAdd={() => addPerson('influencers')}
+                      onUpdate={(id, field, value) => updatePerson('influencers', id, field, value)}
+                      onRemove={(id, personName) => handleDeletePerson('influencers', id, personName)}
                       errors={formatValidationErrors(formValidation.errors)}
                       formErrors={formValidation.errors}
                       formWarnings={formValidation.warnings}
@@ -1519,8 +1672,8 @@ export default function Launchpad() {
                       schedulingStructure={schedulingStructure}
                       rcmStructure={rcmStructure}
                       onChange={(field, value) => {
-                        if (field === "schedulingStructure") setSchedulingStructure(value);
-                        if (field === "rcmStructure") setRcmStructure(value);
+                        if (field === "schedulingStructure") dispatch({ type: 'SET_SCHEDULING_STRUCTURE', payload: value });
+                        if (field === "rcmStructure") dispatch({ type: 'SET_RCM_STRUCTURE', payload: value });
                       }}
                     />
                   </CardContent>
@@ -1576,9 +1729,9 @@ export default function Launchpad() {
                   <TeamReportingSection
                     title="Order Entry Team Reporting"
                     team={orderEntryTeam}
-                    onAdd={() => addPerson(setOrderEntryTeam)}
-                    onUpdate={(id, field, value) => updatePerson(setOrderEntryTeam, id, field, value)}
-                    onRemove={(id, personName) => handleDeletePerson(setOrderEntryTeam, id, personName)}
+                    onAdd={() => addPerson('orderEntryTeam')}
+                    onUpdate={(id, field, value) => updatePerson('orderEntryTeam', id, field, value)}
+                    onRemove={(id, personName) => handleDeletePerson('orderEntryTeam', id, personName)}
                     formErrors={formValidation.errors}
                     formWarnings={formValidation.warnings}
                     errors={formatValidationErrors(formValidation.errors)}
@@ -1587,9 +1740,9 @@ export default function Launchpad() {
                   <TeamReportingSection
                     title="Scheduling Team Reporting"
                     team={schedulingTeam}
-                    onAdd={() => addPerson(setSchedulingTeam)}
-                    onUpdate={(id, field, value) => updatePerson(setSchedulingTeam, id, field, value)}
-                    onRemove={(id, personName) => handleDeletePerson(setSchedulingTeam, id, personName)}
+                    onAdd={() => addPerson('schedulingTeam')}
+                    onUpdate={(id, field, value) => updatePerson('schedulingTeam', id, field, value)}
+                    onRemove={(id, personName) => handleDeletePerson('schedulingTeam', id, personName)}
                     formErrors={formValidation.errors}
                     formWarnings={formValidation.warnings}
                     errors={formatValidationErrors(formValidation.errors)}
@@ -1598,9 +1751,9 @@ export default function Launchpad() {
                   <TeamReportingSection
                     title="Patient Intake Team Reporting"
                     team={patientIntakeTeam}
-                    onAdd={() => addPerson(setPatientIntakeTeam)}
-                    onUpdate={(id, field, value) => updatePerson(setPatientIntakeTeam, id, field, value)}
-                    onRemove={(id, personName) => handleDeletePerson(setPatientIntakeTeam, id, personName)}
+                    onAdd={() => addPerson('patientIntakeTeam')}
+                    onUpdate={(id, field, value) => updatePerson('patientIntakeTeam', id, field, value)}
+                    onRemove={(id, personName) => handleDeletePerson('patientIntakeTeam', id, personName)}
                     formErrors={formValidation.errors}
                     formWarnings={formValidation.warnings}
                     errors={formatValidationErrors(formValidation.errors)}
@@ -1609,9 +1762,9 @@ export default function Launchpad() {
                   <TeamReportingSection
                     title="RCM Team Reporting"
                     team={rcmTeam}
-                    onAdd={() => addPerson(setRcmTeam)}
-                    onUpdate={(id, field, value) => updatePerson(setRcmTeam, id, field, value)}
-                    onRemove={(id, personName) => handleDeletePerson(setRcmTeam, id, personName)}
+                    onAdd={() => addPerson('rcmTeam')}
+                    onUpdate={(id, field, value) => updatePerson('rcmTeam', id, field, value)}
+                    onRemove={(id, personName) => handleDeletePerson('rcmTeam', id, personName)}
                     formErrors={formValidation.errors}
                     formWarnings={formValidation.warnings}
                     errors={formatValidationErrors(formValidation.errors)}
@@ -1670,10 +1823,10 @@ export default function Launchpad() {
                     patientIntakeTeamSize={patientIntakeTeamSize}
                     rcmTeamSize={rcmTeamSize}
                     onChange={(field, value) => {
-                      if (field === "orderEntryTeamSize") setOrderEntryTeamSize(value);
-                      if (field === "schedulingTeamSize") setSchedulingTeamSize(value);
-                      if (field === "patientIntakeTeamSize") setPatientIntakeTeamSize(value);
-                      if (field === "rcmTeamSize") setRcmTeamSize(value);
+                      if (field === "orderEntryTeamSize") dispatch({ type: 'SET_ORDER_ENTRY_TEAM_SIZE', payload: value });
+                      if (field === "schedulingTeamSize") dispatch({ type: 'SET_SCHEDULING_TEAM_SIZE', payload: value });
+                      if (field === "patientIntakeTeamSize") dispatch({ type: 'SET_PATIENT_INTAKE_TEAM_SIZE', payload: value });
+                      if (field === "rcmTeamSize") dispatch({ type: 'SET_RCM_TEAM_SIZE', payload: value });
                     }}
                   />
                   </CardContent>
@@ -1723,7 +1876,7 @@ export default function Launchpad() {
                   <CardContent className="px-5 py-4">
                   <OpportunitySizingCard
                     opportunitySizing={opportunitySizing}
-                    onChange={(updates) => setOpportunitySizing(prev => ({ ...prev, ...updates }))}
+                    onChange={(updates) => dispatch({ type: 'SET_OPPORTUNITY_SIZING', payload: { ...opportunitySizing, ...updates } })}
                   />
                   </CardContent>
                 )}
@@ -1779,20 +1932,20 @@ export default function Launchpad() {
                     insuranceVerificationDetails={insuranceVerificationDetails}
                     additionalInfo={additionalInfo}
                     clinicalNotes={clinicalNotes}
-                    onAddEmrSystem={() => setEmrSystems(prev => [...prev, ""])}
-                    onUpdateEmrSystem={(index, value) => setEmrSystems(prev => prev.map((s, i) => (i === index ? value : s)))}
-                    onRemoveEmrSystem={(index) => setEmrSystems(prev => prev.filter((_, i) => i !== index))}
-                    onAddTelephonySystem={() => setTelephonySystems(prev => [...prev, ""])}
-                    onUpdateTelephonySystem={(index, value) => setTelephonySystems(prev => prev.map((s, i) => (i === index ? value : s)))}
-                    onRemoveTelephonySystem={(index) => setTelephonySystems(prev => prev.filter((_, i) => i !== index))}
-                    onAddSchedulingPhone={() => setSchedulingPhoneNumbers(prev => [...prev, ""])}
-                    onUpdateSchedulingPhone={(index, value) => setSchedulingPhoneNumbers(prev => prev.map((s, i) => (i === index ? value : s)))}
-                    onRemoveSchedulingPhone={(index) => setSchedulingPhoneNumbers(prev => prev.filter((_, i) => i !== index))}
+                    onAddEmrSystem={() => dispatch({ type: 'SET_EMR_SYSTEMS', payload: [...emrSystems, ""] })}
+                    onUpdateEmrSystem={(index, value) => dispatch({ type: 'SET_EMR_SYSTEMS', payload: emrSystems.map((s, i) => (i === index ? value : s)) })}
+                    onRemoveEmrSystem={(index) => dispatch({ type: 'SET_EMR_SYSTEMS', payload: emrSystems.filter((_, i) => i !== index) })}
+                    onAddTelephonySystem={() => dispatch({ type: 'SET_TELEPHONY_SYSTEMS', payload: [...telephonySystems, ""] })}
+                    onUpdateTelephonySystem={(index, value) => dispatch({ type: 'SET_TELEPHONY_SYSTEMS', payload: telephonySystems.map((s, i) => (i === index ? value : s)) })}
+                    onRemoveTelephonySystem={(index) => dispatch({ type: 'SET_TELEPHONY_SYSTEMS', payload: telephonySystems.filter((_, i) => i !== index) })}
+                    onAddSchedulingPhone={() => dispatch({ type: 'SET_SCHEDULING_PHONE_NUMBERS', payload: [...schedulingPhoneNumbers, ""] })}
+                    onUpdateSchedulingPhone={(index, value) => dispatch({ type: 'SET_SCHEDULING_PHONE_NUMBERS', payload: schedulingPhoneNumbers.map((s, i) => (i === index ? value : s)) })}
+                    onRemoveSchedulingPhone={(index) => dispatch({ type: 'SET_SCHEDULING_PHONE_NUMBERS', payload: schedulingPhoneNumbers.filter((_, i) => i !== index) })}
                     onChangeField={(field, value) => {
-                      if (field === "insuranceVerificationSystem") setInsuranceVerificationSystem(value);
-                      if (field === "insuranceVerificationDetails") setInsuranceVerificationDetails(value);
-                      if (field === "additionalInfo") setAdditionalInfo(value);
-                      if (field === "clinicalNotes") setClinicalNotes(value);
+                      if (field === "insuranceVerificationSystem") dispatch({ type: 'SET_INSURANCE_VERIFICATION_SYSTEM', payload: value });
+                      if (field === "insuranceVerificationDetails") dispatch({ type: 'SET_INSURANCE_VERIFICATION_DETAILS', payload: value });
+                      if (field === "additionalInfo") dispatch({ type: 'SET_ADDITIONAL_INFO', payload: value });
+                      if (field === "clinicalNotes") dispatch({ type: 'SET_CLINICAL_NOTES', payload: value });
                     }}
                     errors={formatValidationErrors(formValidation.errors)}
                     formErrors={formValidation.errors}
@@ -1812,7 +1965,7 @@ export default function Launchpad() {
                   onDelete={deleteAccountDocument.mutateAsync}
                   isUploading={uploadAccountDocument.isPending}
                   isDeleting={deleteAccountDocument.isPending}
-                  readOnly={!canWriteLaunchpad}
+                  readOnly={!canUploadLaunchpadDocuments()}
                 />
               </div>
 
@@ -1825,26 +1978,52 @@ export default function Launchpad() {
         <TabsContent value="locations">
           <LocationsModule
             locations={locations}
-            onAdd={() => setLocations(prev => [...prev, {
-              id: Date.now().toString(),
-              location_id: "",
-              name: "",
-              address_line1: "",
-              address_line2: null,
-              city: "",
-              state: "",
-              zip_code: "",
-              weekday_hours: "",
-              weekend_hours: "",
-              specialties_text: "",
-              services_text: "",
-              parking_directions: "",
-              is_active: true,
-            }])}
-            onUpdate={(id, updates) => setLocations(prev => prev.map(l => l.id === id ? { ...l, ...updates } : l))}
-            onRemove={(id) => setLocations(prev => prev.filter(l => l.id !== id))}
+            onAdd={() => {
+              const newLocation = {
+                id: Date.now().toString(),
+                location_id: "",
+                name: "",
+                address_line1: "",
+                address_line2: null,
+                city: "",
+                state: "",
+                zip_code: "",
+                weekday_hours: "09:00 - 17:00",
+                weekend_hours: "",
+                specialties_text: "",
+                services_text: "",
+                parking_directions: "",
+                is_active: true,
+                _isUnsaved: true,
+              };
+              dispatch({ type: 'SET_UNSAVED_LOCATIONS', payload: [...unsavedLocations, newLocation] });
+            }}
+            onUpdate={(id, updates) => {
+              // Check if it's an unsaved location first
+              dispatch({
+                type: 'SET_UNSAVED_LOCATIONS',
+                payload: unsavedLocations.map(l => l.id === id ? { ...l, ...updates } : l)
+              });
+
+              // Also update saved locations if it exists there
+              dispatch({
+                type: 'SET_SAVED_LOCATIONS',
+                payload: savedLocations.map(l => l.id === id ? { ...l, ...updates } : l)
+              });
+            }}
+            onRemove={(id) => {
+              dispatch({ type: 'SET_UNSAVED_LOCATIONS', payload: unsavedLocations.filter(l => l.id !== id) });
+              dispatch({ type: 'SET_SAVED_LOCATIONS', payload: savedLocations.filter(l => l.id !== id) });
+            }}
             onSave={handleSaveLocations}
             isSaving={updateLocations.isPending || updateSpecialties.isPending}
+            fieldErrors={(() => {
+              const errors: Record<string, ValidationError | null> = {};
+              formValidation.errors.forEach(error => {
+                errors[error.field] = error;
+              });
+              return errors;
+            })()}
           />
 
 
@@ -1857,7 +2036,7 @@ export default function Launchpad() {
               onDelete={deleteLocationsDocument.mutateAsync}
               isUploading={uploadLocationsDocument.isPending}
               isDeleting={deleteLocationsDocument.isPending}
-              readOnly={!canWriteLaunchpad}
+              readOnly={!canUploadLaunchpadDocuments()}
             />
           </div>
 
@@ -1868,13 +2047,13 @@ export default function Launchpad() {
         <TabsContent value="specialties">
           <SpecialtiesModule
             specialties={specialties}
-            locations={locations}
+            locations={savedLocations}
             locationOptions={locationOptions}
             unresolvedNotice={(id, codes) => {
               console.warn('Unresolved location codes for specialty', id, codes);
             }}
-            onSwitchTab={setActiveTab}
-            onAdd={() => setSpecialties(prev => [...prev, {
+            onSwitchTab={(tab) => dispatch({ type: 'SET_ACTIVE_TAB', payload: tab })}
+            onAdd={() => dispatch({ type: 'SET_SPECIALTIES', payload: [...specialties, {
               id: Date.now().toString(),
               specialty_name: "",
               location_names_text: "",
@@ -1902,11 +2081,18 @@ export default function Launchpad() {
               patient_faqs_source_name: undefined,
               patient_faqs_source_link: undefined,
               is_active: true,
-            }])}
-            onUpdate={(id, updates) => setSpecialties(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s))}
-            onRemove={(id) => setSpecialties(prev => prev.filter(s => s.id !== id))}
+            }] })}
+            onUpdate={(id, updates) => dispatch({ type: 'SET_SPECIALTIES', payload: specialties.map(s => s.id === id ? { ...s, ...updates } : s) })}
+            onRemove={(id) => dispatch({ type: 'SET_SPECIALTIES', payload: specialties.filter(s => s.id !== id) })}
             onSave={handleSaveSpecialties}
             isSaving={updateSpecialties.isPending}
+            fieldErrors={(() => {
+              const errors: Record<string, ValidationError | null> = {};
+              formValidation.errors.forEach(error => {
+                errors[error.field] = error;
+              });
+              return errors;
+            })()}
           />
 
           {/* Specialties Documents */}
@@ -1918,7 +2104,7 @@ export default function Launchpad() {
               onDelete={deleteSpecialtiesDocument.mutateAsync}
               isUploading={uploadSpecialtiesDocument.isPending}
               isDeleting={deleteSpecialtiesDocument.isPending}
-              readOnly={!canWriteLaunchpad}
+              readOnly={!canUploadLaunchpadDocuments()}
             />
           </div>
 
@@ -1971,7 +2157,10 @@ export default function Launchpad() {
             <CardContent className="p-4 space-y-4">
               <InsuranceModule
                 insurance={insurance}
-                onChange={(updates) => setInsurance(prev => ({ ...prev, ...updates }))}
+                onChange={(updates) => {
+                  hasUserInteractedWithInsurance.current = true;
+                  dispatch({ type: 'SET_INSURANCE', payload: { ...insurance, ...updates } });
+                }}
               />
             </CardContent>
           </Card>
@@ -1985,7 +2174,7 @@ export default function Launchpad() {
               onDelete={deleteInsuranceDocument.mutateAsync}
               isUploading={uploadInsuranceDocument.isPending}
               isDeleting={deleteInsuranceDocument.isPending}
-              readOnly={!canWriteLaunchpad}
+              readOnly={!canUploadLaunchpadDocuments()}
             />
           </div>
 
@@ -2006,7 +2195,7 @@ export default function Launchpad() {
       </Tabs>
 
       {/* Deletion Confirmation Dialog */}
-      <AlertDialog open={deleteDialog.open} onOpenChange={() => setDeleteDialog({ open: false })}>
+      <AlertDialog open={deleteDialog.open} onOpenChange={() => dispatch({ type: 'SET_DELETE_DIALOG', payload: { open: false } })}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
@@ -2027,28 +2216,7 @@ export default function Launchpad() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Unsaved Changes Warning Dialog */}
-      <AlertDialog open={unsavedChangesDialog.open} onOpenChange={handleUnsavedChangesDialogCancel}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
-            <AlertDialogDescription>
-              Unsaved changes in {getUnsavedChangesTabs().length === 1 ? 'tab' : 'tabs'}: <strong>{getUnsavedChangesTabs().join(", ")}</strong>. Switching tabs will keep your changes—they will not be lost. Please save before leaving launchpad page.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => handleUnsavedChangesDialogCancel(false)}>
-              Stay in Current Tab
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleUnsavedChangesDialogContinue}
-              className="bg-[#1C275E] hover:bg-[#233072]"
-            >
-              Continue Anyway
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+
     </div>
   );
 }

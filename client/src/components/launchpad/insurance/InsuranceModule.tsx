@@ -20,6 +20,11 @@ const getSelectedValue = (source: string | null | undefined): string => {
   return source || "";
 };
 
+// Helper function to check if an option is selected (handles null properly)
+const isOptionSelected = (currentValue: string | null | undefined, option: string): boolean => {
+  return currentValue === option && currentValue !== null;
+};
+
 export default function InsuranceModule({ insurance, onChange, readOnly: readOnlyProp }: InsuranceModuleProps) {
   const { canEditInsurance } = usePermissions();
   const readOnly = readOnlyProp ?? !canEditInsurance;
@@ -31,7 +36,7 @@ export default function InsuranceModule({ insurance, onChange, readOnly: readOnl
             <Label className="text-sm">Accepted Payers Source</Label>
             <div className="mt-2 flex flex-wrap gap-2">
               {["EMR", "Website", "RCM", "Other"].map((option) => {
-                const isSelected = getSelectedValue(insurance.accepted_payers_source) === option;
+                const isSelected = isOptionSelected(insurance.accepted_payers_source, option);
                 return (
                   <Button
                     key={option}
@@ -64,7 +69,7 @@ export default function InsuranceModule({ insurance, onChange, readOnly: readOnl
             <Label className="text-sm">Insurance Verification Source</Label>
             <div className="mt-2 flex flex-wrap gap-2">
               {["EMR", "RCM", "Other"].map((option) => {
-                const isSelected = getSelectedValue(insurance.insurance_verification_source) === option;
+                const isSelected = isOptionSelected(insurance.insurance_verification_source, option);
                 return (
                   <Button
                     key={option}
@@ -97,7 +102,7 @@ export default function InsuranceModule({ insurance, onChange, readOnly: readOnl
             <Label className="text-sm">Patient Copay Source</Label>
             <div className="mt-2 flex flex-wrap gap-2">
               {["EMR", "RCM", "Other"].map((option) => {
-                const isSelected = getSelectedValue(insurance.patient_copay_source) === option;
+                const isSelected = isOptionSelected(insurance.patient_copay_source, option);
                 return (
                   <Button
                     key={option}
