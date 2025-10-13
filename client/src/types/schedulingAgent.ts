@@ -166,8 +166,8 @@ export interface AppointmentSetupValues {
 export interface PatientEligibilityValues {
   patientTypes: PatientTypeFlags;
   referralRequirements: {
-    servicesRequiringReferrals: string;
-    insurancePlansRequiringReferrals: string;
+    servicesRequiringReferrals: string[];
+    insurancePlansRequiringReferrals: string[];
   };
 }
 
@@ -184,7 +184,7 @@ export interface SchedulingPoliciesValues {
 }
 
 export interface ProviderPreferencesValues {
-  providerBlackoutDates: string;
+  providerBlackoutDates: string[];
   establishedPatientsOnlyDays: string;
   customSchedulingRules: string;
 }

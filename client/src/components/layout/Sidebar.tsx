@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import { useNavigationBlocker } from "@/context/NavigationBlockerContext";
 import { Menu, X, Rocket, ChevronDown, Phone } from "lucide-react";
 import { NAVIGATION_ITEMS } from "@/lib/constants";
 import { filterNavItemsByRole, UserRole } from "@/lib/permissions";
@@ -40,6 +41,7 @@ export default function Sidebar({
   const location = useLocation();
   const navigate = useNavigate();
   const { user, userRole } = useAuth();
+  const { attemptNavigation } = useNavigationBlocker();
   const isMobile = useIsMobile();
   
   // Filter navigation items based on user role
@@ -77,11 +79,8 @@ export default function Sidebar({
   // Handle navigation
   const handleNavigation = (path: string) => {
     const orgId = user?.org_id;
-    if (orgId) {
-      navigate(`/${orgId}/${path}`);
-    } else {
-      navigate(path);
-    }
+    const fullPath = orgId ? `/${orgId}/${path}` : path;
+    attemptNavigation(fullPath);
     handleMobileMenuItemClick();
   };
 

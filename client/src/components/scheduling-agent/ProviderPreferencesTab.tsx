@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Users, Calendar, Settings, FileText, Save, Loader2 } from "lucide-react";
+import { Users, Calendar, Settings, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { usePermissions } from "@/context/AuthContext";
@@ -28,29 +28,24 @@ import type { ProviderPreferencesValues } from "@/types/schedulingAgent";
 export type ProviderPreferencesTabProps = {
   values: ProviderPreferencesValues;
   onChange: (values: ProviderPreferencesValues) => void;
-  onSave?: () => Promise<void>;
-  isSaving?: boolean;
   readOnly?: boolean;
 };
 
-const ProviderPreferencesTab = ({ values, onChange, onSave, isSaving = false, readOnly: readOnlyProp }: ProviderPreferencesTabProps) => {
+const ProviderPreferencesTab = ({ values, onChange, readOnly: readOnlyProp }: ProviderPreferencesTabProps) => {
   const { canEditSchedulingAgent } = usePermissions();
   const readOnly = readOnlyProp ?? !canEditSchedulingAgent;
 
   // Helper functions for working with provider preferences
-  const blackoutDatesArray = values.providerBlackoutDates
-    ? values.providerBlackoutDates.split('\n')
-    : [];
-  const schedulingRulesArray = values.customSchedulingRules
-    ? values.customSchedulingRules.split('\n')
-    : [];
+  const blackoutDatesArray = values.providerBlackoutDates;
+  // Preserve empty strings for UI display so new input fields can be rendered
+  const schedulingRulesArray = values.customSchedulingRules.split('\n');
 
   // Blackout dates management handlers
   const handleAddBlackoutDate = () => {
     const newDates = [...blackoutDatesArray, ""];
     onChange({
       ...values,
-      providerBlackoutDates: newDates.join('\n')
+      providerBlackoutDates: newDates
     });
   };
 
@@ -59,7 +54,7 @@ const ProviderPreferencesTab = ({ values, onChange, onSave, isSaving = false, re
     updated[index] = value;
     onChange({
       ...values,
-      providerBlackoutDates: updated.join('\n')
+      providerBlackoutDates: updated
     });
   };
 
@@ -90,7 +85,7 @@ const ProviderPreferencesTab = ({ values, onChange, onSave, isSaving = false, re
       const updated = blackoutDatesArray.filter((_, i) => i !== deleteDialog.index);
       onChange({
         ...values,
-        providerBlackoutDates: updated.join('\n')
+        providerBlackoutDates: updated
       });
     }
     setDeleteDialog({ open: false });
@@ -132,11 +127,6 @@ const ProviderPreferencesTab = ({ values, onChange, onSave, isSaving = false, re
     setRuleDeleteDialog({ open: false });
   };
 
-  // Save handler
-  const handleSave = async () => {
-    if (!onSave) return;
-    await onSave();
-  };
 
   return (
     <div className="space-y-6">
@@ -153,25 +143,6 @@ const ProviderPreferencesTab = ({ values, onChange, onSave, isSaving = false, re
                 <p className="text-gray-200 text-sm mt-1">Configure provider-specific scheduling rules</p>
               </div>
             </div>
-            {onSave && !readOnly && (
-              <Button
-                onClick={handleSave}
-                disabled={isSaving}
-                className="bg-white hover:bg-slate-400 active:bg-slate-500 text-[#1c275e] border-[#1c275e] px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Save
-                  </>
-                )}
-              </Button>
-            )}
           </div>
         </CardHeader>
         <CardContent className="p-6">

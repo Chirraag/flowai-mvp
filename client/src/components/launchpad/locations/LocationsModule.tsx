@@ -17,6 +17,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import type { ValidationError } from "@/lib/launchpad.utils";
 
 interface LocationsModuleProps {
   locations: OrgLocation[];
@@ -26,6 +27,7 @@ interface LocationsModuleProps {
   onSave?: () => void;
   isSaving?: boolean;
   readOnly?: boolean;
+  fieldErrors?: Record<string, ValidationError | null>;
 }
 
 export default function LocationsModule({
@@ -36,6 +38,7 @@ export default function LocationsModule({
   onSave,
   isSaving = false,
   readOnly: readOnlyProp,
+  fieldErrors = {},
 }: LocationsModuleProps) {
   const { canEditLocations } = usePermissions();
   const readOnly = readOnlyProp ?? !canEditLocations;
@@ -193,6 +196,7 @@ export default function LocationsModule({
                 isMinimized={minimizedCards[cardId]}
                 onToggleMinimize={() => toggleCardMinimize(cardId)}
                 readOnly={readOnly}
+                fieldErrors={fieldErrors}
               />
             </div>
           );

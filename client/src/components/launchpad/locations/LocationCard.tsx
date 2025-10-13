@@ -4,9 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { ValidationInput } from "@/components/ui/validation-components";
 import { usePermissions } from "@/context/AuthContext";
 import { OrgLocation } from "@/components/launchpad/types";
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import TimeRangePicker from "@/components/ui/time-range-picker";
+import type { ValidationError } from "@/lib/launchpad.utils";
 
 
 interface LocationCardProps {
@@ -17,6 +20,7 @@ interface LocationCardProps {
   isMinimized?: boolean;
   onToggleMinimize?: () => void;
   readOnly?: boolean;
+  fieldErrors?: Record<string, ValidationError | null>;
 }
 
 export default function LocationCard({
@@ -27,13 +31,19 @@ export default function LocationCard({
   isMinimized = false,
   onToggleMinimize,
   readOnly: readOnlyProp,
+  fieldErrors = {},
 }: LocationCardProps) {
   const { canEditLocations } = usePermissions();
   const readOnly = readOnlyProp ?? !canEditLocations;
 
   return (
-    <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]" data-location-card>
+    <Card className={`border ${location._isUnsaved ? 'border-orange-300 bg-orange-50' : 'border-slate-200/70 bg-white'} rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]`} data-location-card>
       <CardHeader className="cursor-pointer bg-[#eef2ff] text-[#1C275E] p-1.5 border-b border-slate-200 transition-colors hover:bg-[#e0e7ff]" onClick={onToggleMinimize}>
+        {location._isUnsaved && (
+          <div className="bg-orange-100 text-orange-800 text-xs px-2 py-1 text-center mb-2 rounded-md">
+            ⚠️ Unsaved - Please save to use in specialties
+          </div>
+        )}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 bg-[#F48024]/20 rounded-xl flex items-center justify-center">
@@ -89,23 +99,33 @@ export default function LocationCard({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <Label className="text-sm font-semibold text-black uppercase tracking-wide">Location Name</Label>
-                <Input
-                  className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
+                <ValidationInput
+                  className="mt-2"
                   placeholder="Enter location name"
                   value={location.name}
                   onChange={readOnly ? undefined : (e) => onChange({ name: e.target.value })}
                   readOnly={readOnly}
+                  error={fieldErrors[`locations[${index}].name`] || undefined}
+                  validationStatus={fieldErrors[`locations[${index}].name`] ? 'invalid' : (location.name.trim() ? 'valid' : 'neutral')}
+                  showValidationIcon={!readOnly}
+                  showErrorMessage={!readOnly}
+                  showSuggestion={!readOnly}
                 />
               </div>
 
               <div>
                 <Label className="text-sm font-semibold text-black uppercase tracking-wide">Location ID</Label>
-                <Input
-                  className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
+                <ValidationInput
+                  className="mt-2"
                   placeholder="External location ID (e.g., LOC001)"
                   value={location.location_id}
                   onChange={readOnly ? undefined : (e) => onChange({ location_id: e.target.value })}
                   readOnly={readOnly}
+                  error={fieldErrors[`locations[${index}].location_id`] || undefined}
+                  validationStatus={fieldErrors[`locations[${index}].location_id`] ? 'invalid' : (location.location_id.trim() ? 'valid' : 'neutral')}
+                  showValidationIcon={!readOnly}
+                  showErrorMessage={!readOnly}
+                  showSuggestion={!readOnly}
                 />
               </div>
             </div>
@@ -168,26 +188,21 @@ export default function LocationCard({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <Label className="text-sm font-semibold text-black uppercase tracking-wide">Weekday Hours</Label>
-                <Input
-                  className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
-                  placeholder="e.g., 8:00 AM - 5:00 PM"
-                  value={location.weekday_hours}
-                  onChange={readOnly ? undefined : (e) => onChange({ weekday_hours: e.target.value })}
-                  readOnly={readOnly}
-                />
-              </div>
-              <div>
-                <Label className="text-sm font-semibold text-black uppercase tracking-wide">Weekend Hours</Label>
-                <Input
-                  className="mt-2 h-10 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
-                  placeholder="e.g., 9:00 AM - 2:00 PM or Closed"
-                  value={location.weekend_hours}
-                  onChange={readOnly ? undefined : (e) => onChange({ weekend_hours: e.target.value })}
-                  readOnly={readOnly}
-                />
-              </div>
+              <TimeRangePicker
+                label="Weekday Hours"
+                value={location.weekday_hours}
+                onChange={(value) => onChange({ weekday_hours: value })}
+                readOnly={readOnly}
+                placeholder="Select weekday hours"
+              />
+              <TimeRangePicker
+                label="Weekend Hours"
+                value={location.weekend_hours}
+                onChange={(value) => onChange({ weekend_hours: value })}
+                readOnly={readOnly}
+                showToggleButton={true}
+                placeholder="Select weekend hours or mark as closed"
+              />
             </div>
 
             <div>

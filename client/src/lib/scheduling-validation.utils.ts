@@ -198,12 +198,11 @@ export function validateProviderPreferences(values: ProviderPreferencesValues): 
   const warnings: ValidationError[] = [];
 
   // Validate blackout dates format if provided
-  if (values.providerBlackoutDates && values.providerBlackoutDates.trim()) {
-    const dates = values.providerBlackoutDates.split('\n').filter(d => d.trim());
+  if (values.providerBlackoutDates && values.providerBlackoutDates.length > 0) {
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    
-    for (const date of dates) {
-      if (!dateRegex.test(date.trim())) {
+
+    for (const date of values.providerBlackoutDates) {
+      if (date && date.trim() && !dateRegex.test(date.trim())) {
         errors.push({
           field: 'providerBlackoutDates',
           message: `Invalid date format: "${date}". Expected YYYY-MM-DD format`,

@@ -48,6 +48,25 @@ const isValidPhoneNumber = (phone: string): boolean => {
   return digitsOnly.length === 10;
 };
 
+// Time range validation: expects format "HH:MM - HH:MM" and validates end > start
+const isValidTimeRange = (timeRange: string): boolean => {
+  if (!timeRange || timeRange.trim() === '') return true; // Empty is valid
+
+  const parts = timeRange.split(' - ');
+  if (parts.length !== 2) return false;
+
+  const [startTime, endTime] = parts.map(t => t.trim());
+
+  // Validate HH:MM format
+  const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
+  if (!timeRegex.test(startTime) || !timeRegex.test(endTime)) {
+    return false;
+  }
+
+  // Validate end time is after start time
+  return endTime > startTime;
+};
+
 const validatePerson = (
   person: { title: string; name: string; email: string; phone: string },
   prefix: string,
@@ -362,6 +381,32 @@ export const validateLocationsData = (locations: OrgLocation[]): ValidationResul
         });
       }
       locationCodes.add(location.location_id.trim());
+    }
+
+    // Validate weekday hours format and range
+    if (location.weekday_hours && location.weekday_hours.trim() !== '') {
+      if (!isValidTimeRange(location.weekday_hours)) {
+        errors.push({
+          field: `locations[${index}].weekday_hours`,
+          message: 'Invalid weekday hours format or time range',
+          severity: 'error',
+          section: 'locations',
+          suggestion: 'Please select valid start and end times (end must be after start)'
+        });
+      }
+    }
+
+    // Validate weekend hours format and range (can be empty for closed)
+    if (location.weekend_hours && location.weekend_hours.trim() !== '') {
+      if (!isValidTimeRange(location.weekend_hours)) {
+        errors.push({
+          field: `locations[${index}].weekend_hours`,
+          message: 'Invalid weekend hours format or time range',
+          severity: 'error',
+          section: 'locations',
+          suggestion: 'Please select valid start and end times (end must be after start) or mark as closed'
+        });
+      }
     }
   });
 

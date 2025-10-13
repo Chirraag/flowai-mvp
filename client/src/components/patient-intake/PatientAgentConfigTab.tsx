@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Bot, Save, Loader2 } from "lucide-react";
+import { Bot } from "lucide-react";
 
 /**
  * PatientAgentConfigTab
@@ -19,8 +19,6 @@ export type PatientAgentConfigTabProps = {
     agentInstructions: string;
     humanTransferCriteria: string;
   };
-  onSave?: (values: any) => Promise<void>;
-  isSaving?: boolean;
   readOnly?: boolean;
 };
 
@@ -41,7 +39,7 @@ export type PatientAgentConfigTabHandle = {
   validate: () => { valid: boolean; errors: string[] };
 };
 
-const PatientAgentConfigTab = forwardRef<PatientAgentConfigTabHandle, PatientAgentConfigTabProps>(({ initialData, onSave, isSaving = false, readOnly = false }, ref) => {
+const PatientAgentConfigTab = forwardRef<PatientAgentConfigTabHandle, PatientAgentConfigTabProps>(({ initialData, readOnly = false }, ref) => {
   // Agent Configuration state (default values, overridden by initialData if provided)
   const [agentName, setAgentName] = useState("Patient Intake Agent");
   const [language, setLanguage] = useState("en-US");
@@ -60,22 +58,6 @@ const PatientAgentConfigTab = forwardRef<PatientAgentConfigTabHandle, PatientAge
     }
   }, [initialData]);
 
-  // Save handler
-  const handleSave = async () => {
-    if (!onSave) return;
-
-    const currentRef = (ref as React.MutableRefObject<PatientAgentConfigTabHandle | null>).current;
-    const validation = currentRef?.validate();
-    if (validation && !validation.valid) {
-      // Validation errors will be handled by the parent
-      return;
-    }
-
-    const currentValues = currentRef?.getValues();
-    if (currentValues) {
-      await onSave(currentValues);
-    }
-  };
 
   // Expose values and validation to parent page
   useImperativeHandle(ref, () => ({
@@ -112,25 +94,6 @@ const PatientAgentConfigTab = forwardRef<PatientAgentConfigTabHandle, PatientAge
                 <p className="text-gray-200 text-sm mt-1">Configure the basic settings and instructions for the patient intake agent</p>
               </div>
             </div>
-            {onSave && (
-              <Button
-                onClick={handleSave}
-                disabled={isSaving}
-                className="bg-white hover:bg-slate-400 active:bg-slate-500 text-[#1c275e] border-[#1c275e] px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Save
-                  </>
-                )}
-              </Button>
-            )}
           </div>
         </CardHeader>
         <CardContent className="p-6">

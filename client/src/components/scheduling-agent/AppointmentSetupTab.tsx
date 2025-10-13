@@ -2,10 +2,9 @@ import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { IOSSwitch } from "@/components/ui/ios-switch";
 import { Button } from "@/components/ui/button";
-import { Calendar, Users, Save, Loader2 } from "lucide-react";
+import { Calendar, Users } from "lucide-react";
 import { usePermissions } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import type { AppointmentSetupValues } from "@/types/schedulingAgent";
@@ -19,21 +18,14 @@ import type { AppointmentSetupValues } from "@/types/schedulingAgent";
 export type AppointmentSetupTabProps = {
   values: AppointmentSetupValues;
   onChange: (values: AppointmentSetupValues) => void;
-  onSave?: () => Promise<void>;
-  isSaving?: boolean;
   readOnly?: boolean;
 };
 
-const AppointmentSetupTab = ({ values, onChange, onSave, isSaving = false, readOnly: readOnlyProp }: AppointmentSetupTabProps) => {
+const AppointmentSetupTab = ({ values, onChange, readOnly: readOnlyProp }: AppointmentSetupTabProps) => {
   const { canEditSchedulingAgent } = usePermissions();
   const readOnly = readOnlyProp ?? !canEditSchedulingAgent;
   const { toast } = useToast();
 
-  // Save handler - validation is now handled at page level
-  const handleSave = async () => {
-    if (!onSave) return;
-    await onSave();
-  };
 
   return (
     <div className="space-y-6">
@@ -50,25 +42,6 @@ const AppointmentSetupTab = ({ values, onChange, onSave, isSaving = false, readO
                 <p className="text-gray-200 text-sm mt-1">Configure the types of appointments available for booking</p>
               </div>
             </div>
-            {onSave && !readOnly && (
-                <Button
-                  onClick={handleSave}
-                  disabled={isSaving}
-                  className="bg-white hover:bg-slate-400 active:bg-slate-500 text-[#1c275e] border-[#1c275e] px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="mr-2 h-4 w-4" />
-                      Save
-                    </>
-                  )}
-                </Button>
-            )}
           </div>
         </CardHeader>
         <CardContent className="p-6">
@@ -158,43 +131,55 @@ const AppointmentSetupTab = ({ values, onChange, onSave, isSaving = false, readO
               {/* Row 1: New Patient and Follow-up Appointments */}
               <div className="space-y-2">
                 <Label htmlFor="new-patient-duration" className="text-sm font-semibold text-[#1c275e]">New Patient Appointments</Label>
-                <Select value={values.newPatientDuration} onValueChange={(value) => {
-                  if (!readOnly) {
-                    onChange({
-                      ...values,
-                      newPatientDuration: value
-                    });
-                  }
-                }} disabled={readOnly}>
-                  <SelectTrigger className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]">
-                    <SelectValue placeholder="Select duration" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="30">30 minutes</SelectItem>
-                    <SelectItem value="45">45 minutes</SelectItem>
-                    <SelectItem value="60">60 minutes</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="relative">
+                  <Input
+                    id="new-patient-duration"
+                    type="text"
+                    placeholder="30"
+                    value={values.newPatientDuration}
+                    onChange={(e) => {
+                      if (!readOnly) {
+                        // Only allow numeric input
+                        const numericValue = e.target.value.replace(/[^0-9]/g, '');
+                        onChange({
+                          ...values,
+                          newPatientDuration: numericValue
+                        });
+                      }
+                    }}
+                    readOnly={readOnly}
+                    className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024] pr-16"
+                  />
+                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500 pointer-events-none">
+                    minutes
+                  </span>
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="follow-up-duration" className="text-sm font-semibold text-[#1c275e]">Follow-up Appointments</Label>
-                <Select value={values.followUpDuration} onValueChange={(value) => {
-                  if (!readOnly) {
-                    onChange({
-                      ...values,
-                      followUpDuration: value
-                    });
-                  }
-                }} disabled={readOnly}>
-                  <SelectTrigger className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]">
-                    <SelectValue placeholder="Select duration" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="15">15 minutes</SelectItem>
-                    <SelectItem value="20">20 minutes</SelectItem>
-                    <SelectItem value="30">30 minutes</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="relative">
+                  <Input
+                    id="follow-up-duration"
+                    type="text"
+                    placeholder="15"
+                    value={values.followUpDuration}
+                    onChange={(e) => {
+                      if (!readOnly) {
+                        // Only allow numeric input
+                        const numericValue = e.target.value.replace(/[^0-9]/g, '');
+                        onChange({
+                          ...values,
+                          followUpDuration: numericValue
+                        });
+                      }
+                    }}
+                    readOnly={readOnly}
+                    className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024] pr-16"
+                  />
+                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500 pointer-events-none">
+                    minutes
+                  </span>
+                </div>
               </div>
 
               {/* Row 2: Procedure-Specific and Duration */}
@@ -218,23 +203,29 @@ const AppointmentSetupTab = ({ values, onChange, onSave, isSaving = false, readO
               </div>
               <div className="space-y-2">
                 <Label htmlFor="procedure-duration" className="text-sm font-semibold text-[#1c275e]">Duration</Label>
-                <Select value={values.procedureDuration} onValueChange={(value) => {
-                  if (!readOnly) {
-                    onChange({
-                      ...values,
-                      procedureDuration: value
-                    });
-                  }
-                }} disabled={readOnly}>
-                  <SelectTrigger className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024]">
-                    <SelectValue placeholder="Select duration" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="30">30 minutes</SelectItem>
-                    <SelectItem value="60">60 minutes</SelectItem>
-                    <SelectItem value="90">90 minutes</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="relative">
+                  <Input
+                    id="procedure-duration"
+                    type="text"
+                    placeholder="60"
+                    value={values.procedureDuration}
+                    onChange={(e) => {
+                      if (!readOnly) {
+                        // Only allow numeric input
+                        const numericValue = e.target.value.replace(/[^0-9]/g, '');
+                        onChange({
+                          ...values,
+                          procedureDuration: numericValue
+                        });
+                      }
+                    }}
+                    readOnly={readOnly}
+                    className="h-11 border-gray-300 focus:border-[#f48024] focus:ring-[#f48024] pr-16"
+                  />
+                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500 pointer-events-none">
+                    minutes
+                  </span>
+                </div>
               </div>
             </div>
           </div>

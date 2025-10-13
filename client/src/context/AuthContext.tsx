@@ -16,7 +16,8 @@ import {
   canAddMembers,
   canChangeRoles,
   canDeleteMembers,
-  canCreateOrganizations
+  canCreateOrganizations,
+  canUploadLaunchpadDocuments
 } from "@/lib/permissions";
 import type { QueryFilters } from "@tanstack/react-query";
 
@@ -67,6 +68,8 @@ interface AuthContextType {
   canDeleteMembers: () => boolean;
   // Organization management permissions
   canCreateOrganizations: () => boolean;
+  // Document management permissions
+  canUploadLaunchpadDocuments: () => boolean;
   // Force password reset state
   forcePasswordReset: boolean | null;
 }
@@ -544,6 +547,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     canDeleteMembers: canDeleteMembersCheck,
     // Organization management permissions
     canCreateOrganizations: () => !!(userRole && canCreateOrganizations(userRole)),
+    // Document management permissions
+    canUploadLaunchpadDocuments: () => !!(userRole && canUploadLaunchpadDocuments(userRole)),
     // Force password reset state
     forcePasswordReset,
   };

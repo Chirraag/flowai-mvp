@@ -1,48 +1,48 @@
 // FlowAI RBAC Permission System
 // Centralized permission logic that matches backend RBAC matrix
 
-export type UserRole = "super-admin" | "customer-admin" | "core-team-member" | "observer" | "member" | "analytics-user";
+export type UserRole = "super-admin" | "customer-admin" | "observer" | "fde" | "account-executive" | "customer-user";
 
 const FEATURE_PERMISSIONS = {
   launchpad: {
     "super-admin": { read: true, write: true },
-    "customer-admin": { read: true, write: true },
-    "member": { read: true, write: true },
-    "core-team-member": { read: true, write: false },
+    "customer-admin": { read: true, write: false },
+    "fde": { read: true, write: true },
+    "account-executive": { read: true, write: true },
     "observer": { read: true, write: false },
-    "analytics-user": { read: false, write: false },
+    "customer-user": { read: false, write: false },
   },
   "ai-agents": {
     "super-admin": { read: true, write: true },
-    "customer-admin": { read: true, write: true },
-    "member": { read: true, write: true },
-    "core-team-member": { read: true, write: false },
+    "customer-admin": { read: true, write: false },
+    "fde": { read: true, write: true },
+    "account-executive": { read: true, write: true },
     "observer": { read: true, write: false },
-    "analytics-user": { read: false, write: false },
+    "customer-user": { read: false, write: false },
   },
   analytics: {
     "super-admin": { read: true, write: true },
-    "customer-admin": { read: true, write: true },
-    "member": { read: true, write: true },
-    "core-team-member": { read: false, write: false },
+    "customer-admin": { read: true, write: false },
+    "fde": { read: true, write: true },
+    "account-executive": { read: true, write: true },
     "observer": { read: true, write: false },
-    "analytics-user": { read: true, write: false },
+    "customer-user": { read: true, write: false },
   },
   members: {
     "super-admin": { read: true, write: true },
     "customer-admin": { read: true, write: true }, // can add members
-    "member": { read: false, write: false },
-    "core-team-member": { read: false, write: false },
+    "fde": { read: false, write: false },
+    "account-executive": { read: false, write: false },
     "observer": { read: false, write: false },
-    "analytics-user": { read: false, write: false },
+    "customer-user": { read: false, write: false },
   },
   organizations: {
     "super-admin": { read: true, write: true }, // can create/manage organizations
     "customer-admin": { read: true, write: false }, // can view organizations but not create
-    "member": { read: true, write: false }, // can view organizations but not create
-    "core-team-member": { read: false, write: false }, // no organization access
+    "fde": { read: true, write: false }, // can view organizations but not create
+    "account-executive": { read: true, write: false }, // can view organizations but not create
     "observer": { read: true, write: false }, // can view organizations but not create
-    "analytics-user": { read: false, write: false }, // no organization access
+    "customer-user": { read: false, write: false }, // no organization access
   },
 } as const;
 
@@ -100,6 +100,11 @@ export const canDeleteMembers = (role: UserRole): boolean => {
   return role === "super-admin";
 };
 
+// Document management specific permissions
+export const canUploadLaunchpadDocuments = (role: UserRole): boolean => {
+  return role === "super-admin" || role === "fde" || role === "account-executive";
+};
+
 // Organization management specific permissions
 export const canCreateOrganizations = (role: UserRole): boolean => {
   return role === "super-admin";
@@ -108,12 +113,12 @@ export const canCreateOrganizations = (role: UserRole): boolean => {
 // Role-based default page routing
 export const getDefaultPageForRole = (role: UserRole): string => {
   switch (role) {
-    case "analytics-user":
+    case "customer-user":
       return "analytics";
     case "super-admin":
     case "customer-admin":
-    case "member":
-    case "core-team-member":
+    case "fde":
+    case "account-executive":
     case "observer":
     default:
       return "launchpad";

@@ -19,17 +19,16 @@ import type { Member, AddMemberRequest } from "@/types/members";
 
 const ROLE_OPTIONS = [
   "super-admin",
-  "observer", 
-  "member",
+  "observer",
+  "fde",
+  "account-executive",
   "customer-admin",
-  "core-team-member",
-  "analytics-user"
+  "customer-user"
 ];
 
 const CUSTOMER_ADMIN_ALLOWED_ROLES = [
   "customer-admin",
-  "core-team-member", 
-  "analytics-user"
+  "customer-user"
 ];
 
 export default function MembersPage() {
@@ -126,8 +125,9 @@ export default function MembersPage() {
     }
 
     try {
+      console.log('Payload being sent:', JSON.stringify(formData, null, 2));
       await addMemberMutation.mutateAsync(formData);
-      
+
       toast({
         title: "Success",
         description: "Member added successfully. Welcome email has been sent with login credentials.",

@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { IOSSwitch } from "@/components/ui/ios-switch";
-import { Send, FileSignature, Save, Loader2 } from "lucide-react";
+import { Send, FileSignature } from "lucide-react";
 import { usePermissions } from "@/context/AuthContext";
 
 /**
@@ -29,20 +29,13 @@ export type DeliveryMethodsTabProps = {
     };
   };
   onChange: (values: DeliveryMethodsTabProps['values']) => void;
-  onSave?: () => Promise<void>;
-  isSaving?: boolean;
   readOnly?: boolean;
 };
 
-const DeliveryMethodsTab = ({ values, onChange, onSave, isSaving = false, readOnly: readOnlyProp }: DeliveryMethodsTabProps) => {
+const DeliveryMethodsTab = ({ values, onChange, readOnly: readOnlyProp }: DeliveryMethodsTabProps) => {
   const { canEditPatientIntakeAgent } = usePermissions();
   const readOnly = readOnlyProp ?? !canEditPatientIntakeAgent;
 
-  // Save handler
-  const handleSave = async () => {
-    if (!onSave) return;
-    await onSave();
-  };
 
   return (
     <div className="space-y-6">
@@ -59,25 +52,6 @@ const DeliveryMethodsTab = ({ values, onChange, onSave, isSaving = false, readOn
                 <p className="text-gray-200 text-sm mt-1">Configure how intake forms are delivered to patients</p>
               </div>
             </div>
-            {onSave && !readOnly && (
-              <Button
-                onClick={handleSave}
-                disabled={isSaving}
-                className="bg-white hover:bg-slate-400 active:bg-slate-500 text-[#1c275e] border-[#1c275e] px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Save
-                  </>
-                )}
-              </Button>
-            )}
           </div>
         </CardHeader>
         <CardContent className="p-6">

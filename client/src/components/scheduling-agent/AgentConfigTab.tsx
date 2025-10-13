@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Bot, Save, Loader2 } from "lucide-react";
+import { Bot } from "lucide-react";
 import type { AgentConfigValues } from "@/types/schedulingAgent";
 
 /**
@@ -13,8 +13,6 @@ import type { AgentConfigValues } from "@/types/schedulingAgent";
  */
 export type AgentConfigTabProps = {
   initialValues?: AgentConfigValues;
-  onSave?: (values: AgentConfigValues) => Promise<void>;
-  isSaving?: boolean;
   readOnly?: boolean;
 };
 
@@ -29,7 +27,7 @@ export type AgentConfigTabHandle = {
   validate: () => { valid: boolean; errors: string[] };
 };
 
-const AgentConfigTab = forwardRef<AgentConfigTabHandle, AgentConfigTabProps>(({ initialValues, onSave, isSaving = false, readOnly = false }, ref) => {
+const AgentConfigTab = forwardRef<AgentConfigTabHandle, AgentConfigTabProps>(({ initialValues, readOnly = false }, ref) => {
   // Local state synced with initialValues
   const [agentName, setAgentName] = useState("Flow Scheduling Agent");
   const [language, setLanguage] = useState("en-US");
@@ -50,25 +48,6 @@ const AgentConfigTab = forwardRef<AgentConfigTabHandle, AgentConfigTabProps>(({ 
   }, [initialValues]);
 
 
-  // Save handler
-  const handleSave = async () => {
-    if (!onSave) return;
-
-    const currentValues = {
-      agentName,
-      language,
-      voice,
-      agentInstructions,
-      humanTransferCriteria,
-    };
-
-    try {
-      await onSave(currentValues);
-      
-    } catch (error) {
-      console.error('Failed to save agent config:', error);
-    }
-  };
 
   // Expose values and validation to parent page
   useImperativeHandle(ref, () => ({
@@ -105,25 +84,6 @@ const AgentConfigTab = forwardRef<AgentConfigTabHandle, AgentConfigTabProps>(({ 
                 <p className="text-gray-200 text-sm mt-1">Configure the basic settings and instructions for the scheduling agent</p>
               </div>
             </div>
-            {onSave && !readOnly && (
-              <Button
-                onClick={handleSave}
-                disabled={isSaving}
-                className="bg-white hover:bg-slate-400 active:bg-slate-500 text-[#1c275e] border-[#1c275e] px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Save
-                  </>
-                )}
-              </Button>
-            )}
           </div>
         </CardHeader>
         <CardContent className="p-6">

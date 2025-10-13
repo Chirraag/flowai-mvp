@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useNavigationBlocker } from '@/context/NavigationBlockerContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -37,6 +38,7 @@ export default function OrganizationSwitcher({
 }: OrganizationSwitcherProps) {
   const { user, switchOrganization, canCreateOrganizations } = useAuth();
   const { toast } = useToast();
+  const { navigateWithoutBlock } = useNavigationBlocker();
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
@@ -102,7 +104,7 @@ export default function OrganizationSwitcher({
       const pathParts = currentPath.split('/');
       const pageRoute = pathParts.slice(2).join('/') || 'launchpad';
 
-      navigate(`/${orgId}/${pageRoute}`);
+      navigateWithoutBlock(`/${orgId}/${pageRoute}`);
 
       toast({
         title: "Organization Switched",
@@ -182,7 +184,7 @@ export default function OrganizationSwitcher({
           await switchOrganization(response.organisation.id);
 
           // Navigate to the new organization's launchpad
-          navigate(`/${response.organisation.id}/launchpad`);
+          navigateWithoutBlock(`/${response.organisation.id}/launchpad`);
 
           // Success toast with organization name from response
           toast({

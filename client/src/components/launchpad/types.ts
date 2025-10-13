@@ -30,6 +30,7 @@ export type OrgLocation = {
   services_text?: string; // Free text services
   parking_directions: string;
   is_active: boolean;
+  _isUnsaved?: boolean; // Internal flag to mark unsaved locations
 };
 
 export type SpecialtyServiceEntry = {

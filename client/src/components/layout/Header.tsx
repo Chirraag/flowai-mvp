@@ -54,17 +54,9 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
       return "Launchpad";
     }
 
-    // AI Agents pages
-    if (location.includes("ai-agents/scheduling")) {
-      return "Scheduling Agent";
-    }
-
-    if (location.includes("ai-agents/patient-intake")) {
-      return "Patient Intake Agent";
-    }
-
-    if (location.includes("ai-agents/customer-support")) {
-      return "Customer Support Agent";
+    // AI Agents pages - show "AI Agents" for all agent pages
+    if (location.includes("ai-agents/")) {
+      return "AI Agents";
     }
 
     if (location.includes("analytics")) {

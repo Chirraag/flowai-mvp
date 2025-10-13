@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Shield, FileCheck, Save, Loader2 } from "lucide-react";
+import { Shield, FileCheck } from "lucide-react";
 import { usePermissions } from "@/context/AuthContext";
 
 /**
@@ -31,20 +31,13 @@ export type FieldContentRulesTabProps = {
     };
   };
   onChange: (values: FieldContentRulesTabProps['values']) => void;
-  onSave?: () => Promise<void>;
-  isSaving?: boolean;
   readOnly?: boolean;
 };
 
-const FieldContentRulesTab = ({ values, onChange, onSave, isSaving = false, readOnly: readOnlyProp }: FieldContentRulesTabProps) => {
+const FieldContentRulesTab = ({ values, onChange, readOnly: readOnlyProp }: FieldContentRulesTabProps) => {
   const { canEditPatientIntakeAgent } = usePermissions();
   const readOnly = readOnlyProp ?? !canEditPatientIntakeAgent;
 
-  // Save handler
-  const handleSave = async () => {
-    if (!onSave) return;
-    await onSave();
-  };
 
   return (
     <div className="space-y-6">
@@ -61,25 +54,6 @@ const FieldContentRulesTab = ({ values, onChange, onSave, isSaving = false, read
                 <p className="text-gray-200 text-sm mt-1">Configure field requirements for intake forms</p>
               </div>
             </div>
-            {onSave && !readOnly && (
-              <Button
-                onClick={handleSave}
-                disabled={isSaving}
-                className="bg-white hover:bg-slate-400 active:bg-slate-500 text-[#1c275e] border-[#1c275e] px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Save
-                  </>
-                )}
-              </Button>
-            )}
           </div>
         </CardHeader>
         <CardContent className="p-6">
