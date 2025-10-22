@@ -44,6 +44,7 @@
     "@reactflow/minimap": "^11.7.14",
     "@reactflow/node-resizer": "^2.2.14",
     "@tanstack/react-query": "^5.76.2",
+    "@tremor/react": "^3.18.7",
     "@types/js-cookie": "^3.0.6",
     "@xyflow/react": "^12.8.1",
     "chart.js": "^4.5.0",

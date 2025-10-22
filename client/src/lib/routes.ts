@@ -102,8 +102,8 @@ export const routes: RouteObject[] = [
             },
             {
                 path: "analytics",
-                element: React.createElement(() => 
-                    React.createElement(ProtectedRoute, { 
+                element: React.createElement(() =>
+                    React.createElement(ProtectedRoute, {
                         requiredPage: "analytics",
                         children: React.createElement(AnalyticsAgent)
                     })
