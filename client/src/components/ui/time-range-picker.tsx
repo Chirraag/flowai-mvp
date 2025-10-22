@@ -38,16 +38,34 @@ export default function TimeRangePicker({
         setIsClosed(false); // Has hours = Open
       } else {
         // Handle legacy formats or malformed data
-        setStartTime("");
-        setEndTime("");
-        setIsClosed(true); // No valid hours = Closed
+        // For weekday hours (no toggle button), keep field enabled with defaults
+        if (!showToggleButton) {
+          // Weekday hours should never be "closed" - provide defaults
+          setStartTime("09:00");
+          setEndTime("17:00");
+          setIsClosed(false); // Always keep enabled for weekday hours
+        } else {
+          // Weekend hours can be closed
+          setStartTime("");
+          setEndTime("");
+          setIsClosed(true); // No valid hours = Closed
+        }
       }
     } else {
-      setStartTime("");
-      setEndTime("");
-      setIsClosed(true); // Empty value = Closed
+      // Empty value - handle based on toggle button availability
+      if (!showToggleButton) {
+        // Weekday hours: provide defaults and keep enabled
+        setStartTime("09:00");
+        setEndTime("17:00");
+        setIsClosed(false);
+      } else {
+        // Weekend hours: can be closed
+        setStartTime("");
+        setEndTime("");
+        setIsClosed(true); // Empty value = Closed
+      }
     }
-  }, [value]);
+  }, [value, showToggleButton]);
 
   // Validate and format time range
   const validateAndFormat = (start: string, end: string): { isValid: boolean; formattedValue: string; error: string } => {

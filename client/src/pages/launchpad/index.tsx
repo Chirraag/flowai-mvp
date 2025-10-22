@@ -825,7 +825,7 @@ export default function Launchpad() {
         city: loc.city ?? "",
         state: loc.state ?? "",
         zip_code: loc.zip_code ?? "",
-        weekday_hours: loc.weekday_hours ?? "",
+        weekday_hours: loc.weekday_hours ?? "09:00 - 17:00",
         weekend_hours: loc.weekend_hours ?? "",
         specialties_text: "",
         services_text: "",
