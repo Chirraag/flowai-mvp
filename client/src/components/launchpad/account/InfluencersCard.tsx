@@ -30,7 +30,7 @@ interface InfluencersCardProps {
   readOnly?: boolean;
 }
 
-export default function InfluencersCard({
+function InfluencersCard({
   influencers,
   onAdd,
   onUpdate,
@@ -255,4 +255,4 @@ export default function InfluencersCard({
   );
 }
 
-
+export default React.memo(InfluencersCard);

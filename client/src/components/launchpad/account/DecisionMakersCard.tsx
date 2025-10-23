@@ -30,7 +30,7 @@ interface DecisionMakersCardProps {
   readOnly?: boolean;
 }
 
-export default function DecisionMakersCard({
+function DecisionMakersCard({
   decisionMakers,
   onAdd,
   onUpdate,
@@ -255,4 +255,4 @@ export default function DecisionMakersCard({
   );
 }
 
-
+export default React.memo(DecisionMakersCard);

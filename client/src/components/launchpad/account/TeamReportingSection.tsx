@@ -30,7 +30,7 @@ interface TeamReportingSectionProps {
   readOnly?: boolean;
 }
 
-export default function TeamReportingSection({
+function TeamReportingSection({
   title,
   team,
   onAdd,
@@ -267,4 +267,4 @@ export default function TeamReportingSection({
   );
 }
 
-
+export default React.memo(TeamReportingSection);

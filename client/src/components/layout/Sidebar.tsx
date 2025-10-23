@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigationBlocker } from "@/context/NavigationBlockerContext";
-import { Menu, X, Rocket, ChevronDown, Phone } from "lucide-react";
+import { Menu, X, Rocket, ChevronDown, ChevronLeft, ChevronRight, Phone } from "lucide-react";
 import { NAVIGATION_ITEMS } from "@/lib/constants";
 import { filterNavItemsByRole, UserRole } from "@/lib/permissions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -50,8 +50,6 @@ export default function Sidebar({
     NAVIGATION_ITEMS
   );
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
-  const [collapsedFlyoutFor, setCollapsedFlyoutFor] = useState<string | null>(null);
-  const collapseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Close mobile menu when switching to desktop
   useEffect(() => {
@@ -60,14 +58,6 @@ export default function Sidebar({
     }
   }, [isMobile, mobileMenuOpen, setMobileMenuOpen]);
 
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (collapseTimeoutRef.current) {
-        clearTimeout(collapseTimeoutRef.current);
-      }
-    };
-  }, []);
 
   // Handle mobile menu item click
   const handleMobileMenuItemClick = () => {
@@ -98,52 +88,18 @@ export default function Sidebar({
 
   // Handle dropdown toggle
   const handleDropdownToggle = (itemName: string) => {
-    const isOpening = dropdownOpen !== itemName;
-    setDropdownOpen(dropdownOpen === itemName ? null : itemName);
-    
-    // Track which dropdown was intentionally opened for collapsed state
-    if (isOpening) {
-      setCollapsedFlyoutFor(itemName);
-    } else {
-      // If closing dropdown, clear collapsed flyout
-      setCollapsedFlyoutFor(null);
-    }
-  };
-
-  // Hover handlers for sidebar expansion (desktop only)
-  const handleMouseEnter = () => {
-    if (!isMobile) {
-      // Clear any pending collapse timeout
-      if (collapseTimeoutRef.current) {
-        clearTimeout(collapseTimeoutRef.current);
-        collapseTimeoutRef.current = null;
-      }
-      onHoverChange(true);
-      // Restore dropdown state when expanding if flyout was active
-      if (collapsedFlyoutFor) {
-        setDropdownOpen(collapsedFlyoutFor);
-      }
-    }
-  };
-
-  const handleMouseLeave = () => {
-    if (!isMobile) {
-      // Delay collapse by 300ms to prevent accidental closes
-      collapseTimeoutRef.current = setTimeout(() => {
-        // Close any open dropdown when collapsing, but keep flyout state
-        setDropdownOpen(null);
-        onHoverChange(false);
-        collapseTimeoutRef.current = null;
-      }, 300);
-    }
-  };
-
-  // Click handler for manual toggle when collapsed
-  const handleSidebarClick = () => {
-    if (!isMobile && !expanded) {
+    // If sidebar is collapsed and clicking a dropdown, expand the sidebar first
+    if (!showLabels) {
       onExpandedChange(true);
     }
+    setDropdownOpen(dropdownOpen === itemName ? null : itemName);
   };
+
+  // Handle sidebar toggle via arrow button
+  const handleSidebarToggle = () => {
+    onExpandedChange(!expanded);
+  };
+
 
   // Determine if labels should be shown
   const showLabels = expanded;
@@ -528,9 +484,6 @@ export default function Sidebar({
                 expanded ? "w-64" : "w-16"
               ),
         )}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-        onClick={handleSidebarClick}
       >
         <div className={cn(
           "flex items-center border-b border-gray-200 h-16 px-3",
@@ -556,12 +509,37 @@ export default function Sidebar({
           )}
         </div>
 
-        {/* Organization Switcher - always visible; icon-only when collapsed */}
+        {/* Organization Switcher with Toggle Arrow */}
         <div className={cn(
-          "border-b border-gray-200",
-          showLabels ? "px-3 py-3" : "px-2 py-2"
+          "border-b border-gray-200 relative",
+          showLabels ? "px-2 py-2" : "px-1 py-2"
         )}>
-          <OrganizationSwitcher isCollapsed={!showLabels} />
+          <div className={cn(
+            "flex",
+            showLabels ? "flex-row items-center justify-between" : "flex-col items-center justify-center"
+          )}>
+            <div className={cn(
+              "flex-1",
+              showLabels ? "max-w-[calc(100%-2rem)]" : "mb-1"
+            )}>
+              <OrganizationSwitcher isCollapsed={!showLabels} />
+            </div>
+            {/* Arrow Toggle Button */}
+            <button
+              className={cn(
+                "flex items-center justify-center w-8 h-8 rounded-md transition-colors duration-200",
+                "hover:bg-[#f48024] border border-gray-200 text-black hover:text-white bg-orange-100"
+              )}
+              onClick={handleSidebarToggle}
+              title={showLabels ? "Close sidebar" : "Open sidebar"}
+            >
+              {showLabels ? (
+                <ChevronLeft className="h-4 w-4" />
+              ) : (
+                <ChevronRight className="h-4 w-4" />
+              )}
+            </button>
+          </div>
         </div>
 
         <nav className={cn(
@@ -644,26 +622,6 @@ export default function Sidebar({
                         </div>
                       )}
 
-                      {/* Collapsed state: show child icons below parent when flyout is active */}
-                      {!showLabels && collapsedFlyoutFor === item.name && item.children && (
-                        <div className="mt-1 space-y-1">
-                          {item.children?.map((child: NavigationItem) => (
-                            <button
-                              key={child.path}
-                              className={cn(
-                                "transition-colors duration-200 w-full flex items-center justify-center px-2 py-2 mx-1 rounded-lg",
-                                isPathActive(child.path)
-                                  ? "bg-orange-50 text-[#F48024]"
-                                  : "hover:bg-gray-50 text-gray-600",
-                              )}
-                              onClick={() => handleNavigation(child.path)}
-                              title={child.name}
-                            >
-                              <span className="p-1 inline-flex">{IconComponent(child.icon)}</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
                     </>
                   ) : (
                     /* Regular navigation item */

@@ -25,7 +25,7 @@ const isOptionSelected = (currentValue: string | null | undefined, option: strin
   return currentValue === option && currentValue !== null;
 };
 
-export default function InsuranceModule({ insurance, onChange, readOnly: readOnlyProp }: InsuranceModuleProps) {
+function InsuranceModule({ insurance, onChange, readOnly: readOnlyProp }: InsuranceModuleProps) {
   const { canEditInsurance } = usePermissions();
   const readOnly = readOnlyProp ?? !canEditInsurance;
   return (
@@ -143,4 +143,4 @@ export default function InsuranceModule({ insurance, onChange, readOnly: readOnl
   );
 }
 
-
+export default React.memo(InsuranceModule);

@@ -35,7 +35,7 @@ interface GenerationStep {
   status: GenerationStepStatus;
 }
 
-export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount, readOnly: readOnlyProp }: KnowledgeModuleProps) {
+function KnowledgeModule({ orgId, curatedKb, curatedKbCount, readOnly: readOnlyProp }: KnowledgeModuleProps) {
   const { canEditKnowledgeBase } = usePermissions();
   const readOnly = readOnlyProp ?? !canEditKnowledgeBase;
   const { toast } = useToast();
@@ -642,4 +642,4 @@ export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount, read
   );
 }
 
-
+export default React.memo(KnowledgeModule);
