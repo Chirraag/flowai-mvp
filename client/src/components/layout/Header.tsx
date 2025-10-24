@@ -1,5 +1,6 @@
 import { useAuth } from "@/context/AuthContext";
-import { Menu, LogOut, Key, Eye, EyeOff } from "lucide-react";
+import { useNavigationBlocker } from "@/context/NavigationBlockerContext";
+import { Menu, LogOut, Key, Eye, EyeOff, CheckCircle, XCircle } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,8 +26,14 @@ interface HeaderProps {
 
 export default function Header({ onMobileMenuToggle }: HeaderProps) {
   const { user, logout } = useAuth();
+  const { backgroundTasks, removeBackgroundTask } = useNavigationBlocker();
   const [location] = useLocation();
   const { toast } = useToast();
+
+  // Get current background tasks
+  const runningTask = backgroundTasks.find(task => task.status === 'running');
+  const completedTask = backgroundTasks.find(task => task.status === 'completed');
+  const failedTask = backgroundTasks.find(task => task.status === 'failed');
 
   const isMobile = useIsMobile();
 
@@ -208,6 +215,61 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
 
   return (
     <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm">
+      {/* Background Task Notifications - Integrated Inside Header */}
+      {runningTask && (
+        <div className="w-full bg-blue-50 border-b border-blue-200 px-4 py-2 transition-all duration-300">
+          <div className="flex items-center justify-between max-w-7xl mx-auto">
+            <div className="flex items-center gap-2">
+              <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent" />
+              <span className="text-sm font-medium text-blue-900">
+                {runningTask.message}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {completedTask && !runningTask && (
+        <div className="w-full bg-green-50 border-b border-green-200 px-4 py-2 transition-all duration-300">
+          <div className="flex items-center justify-between max-w-7xl mx-auto">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <span className="text-sm font-medium text-green-900">
+                {completedTask.message}
+              </span>
+            </div>
+            <button
+              onClick={() => removeBackgroundTask(completedTask.id)}
+              className="text-green-600 hover:text-green-800 text-lg font-bold hover:bg-green-100 rounded px-1 transition-colors"
+              aria-label="Dismiss notification"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+
+      {failedTask && !runningTask && !completedTask && (
+        <div className="w-full bg-red-50 border-b border-red-200 px-4 py-2 transition-all duration-300">
+          <div className="flex items-center justify-between max-w-7xl mx-auto">
+            <div className="flex items-center gap-2">
+              <XCircle className="h-4 w-4 text-red-600" />
+              <span className="text-sm font-medium text-red-900">
+                {failedTask.message}
+              </span>
+            </div>
+            <button
+              onClick={() => removeBackgroundTask(failedTask.id)}
+              className="text-red-600 hover:text-red-800 text-lg font-bold hover:bg-red-100 rounded px-1 transition-colors"
+              aria-label="Dismiss notification"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Main Header Content */}
       <div className="flex w-full items-center gap-3 px-4 sm:px-6 lg:px-8 py-1.5 sm:py-2">
         <div className="flex flex-1 items-center gap-3 min-w-0">
           {isMobile && (

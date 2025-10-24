@@ -509,36 +509,18 @@ export default function Sidebar({
           )}
         </div>
 
-        {/* Organization Switcher with Toggle Arrow */}
+        {/* Organization Switcher */}
         <div className={cn(
           "border-b border-gray-200 relative",
           showLabels ? "px-2 py-2" : "px-1 py-2"
         )}>
           <div className={cn(
             "flex",
-            showLabels ? "flex-row items-center justify-between" : "flex-col items-center justify-center"
+            showLabels ? "flex-row items-center justify-center" : "flex-col items-center justify-center"
           )}>
-            <div className={cn(
-              "flex-1",
-              showLabels ? "max-w-[calc(100%-2rem)]" : "mb-1"
-            )}>
+            <div className="flex-1">
               <OrganizationSwitcher isCollapsed={!showLabels} />
             </div>
-            {/* Arrow Toggle Button */}
-            <button
-              className={cn(
-                "flex items-center justify-center w-8 h-8 rounded-md transition-colors duration-200",
-                "hover:bg-[#f48024] border border-gray-200 text-black hover:text-white bg-orange-100"
-              )}
-              onClick={handleSidebarToggle}
-              title={showLabels ? "Close sidebar" : "Open sidebar"}
-            >
-              {showLabels ? (
-                <ChevronLeft className="h-4 w-4" />
-              ) : (
-                <ChevronRight className="h-4 w-4" />
-              )}
-            </button>
           </div>
         </div>
 
@@ -655,6 +637,23 @@ export default function Sidebar({
           ))}
         </nav>
 
+        {/* Arrow Toggle Button - Above Footer, Bottom Right */}
+        <div className="relative px-2 py-2">
+          <button
+            className={cn(
+              "absolute bottom-0 right-0 flex items-center justify-center w-8 h-8 rounded-md transition-colors duration-200 z-10",
+              "hover:bg-orange-600 border border-gray-200 text-white hover:text-white bg-[#f48024]"
+            )}
+            onClick={handleSidebarToggle}
+            title={showLabels ? "Close sidebar" : "Open sidebar"}
+          >
+            {showLabels ? (
+              <ChevronLeft className="h-4 w-4" />
+            ) : (
+              <ChevronRight className="h-4 w-4" />
+            )}
+          </button>
+        </div>
 
         <div className={cn(
           "border-t border-gray-200",
