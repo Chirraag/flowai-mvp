@@ -30,7 +30,7 @@ interface DecisionMakersCardProps {
   readOnly?: boolean;
 }
 
-function DecisionMakersCard({
+export default function DecisionMakersCard({
   decisionMakers,
   onAdd,
   onUpdate,
@@ -71,9 +71,7 @@ function DecisionMakersCard({
   };
 
   const handleTextOnlyChange = (id: string, field: 'title' | 'name', rawValue: string) => {
-    // Allow only letters, spaces, and basic punctuation
-    const textOnly = rawValue.replace(/[^a-zA-Z\s\-']/g, '');
-    onUpdate(id, field, textOnly);
+    onUpdate(id, field, rawValue);
   };
 
   // Helper to split full name into first and last name
@@ -254,5 +252,3 @@ function DecisionMakersCard({
     </div>
   );
 }
-
-export default React.memo(DecisionMakersCard);

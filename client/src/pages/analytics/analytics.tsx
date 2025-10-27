@@ -1,21 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  ArcElement,
-  BarElement,
-  Title,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  CartesianGrid,
+  XAxis,
+  YAxis,
   Tooltip,
   Legend,
-  Filler,
-} from 'chart.js';
-import { Line, Doughnut, Bar } from 'react-chartjs-2';
-import { 
-  Sparkles, 
-  Clock, 
+} from 'recharts';
+import {
+  Sparkles,
+  Clock,
   Activity,
   TrendingUp,
   Phone,
@@ -25,91 +28,20 @@ import {
   PhoneIncoming,
   PhoneOutgoing,
   FileText,
-  BarChart3
+  BarChart3,
 } from 'lucide-react';
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from '@/context/AuthContext';
+import { analyticsApi } from '@/api/analytics';
+import type { AnalyticsData } from '@/types/analytics';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
-// Register ChartJS components
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  ArcElement,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
-);
-
-// Types
-interface AnalyticsData {
-  summary: {
-    totalCalls: number;
-    averageCallDuration: number;
-    averageLatency: number;
-    dateRange: {
-      start: string;
-      end: string;
-    };
-  };
-  callSuccessRate: {
-    successful: number;
-    unsuccessful: number;
-  };
-  disconnectionReasons: Record<string, number>;
-  userSentiment: {
-    negative: number;
-    positive: number;
-    neutral: number;
-    unknown: number;
-  };
-  phoneDirection: {
-    inbound: number;
-    outbound: number;
-  };
-  timeSeriesData: {
-    callCounts: Array<{ date: string; value: number }>;
-    callPickupRate: Array<{ date: string; value: number }>;
-    callSuccessfulRate: Array<{ date: string; value: number }>;
-    callTransferRate: Array<{ date: string; value: number }>;
-    voicemailRate: Array<{ date: string; value: number }>;
-    averageCallDuration: Array<{ date: string; value: number }>;
-    averageLatency: Array<{ date: string; value: number }>;
-  };
-  dailyBreakdown: Array<{
-    date: string;
-    successful: number;
-    unsuccessful: number;
-    disconnectionReasons: Record<string, number>;
-    sentiment: {
-      negative: number;
-      positive: number;
-      neutral: number;
-      unknown: number;
-    };
-  }>;
-  agentPerformance: Array<{
-    agentId: string;
-    agentName: string;
-    callSuccessful: {
-      successful: number;
-      unsuccessful: number;
-      percentage: number;
-    };
-    callPickupRate: {
-      pickedUp: number;
-      total: number;
-      percentage: number;
-    };
-    callTransferRate: {
-      transferred: number;
-      total: number;
-      percentage: number;
-    };
-  }>;
-}
+// Analytics data types are imported from '@/types/analytics'
 
 // Utility functions
 const formatDuration = (seconds: number): string => {
@@ -134,41 +66,562 @@ const camelToTitle = (str: string): string => {
     .trim();
 };
 
+const trimYAxisLabel = (label: string): string => {
+  const parts = label.split('|');
+  return parts.length > 2 ? parts.slice(0, 2).join('|').trim() : label.trim();
+};
+
+// Colors
+const COLORS = {
+  blue: '#3b82f6',
+  blueLight: 'rgba(59, 130, 246, 0.1)',
+  cyan: '#06b6d4',
+  cyanLight: 'rgba(6, 182, 212, 0.1)',
+  emerald: '#10b981',
+  emeraldLight: 'rgba(16, 185, 129, 0.1)',
+  indigo: '#6366f1',
+  violet: '#8b5cf6',
+  violetLight: 'rgba(139, 92, 246, 0.1)',
+  amber: '#f59e0b',
+  amberLight: 'rgba(245, 158, 11, 0.1)',
+  orange: '#f97316',
+  rose: '#f43f5e',
+  slate: '#64748b',
+  sky: '#5DADE2',
+  green: '#58D68D',
+  purple: '#BB8FCE',
+  gold: '#F5B041',
+  red: '#EC7063',
+};
+
+// Array of colors for dynamic chart segments
+const colorsArray = [
+  COLORS.blue,
+  COLORS.cyan,
+  COLORS.emerald,
+  COLORS.violet,
+  COLORS.amber,
+  COLORS.orange,
+  COLORS.rose,
+  COLORS.indigo,
+  COLORS.slate,
+  COLORS.sky,
+  COLORS.green,
+  COLORS.purple,
+  COLORS.gold,
+  COLORS.red,
+];
+
+// Custom Legend Component for Disconnection Reasons Bar Chart
+const DisconnectionBarLegend: React.FC<{
+  payload: any[];
+  onShowMore: () => void;
+}> = ({ payload, onShowMore }) => {
+  // Always show first 2 items + "Show more" button
+  const visibleItems = payload.slice(0, 2);
+
+  return (
+    <div>
+      {/* Primary legend items */}
+      <div className="flex flex-wrap justify-center gap-4 mt-4">
+        {visibleItems.map((entry, index) => (
+          <div key={entry.name} className="flex items-center gap-2">
+            <div
+              className="w-3 h-3 rounded-full"
+              style={{ backgroundColor: entry.color }}
+            />
+            <span className="text-sm">
+              {entry.name}: {entry.value.toLocaleString()}
+            </span>
+          </div>
+        ))}
+
+        {/* Show more button (opens modal) */}
+        {payload.length > 2 && (
+          <button
+            className="flex items-center gap-2 font-semibold text-blue-600 hover:text-blue-800 transition-colors"
+            onClick={onShowMore}
+          >
+            <span className="text-sm">
+              +{payload.length - 2} more
+            </span>
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // Card component
 const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
-  <div className={`bg-white rounded-lg p-6 ${className}`}>
-    {children}
-  </div>
+  <div className={`bg-white rounded-lg p-6 ${className}`}>{children}</div>
 );
 
+// Expanded Legend Modal Component
+const ExpandedLegendModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  legendData: any[];
+  title?: string;
+  description?: string;
+}> = ({ isOpen, onClose, legendData, title = "Additional Disconnection Reasons", description = "Complete list of disconnection reasons with their call counts" }) => {
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>
+            {description}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid grid-cols-2 gap-4 py-4">
+          {legendData.map((entry, index) => (
+            <div key={`modal-${entry.name}`} className="flex items-center gap-2">
+              <div
+                className="w-3 h-3 rounded-full flex-shrink-0"
+                style={{ backgroundColor: entry.color }}
+              />
+              <div className="flex flex-col">
+                <span className="text-sm font-medium text-gray-900">
+                  {entry.name}
+                </span>
+                <span className="text-xs text-gray-500">
+                  {entry.value.toLocaleString()} calls
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// Agent Performance Modal Component
+const AgentPerformanceModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  data: any[];
+  title: string;
+  color: string;
+  valueName: string;
+}> = ({ isOpen, onClose, data, title, color, valueName }) => {
+  // Calculate dynamic height based on number of agents (minimum 400px, maximum 800px)
+  const chartHeight = Math.min(Math.max(data.length * 40 + 100, 400), 800);
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-5xl w-full max-h-[95vh] overflow-hidden flex flex-col">
+        <DialogHeader className="flex-shrink-0">
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>
+            Complete agent performance data - {data.length} agents total
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex-1 overflow-auto min-h-0">
+          <div style={{ height: chartHeight, width: '100%' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data} layout="vertical" margin={{ top: 10, right: 30, bottom: 10, left: 160 }}>
+                <CartesianGrid stroke="rgba(0,0,0,0.05)" />
+                <XAxis type="number" domain={[0, 100]} />
+                <YAxis type="category" dataKey="name" width={150} fontSize={11} />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="value" name={valueName} fill={color} radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// Custom Legend Component for Disconnection Reasons
+const DisconnectionLegend: React.FC<{
+  payload: any[];
+  onShowMore: () => void;
+}> = ({ payload, onShowMore }) => {
+  // Always show first 5 items + "Show more" button
+  const visibleItems = payload.slice(0, 5);
+
+  return (
+    <div>
+      {/* Primary legend items */}
+      <div className="flex flex-wrap justify-center gap-4 mt-4">
+        {visibleItems.map((entry, index) => (
+          <div key={entry.name} className="flex items-center gap-2">
+            <div
+              className="w-3 h-3 rounded-full"
+              style={{ backgroundColor: entry.color }}
+            />
+            <span className="text-sm">
+              {entry.name}: {entry.value.toLocaleString()}
+            </span>
+          </div>
+        ))}
+
+        {/* Show more button (opens modal) */}
+        {payload.length > 5 && (
+          <button
+            className="flex items-center gap-2 font-semibold text-blue-600 hover:text-blue-800 transition-colors"
+            onClick={onShowMore}
+          >
+            <span className="text-sm">
+              +{payload.length - 5} more
+            </span>
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
 export default function Analytics() {
-  const { hasWriteAccess } = useAuth();
-  const canWriteAnalytics = hasWriteAccess("analytics");
+  const { hasWriteAccess, user } = useAuth();
+  const canWriteAnalytics = hasWriteAccess('analytics');
 
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDisconnectionBarModalOpen, setIsDisconnectionBarModalOpen] = useState(false);
+  const [agentModalType, setAgentModalType] = useState<'success' | 'pickup' | 'transfer' | null>(null);
 
+  // Fetch data
   useEffect(() => {
     const fetchData = async () => {
+      if (!user?.org_id) {
+        setError('Organization ID not found. Please log in again.');
+        setLoading(false);
+        return;
+      }
+
       try {
-        const response = await fetch('/data/analyticsdata.json');
-        if (!response.ok) {
-          throw new Error('Failed to fetch analytics data');
-        }
-        const jsonData = await response.json();
-        setData(jsonData);
-      } catch (error) {
-        console.error('Error loading analytics data:', error);
-        setError('Failed to load analytics data');
+        const analyticsData = await analyticsApi.getAnalytics(user.org_id);
+        setData(analyticsData);
+      } catch (err: any) {
+        console.error('Error loading analytics data:', err);
+        setError(err.message || 'Failed to load analytics data');
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, []);
+  }, [user?.org_id]);
 
+  // ALL useMemo hooks must be declared BEFORE any conditional returns
+  // Memoized transforms for Recharts
+  const timeSeriesLabels = useMemo(() => {
+    if (!data) return [];
+    return data.timeSeriesData.callCounts.map((it) => formatDate(it.date));
+  }, [data]);
+
+  const timeSeriesBreakdown = useMemo(() => {
+    if (!data) return [];
+    const callCounts = data.timeSeriesData.callCounts;
+    const totalSuccessful = data.callSuccessRate.successful;
+    const totalUnsuccessful = data.callSuccessRate.unsuccessful;
+    const total = Math.max(1, totalSuccessful + totalUnsuccessful);
+    return callCounts.map((item) => {
+      const successfulRatio = totalSuccessful / total;
+      const unsuccessfulRatio = totalUnsuccessful / total;
+      return {
+        date: item.date,
+        successful: Math.round(item.value * successfulRatio),
+        unsuccessful: Math.round(item.value * unsuccessfulRatio),
+      };
+    });
+  }, [data]);
+
+  const callSuccessfulStacked = useMemo(() => {
+    if (!timeSeriesBreakdown.length) return [];
+    return timeSeriesBreakdown.map((it) => ({
+      label: formatDate(it.date),
+      successful: it.successful,
+      unsuccessful: it.unsuccessful,
+    }));
+  }, [timeSeriesBreakdown]);
+
+  // Disconnection reasons stacked bar chart data
+  const disconnectionReasonsStacked = useMemo(() => {
+    if (!data?.dailyBreakdown?.length) return [];
+
+    // Get all unique disconnection reasons across all dates
+    const allReasons = new Set<string>();
+    data.dailyBreakdown.forEach(day => {
+      Object.keys(day.disconnectionReasons).forEach(reason => {
+        allReasons.add(reason);
+      });
+    });
+
+    return data.dailyBreakdown.map((day) => {
+      const result: any = { label: formatDate(day.date) };
+      // Add all disconnection reasons, defaulting to 0 if not present
+      allReasons.forEach(reason => {
+        result[camelToTitle(reason)] = day.disconnectionReasons[reason] || 0;
+      });
+      return result;
+    });
+  }, [data]);
+
+  // User sentiment stacked bar chart data
+  const sentimentStacked = useMemo(() => {
+    if (!data?.dailyBreakdown?.length) return [];
+
+    // Get all unique sentiment types across all dates
+    const allSentiments = new Set<string>();
+    data.dailyBreakdown.forEach(day => {
+      Object.keys(day.sentiment).forEach(sentiment => {
+        allSentiments.add(sentiment);
+      });
+    });
+
+    return data.dailyBreakdown.map((day) => {
+      const result: any = { label: formatDate(day.date) };
+      // Add all sentiment types, defaulting to 0 if not present
+      allSentiments.forEach(sentiment => {
+        result[camelToTitle(sentiment)] = day.sentiment[sentiment] || 0;
+      });
+      return result;
+    });
+  }, [data]);
+
+  // Legend data for disconnection reasons bar chart
+  const disconnectionBarLegendData = useMemo(() => {
+    if (!disconnectionReasonsStacked.length) return [];
+
+    // Get all disconnection reason keys (excluding 'label')
+    const reasonKeys = Object.keys(disconnectionReasonsStacked[0]).filter(key => key !== 'label');
+
+    // Calculate total for each reason across all dates
+    const reasonTotals: { [key: string]: number } = {};
+    disconnectionReasonsStacked.forEach(dateEntry => {
+      reasonKeys.forEach(reason => {
+        reasonTotals[reason] = (reasonTotals[reason] || 0) + (dateEntry[reason] || 0);
+      });
+    });
+
+    // Sort to prioritize User_hangup and Agent_hangup first, then by total count descending
+    const priorityReasons = ['User_hangup', 'Agent_hangup'];
+    const sortedReasons = reasonKeys
+      .map(reason => ({ name: reason, value: reasonTotals[reason] }))
+      .sort((a, b) => {
+        const aPriority = priorityReasons.indexOf(a.name);
+        const bPriority = priorityReasons.indexOf(b.name);
+
+        // If both are priority reasons, sort by priority order
+        if (aPriority >= 0 && bPriority >= 0) {
+          return aPriority - bPriority;
+        }
+        // If only one is priority, put it first
+        if (aPriority >= 0) return -1;
+        if (bPriority >= 0) return 1;
+        // Otherwise sort by value descending
+        return b.value - a.value;
+      });
+
+    // Assign colors to each reason
+    return sortedReasons.map((reason, idx) => ({
+      name: reason.name,
+      value: reason.value,
+      color: colorsArray[idx % colorsArray.length],
+    }));
+  }, [disconnectionReasonsStacked]);
+
+  // Area/Line chart series
+  const callCountsSeries = useMemo(() => {
+    if (!data) return [];
+    return data.timeSeriesData.callCounts.map((it) => ({ date: formatDate(it.date), value: it.value }));
+  }, [data]);
+
+  const pickupRateSeries = useMemo(() => {
+    if (!data) return [];
+    return data.timeSeriesData.callPickupRate.map((it) => ({ date: formatDate(it.date), value: it.value }));
+  }, [data]);
+
+  const successRateSeries = useMemo(() => {
+    if (!data) return [];
+    return data.timeSeriesData.callSuccessfulRate.map((it) => ({ date: formatDate(it.date), value: it.value }));
+  }, [data]);
+
+  const transferRateSeries = useMemo(() => {
+    if (!data) return [];
+    return data.timeSeriesData.callTransferRate.map((it) => ({ date: formatDate(it.date), value: it.value }));
+  }, [data]);
+
+  const voicemailRateSeries = useMemo(() => {
+    if (!data) return [];
+    return data.timeSeriesData.voicemailRate.map((it) => ({ date: formatDate(it.date), value: it.value }));
+  }, [data]);
+
+  const durationSeries = useMemo(() => {
+    if (!data) return [];
+    return data.timeSeriesData.averageCallDuration.map((it) => ({ date: formatDate(it.date), value: it.value }));
+  }, [data]);
+
+  const latencySeries = useMemo(() => {
+    if (!data) return [];
+    return data.timeSeriesData.averageLatency.map((it) => ({ date: formatDate(it.date), value: it.value }));
+  }, [data]);
+
+  // Donut data - Call Successful donut now only has 2 segments (successful/unsuccessful)
+  const successRateDonut = useMemo(() => {
+    if (!data) return [];
+    return [
+      { name: 'Successful', value: data.callSuccessRate.successful, color: COLORS.cyan },
+      { name: 'Unsuccessful', value: data.callSuccessRate.unsuccessful, color: COLORS.orange },
+    ];
+  }, [data]);
+
+  const disconnectionsSorted = useMemo(() => {
+    if (!data) return { top: [], rest: [], others: 0, totalUnique: 0 };
+    const arr = Object.entries(data.disconnectionReasons)
+      .map(([key, value]) => ({ name: camelToTitle(key), value }))
+      .sort((a, b) => b.value - a.value);
+    const top = arr.slice(0, 5);
+    const rest = arr.slice(5);
+    const others = rest.reduce((sum, it) => sum + it.value, 0);
+    return { top, rest, others, totalUnique: arr.length };
+  }, [data]);
+
+  // Chart data - always shows all disconnection reasons
+  const disconnectionDonut = useMemo(() => {
+    if (!disconnectionsSorted.top.length) return [];
+
+    // Always show all disconnection reasons in the chart with distinct colors
+    const allReasons = [...disconnectionsSorted.top, ...disconnectionsSorted.rest];
+    return allReasons.map((d, idx) => ({
+      name: d.name,
+      value: d.value,
+      color: [
+        COLORS.violet,
+        COLORS.orange,
+        COLORS.cyan,
+        COLORS.amber,
+        COLORS.rose,
+        COLORS.blue,
+        COLORS.emerald,
+        COLORS.indigo,
+        COLORS.slate,
+        COLORS.blueLight,
+        COLORS.cyanLight,
+        COLORS.emeraldLight,
+        COLORS.violetLight
+      ][idx % 13],
+    }));
+  }, [disconnectionsSorted]);
+
+  // Legend data - can be expanded/collapsed
+  const disconnectionLegendData = useMemo(() => {
+    const allReasons = [...disconnectionsSorted.top, ...disconnectionsSorted.rest];
+    return allReasons.map((d, idx) => ({
+      name: d.name,
+      value: d.value,
+      color: [
+        COLORS.violet,
+        COLORS.orange,
+        COLORS.cyan,
+        COLORS.amber,
+        COLORS.rose,
+        COLORS.blue,
+        COLORS.emerald,
+        COLORS.indigo,
+        COLORS.slate,
+        COLORS.blueLight,
+        COLORS.cyanLight,
+        COLORS.emeraldLight,
+        COLORS.violetLight
+      ][idx % 13],
+    }));
+  }, [disconnectionsSorted]);
+
+  const sentimentDonut = useMemo(() => {
+    if (!data) return [];
+    return [
+      { name: 'Neutral', value: data.userSentiment.Neutral || 0, color: COLORS.violet },
+      { name: 'Positive', value: data.userSentiment.Positive || 0, color: COLORS.cyan },
+      { name: 'positive', value: data.userSentiment.positive || 0, color: COLORS.emerald },
+      { name: 'Unknown', value: data.userSentiment.Unknown || 0, color: COLORS.slate },
+      { name: 'Negative', value: data.userSentiment.Negative || 0, color: COLORS.orange },
+    ];
+  }, [data]);
+
+  const phoneDirectionDonut = useMemo(() => {
+    if (!data) return [];
+    return [
+      { name: 'Inbound', value: data.phoneDirection.inbound, color: COLORS.blue },
+      { name: 'Outbound', value: data.phoneDirection.outbound, color: COLORS.orange },
+    ];
+  }, [data]);
+
+  // Agent performance (horizontal bars) - Top 5 agents only
+  const agentSuccessBars = useMemo(() => {
+    if (!data) return [];
+    return data.agentPerformance
+      .map((a) => ({
+        name: trimYAxisLabel(a.agentName || a.agentId),
+        value: a.callSuccessful.percentage
+      }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5);
+  }, [data]);
+
+  const agentPickupBars = useMemo(() => {
+    if (!data) return [];
+    return data.agentPerformance
+      .map((a) => ({
+        name: trimYAxisLabel(a.agentName || a.agentId),
+        value: a.callPickupRate.percentage
+      }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5);
+  }, [data]);
+
+  const agentTransferBars = useMemo(() => {
+    if (!data) return [];
+    return data.agentPerformance
+      .map((a) => ({
+        name: trimYAxisLabel(a.agentName || a.agentId),
+        value: a.callTransferRate.percentage
+      }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5);
+  }, [data]);
+
+  // Full agent performance data for modal
+  const agentSuccessBarsFull = useMemo(() => {
+    if (!data) return [];
+    return data.agentPerformance
+      .map((a) => ({
+        name: trimYAxisLabel(a.agentName || a.agentId),
+        value: a.callSuccessful.percentage
+      }))
+      .sort((a, b) => b.value - a.value);
+  }, [data]);
+
+  const agentPickupBarsFull = useMemo(() => {
+    if (!data) return [];
+    return data.agentPerformance
+      .map((a) => ({
+        name: trimYAxisLabel(a.agentName || a.agentId),
+        value: a.callPickupRate.percentage
+      }))
+      .sort((a, b) => b.value - a.value);
+  }, [data]);
+
+  const agentTransferBarsFull = useMemo(() => {
+    if (!data) return [];
+    return data.agentPerformance
+      .map((a) => ({
+        name: trimYAxisLabel(a.agentName || a.agentId),
+        value: a.callTransferRate.percentage
+      }))
+      .sort((a, b) => b.value - a.value);
+  }, [data]);
+
+  // CONDITIONAL RETURNS COME AFTER ALL HOOKS
   if (loading) {
     return (
       <div className="container mx-auto p-4 sm:p-6 space-y-6">
@@ -178,9 +631,7 @@ export default function Analytics() {
               <FileText className="h-8 w-8 text-[#1c275e]" />
               Analytics
             </h1>
-            <p className="text-gray-600 mt-1 sm:mt-2 text-sm sm:text-base">
-              Healthcare analytics and insights dashboard
-            </p>
+            <p className="text-gray-600 mt-1 sm:mt-2 text-sm sm:text-base">Healthcare analytics and insights dashboard</p>
           </div>
         </div>
         <div className="flex items-center justify-center min-h-96">
@@ -202,536 +653,41 @@ export default function Analytics() {
               <FileText className="h-8 w-8 text-[#1c275e]" />
               Analytics
             </h1>
-            <p className="text-gray-600 mt-1 sm:mt-2 text-sm sm:text-base">
-              Healthcare analytics and insights dashboard
-            </p>
+            <p className="text-gray-600 mt-1 sm:mt-2 text-sm sm:text-base">Healthcare analytics and insights dashboard</p>
           </div>
         </div>
         <div className="text-center p-8">
-          <p className="text-red-600">{error || 'Failed to load analytics data'}</p>
-          <button 
-            onClick={() => window.location.reload()} 
-            className="mt-4 bg-[#1c275e] hover:bg-[#233072] text-white px-4 py-2 rounded-lg"
-          >
-            Retry
-          </button>
+          <div className="max-w-md mx-auto">
+            <div className="text-red-600 mb-4">
+              <p className="font-medium">Failed to load analytics data</p>
+              <p className="text-sm text-gray-600 mt-1">{error}</p>
+            </div>
+            <div className="space-y-2">
+              <button
+                onClick={() => window.location.reload()}
+                className="bg-[#1c275e] hover:bg-[#233072] text-white px-4 py-2 rounded-lg mr-2"
+              >
+                Retry
+              </button>
+              <button
+                onClick={() => window.location.href = '/login'}
+                className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg"
+              >
+                Back to Login
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
-
-  // Chart Options
-  const lineChartOptions = (title: string) => ({
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        display: true,
-        position: 'top' as const,
-      },
-      title: {
-        display: false,
-      },
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        grid: {
-          color: 'rgba(0, 0, 0, 0.05)',
-        },
-      },
-      x: {
-        grid: {
-          display: false,
-        },
-      },
-    },
-  });
-
-  const doughnutOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        display: true,
-        position: 'bottom' as const,
-        labels: {
-          padding: 15,
-          font: {
-            size: 12,
-          },
-        },
-      },
-    },
-    cutout: '70%',
-  };
-
-  const stackedBarOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        display: true,
-        position: 'bottom' as const,
-        labels: {
-          padding: 15,
-          font: {
-            size: 11,
-          },
-          usePointStyle: true,
-          pointStyle: 'rect',
-        },
-      },
-      tooltip: {
-        mode: 'index' as const,
-        intersect: false,
-      },
-    },
-    scales: {
-      x: {
-        stacked: true,
-        grid: {
-          display: false,
-        },
-      },
-      y: {
-        stacked: true,
-        beginAtZero: true,
-        grid: {
-          color: 'rgba(0, 0, 0, 0.05)',
-        },
-      },
-    },
-  };
-
-  const barChartOptions = (title: string) => ({
-    indexAxis: 'y' as const,
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        display: false,
-      },
-    },
-    scales: {
-      x: {
-        beginAtZero: true,
-        max: 100,
-        grid: {
-          color: 'rgba(0, 0, 0, 0.05)',
-        },
-      },
-      y: {
-        grid: {
-          display: false,
-        },
-      },
-    },
-  });
-
-  // Process time series data from callCounts for stacked bar charts
-  const timeSeriesLabels = data.timeSeriesData.callCounts.map(item => formatDate(item.date));
-  
-  // Create time series breakdown data by distributing totals based on overall ratios
-  const createTimeSeriesBreakdown = () => {
-    const callCounts = data.timeSeriesData.callCounts;
-    const totalSuccessful = data.callSuccessRate.successful;
-    const totalUnsuccessful = data.callSuccessRate.unsuccessful;
-    const total = totalSuccessful + totalUnsuccessful;
-    
-    return callCounts.map(item => {
-      const successfulRatio = totalSuccessful / total;
-      const unsuccessfulRatio = totalUnsuccessful / total;
-      
-      return {
-        date: item.date,
-        successful: Math.round(item.value * successfulRatio),
-        unsuccessful: Math.round(item.value * unsuccessfulRatio),
-      };
-    });
-  };
-
-  const timeSeriesBreakdown = createTimeSeriesBreakdown();
-
-  // Stacked Bar Chart 1: Call Successful
-  const callSuccessfulStackedData = {
-    labels: timeSeriesLabels,
-    datasets: [
-      {
-        label: 'Call counts: successful',
-        data: timeSeriesBreakdown.map(item => item.successful),
-        backgroundColor: '#5DADE2',
-        borderRadius: 4,
-        borderSkipped: false,
-      },
-      {
-        label: 'Call counts: unsuccessful',
-        data: timeSeriesBreakdown.map(item => item.unsuccessful),
-        backgroundColor: '#58D68D',
-        borderRadius: 4,
-        borderSkipped: false,
-      },
-    ],
-  };
-
-  // Process disconnection reasons for stacked bar chart
-  const createDisconnectionTimeSeries = () => {
-    const callCounts = data.timeSeriesData.callCounts;
-    const disconnectionEntries = Object.entries(data.disconnectionReasons)
-      .sort((a, b) => b[1] - a[1]);
-    
-    const top2 = disconnectionEntries.slice(0, 2);
-    const othersTotal = disconnectionEntries.slice(2).reduce((sum, [, value]) => sum + value, 0);
-    const grandTotal = disconnectionEntries.reduce((sum, [, value]) => sum + value, 0);
-    
-    return {
-      labels: timeSeriesLabels,
-      categories: [
-        ...top2.map(([key]) => key),
-        'others'
-      ],
-      data: callCounts.map(item => {
-        const ratios = [
-          ...top2.map(([, value]) => value / grandTotal),
-          othersTotal / grandTotal
-        ];
-        
-        return ratios.map(ratio => Math.round(item.value * ratio * 0.3)); // 30% of calls have disconnection
-      }),
-    };
-  };
-
-  const disconnectionTimeSeries = createDisconnectionTimeSeries();
-
-  // Stacked Bar Chart 2: Disconnection Reason
-  const disconnectionStackedData = {
-    labels: disconnectionTimeSeries.labels,
-    datasets: [
-      {
-        label: `Call counts: ${camelToTitle(disconnectionTimeSeries.categories[0])}`,
-        data: disconnectionTimeSeries.data.map(d => d[0]),
-        backgroundColor: '#5DADE2',
-        borderRadius: 4,
-        borderSkipped: false,
-      },
-      {
-        label: `Call counts: ${camelToTitle(disconnectionTimeSeries.categories[1])}`,
-        data: disconnectionTimeSeries.data.map(d => d[1]),
-        backgroundColor: '#F5B041',
-        borderRadius: 4,
-        borderSkipped: false,
-      },
-      {
-        label: `+${Object.keys(data.disconnectionReasons).length - 2} more`,
-        data: disconnectionTimeSeries.data.map(d => d[2]),
-        backgroundColor: '#EC7063',
-        borderRadius: 4,
-        borderSkipped: false,
-      },
-    ],
-  };
-
-  // Process sentiment for stacked bar chart
-  const createSentimentTimeSeries = () => {
-    const callCounts = data.timeSeriesData.callCounts;
-    const sentimentTotal = 
-      data.userSentiment.negative + 
-      data.userSentiment.positive + 
-      data.userSentiment.neutral + 
-      data.userSentiment.unknown;
-    
-    const sentimentRatios = {
-      negative: data.userSentiment.negative / sentimentTotal,
-      neutral: data.userSentiment.neutral / sentimentTotal,
-      positive: data.userSentiment.positive / sentimentTotal,
-      unknown: data.userSentiment.unknown / sentimentTotal,
-    };
-    
-    return {
-      labels: timeSeriesLabels,
-      data: callCounts.map(item => ({
-        negative: Math.round(item.value * sentimentRatios.negative),
-        neutral: Math.round(item.value * sentimentRatios.neutral),
-        positive: Math.round(item.value * sentimentRatios.positive),
-        unknown: Math.round(item.value * sentimentRatios.unknown),
-      })),
-    };
-  };
-
-  const sentimentTimeSeries = createSentimentTimeSeries();
-
-  // Stacked Bar Chart 3: User Sentiment
-  const sentimentStackedData = {
-    labels: sentimentTimeSeries.labels,
-    datasets: [
-      {
-        label: 'Call counts: negative',
-        data: sentimentTimeSeries.data.map(d => d.negative),
-        backgroundColor: '#5DADE2',
-        borderRadius: 4,
-        borderSkipped: false,
-      },
-      {
-        label: 'Call counts: neutral',
-        data: sentimentTimeSeries.data.map(d => d.neutral),
-        backgroundColor: '#F5B041',
-        borderRadius: 4,
-        borderSkipped: false,
-      },
-      {
-        label: '+2 more',
-        data: sentimentTimeSeries.data.map(d => d.positive + d.unknown),
-        backgroundColor: '#BB8FCE',
-        borderRadius: 4,
-        borderSkipped: false,
-      },
-    ],
-  };
-
-  // Transform data for other charts
-  const disconnectionData = Object.entries(data.disconnectionReasons)
-    .map(([key, value]) => ({
-      name: camelToTitle(key),
-      value: value,
-    }))
-    .sort((a, b) => b.value - a.value);
-
-  const topDisconnections = disconnectionData.slice(0, 5);
-  const otherDisconnections = disconnectionData.slice(5).reduce((sum, item) => sum + item.value, 0);
-
-  // Call Counts Area Chart
-  const callCountsData = {
-    labels: data.timeSeriesData.callCounts.map(item => formatDate(item.date)),
-    datasets: [
-      {
-        label: 'Call Counts',
-        data: data.timeSeriesData.callCounts.map(item => item.value),
-        fill: true,
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-        borderColor: 'rgb(59, 130, 246)',
-        borderWidth: 2,
-        tension: 0.4,
-        pointRadius: 0,
-        pointHoverRadius: 4,
-      },
-    ],
-  };
-
-  // Success Rate Donut
-  const successRateData = {
-    labels: ['Successful', 'Unsuccessful'],
-    datasets: [
-      {
-        data: [data.callSuccessRate.successful, data.callSuccessRate.unsuccessful],
-        backgroundColor: ['#06b6d4', '#f97316'],
-        borderWidth: 0,
-        hoverOffset: 4,
-      },
-    ],
-  };
-
-  // Disconnection Reason Donut
-  const disconnectionChartData = {
-    labels: [
-      ...topDisconnections.map(d => d.name),
-      ...(otherDisconnections > 0 ? [`+${disconnectionData.length - 5} more`] : [])
-    ],
-    datasets: [
-      {
-        data: [
-          ...topDisconnections.map(d => d.value),
-          ...(otherDisconnections > 0 ? [otherDisconnections] : [])
-        ],
-        backgroundColor: ['#8b5cf6', '#f97316', '#06b6d4', '#f59e0b', '#f43f5e', '#64748b'],
-        borderWidth: 0,
-        hoverOffset: 4,
-      },
-    ],
-  };
-
-  // User Sentiment Donut
-  const sentimentData = {
-    labels: ['Unknown', 'Negative', 'Neutral', 'Positive'],
-    datasets: [
-      {
-        data: [
-          data.userSentiment.unknown,
-          data.userSentiment.negative,
-          data.userSentiment.neutral,
-          data.userSentiment.positive,
-        ],
-        backgroundColor: ['#3b82f6', '#f97316', '#8b5cf6', '#06b6d4'],
-        borderWidth: 0,
-        hoverOffset: 4,
-      },
-    ],
-  };
-
-  // Phone Direction Donut
-  const phoneDirectionData = {
-    labels: ['Inbound', 'Outbound'],
-    datasets: [
-      {
-        data: [data.phoneDirection.inbound, data.phoneDirection.outbound],
-        backgroundColor: ['#3b82f6', '#f97316'],
-        borderWidth: 0,
-        hoverOffset: 4,
-      },
-    ],
-  };
-
-  // Pickup Rate Area Chart
-  const pickupRateData = {
-    labels: data.timeSeriesData.callPickupRate.map(item => formatDate(item.date)),
-    datasets: [
-      {
-        label: 'Pickup Rate (%)',
-        data: data.timeSeriesData.callPickupRate.map(item => item.value),
-        fill: true,
-        backgroundColor: 'rgba(16, 185, 129, 0.1)',
-        borderColor: 'rgb(16, 185, 129)',
-        borderWidth: 2,
-        tension: 0.4,
-        pointRadius: 0,
-        pointHoverRadius: 4,
-      },
-    ],
-  };
-
-  // Success Rate Area Chart
-  const successRateChartData = {
-    labels: data.timeSeriesData.callSuccessfulRate.map(item => formatDate(item.date)),
-    datasets: [
-      {
-        label: 'Success Rate (%)',
-        data: data.timeSeriesData.callSuccessfulRate.map(item => item.value),
-        fill: true,
-        backgroundColor: 'rgba(37, 99, 235, 0.1)',
-        borderColor: 'rgb(37, 99, 235)',
-        borderWidth: 2,
-        tension: 0.4,
-        pointRadius: 0,
-        pointHoverRadius: 4,
-      },
-    ],
-  };
-
-  // Transfer Rate Area Chart
-  const transferRateData = {
-    labels: data.timeSeriesData.callTransferRate.map(item => formatDate(item.date)),
-    datasets: [
-      {
-        label: 'Transfer Rate (%)',
-        data: data.timeSeriesData.callTransferRate.map(item => item.value),
-        fill: true,
-        backgroundColor: 'rgba(139, 92, 246, 0.1)',
-        borderColor: 'rgb(139, 92, 246)',
-        borderWidth: 2,
-        tension: 0.4,
-        pointRadius: 0,
-        pointHoverRadius: 4,
-      },
-    ],
-  };
-
-  // Voicemail Rate Area Chart
-  const voicemailRateData = {
-    labels: data.timeSeriesData.voicemailRate.map(item => formatDate(item.date)),
-    datasets: [
-      {
-        label: 'Voicemail Rate (%)',
-        data: data.timeSeriesData.voicemailRate.map(item => item.value),
-        fill: true,
-        backgroundColor: 'rgba(245, 158, 11, 0.1)',
-        borderColor: 'rgb(245, 158, 11)',
-        borderWidth: 2,
-        tension: 0.4,
-        pointRadius: 0,
-        pointHoverRadius: 4,
-      },
-    ],
-  };
-
-  // Duration Area Chart
-  const durationData = {
-    labels: data.timeSeriesData.averageCallDuration.map(item => formatDate(item.date)),
-    datasets: [
-      {
-        label: 'Duration (seconds)',
-        data: data.timeSeriesData.averageCallDuration.map(item => item.value),
-        fill: true,
-        backgroundColor: 'rgba(6, 182, 212, 0.1)',
-        borderColor: 'rgb(6, 182, 212)',
-        borderWidth: 2,
-        tension: 0.4,
-        pointRadius: 0,
-        pointHoverRadius: 4,
-      },
-    ],
-  };
-
-  // Latency Area Chart
-  const latencyData = {
-    labels: data.timeSeriesData.averageLatency.map(item => formatDate(item.date)),
-    datasets: [
-      {
-        label: 'Latency (ms)',
-        data: data.timeSeriesData.averageLatency.map(item => item.value),
-        fill: true,
-        backgroundColor: 'rgba(244, 63, 94, 0.1)',
-        borderColor: 'rgb(244, 63, 94)',
-        borderWidth: 2,
-        tension: 0.4,
-        pointRadius: 0,
-        pointHoverRadius: 4,
-      },
-    ],
-  };
-
-  // Agent Performance Bar Charts
-  const agentSuccessData = {
-    labels: data.agentPerformance.map(agent => agent.agentName),
-    datasets: [
-      {
-        label: 'Success Rate (%)',
-        data: data.agentPerformance.map(agent => agent.callSuccessful.percentage),
-        backgroundColor: 'rgb(37, 99, 235)',
-        borderRadius: 4,
-      },
-    ],
-  };
-
-  const agentPickupData = {
-    labels: data.agentPerformance.map(agent => agent.agentName),
-    datasets: [
-      {
-        label: 'Pickup Rate (%)',
-        data: data.agentPerformance.map(agent => agent.callPickupRate.percentage),
-        backgroundColor: 'rgb(16, 185, 129)',
-        borderRadius: 4,
-      },
-    ],
-  };
-
-  const agentTransferData = {
-    labels: data.agentPerformance.map(agent => agent.agentName),
-    datasets: [
-      {
-        label: 'Transfer Rate (%)',
-        data: data.agentPerformance.map(agent => agent.callTransferRate.percentage),
-        backgroundColor: 'rgb(139, 92, 246)',
-        borderRadius: 4,
-      },
-    ],
-  };
 
   return (
     <div className="min-h-screen bg-white p-4 sm:p-6">
       <div className="container mx-auto space-y-6">
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-          <div className="min-w-0 flex-1">
-          </div>
+          <div className="min-w-0 flex-1" />
         </div>
 
         {/* Top KPI Cards */}
@@ -742,9 +698,7 @@ export default function Analytics() {
               <div className="flex-1">
                 <h3 className="text-white font-semibold text-lg">Call Counts</h3>
                 <p className="text-blue-100 text-sm mt-1">All agents</p>
-                <p className="text-white mt-4 text-3xl font-bold">
-                  {formatNumber(data.summary.totalCalls)}
-                </p>
+                <p className="text-white mt-4 text-3xl font-bold">{formatNumber(data.summary.totalCalls)}</p>
               </div>
             </div>
           </Card>
@@ -755,9 +709,7 @@ export default function Analytics() {
               <div className="flex-1">
                 <h3 className="text-white font-semibold text-lg">Call Duration</h3>
                 <p className="text-purple-100 text-sm mt-1">All agents</p>
-                <p className="text-white mt-4 text-3xl font-bold">
-                  {formatDuration(data.summary.averageCallDuration)}
-                </p>
+                <p className="text-white mt-4 text-3xl font-bold">{formatDuration(data.summary.averageCallDuration)}</p>
               </div>
             </div>
           </Card>
@@ -768,9 +720,7 @@ export default function Analytics() {
               <div className="flex-1">
                 <h3 className="text-white font-semibold text-lg">Call Latency</h3>
                 <p className="text-pink-100 text-sm mt-1">All agents</p>
-                <p className="text-white mt-4 text-3xl font-bold">
-                  {data.summary.averageLatency}ms
-                </p>
+                <p className="text-white mt-4 text-3xl font-bold">{data.summary.averageLatency}ms</p>
               </div>
             </div>
           </Card>
@@ -785,7 +735,22 @@ export default function Analytics() {
             </div>
             <p className="text-gray-600 text-sm mb-4">All agents</p>
             <div className="h-72">
-              <Line data={callCountsData} options={lineChartOptions('Call Counts')} />
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={callCountsSeries} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
+                  <defs>
+                    <linearGradient id="colorCallCounts" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={COLORS.blue} stopOpacity={0.35} />
+                      <stop offset="95%" stopColor={COLORS.blue} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid stroke="rgba(0,0,0,0.05)" />
+                  <XAxis dataKey="date" />
+                  <YAxis allowDecimals={false} />
+                  <Tooltip />
+                  <Legend />
+                  <Area type="monotone" dataKey="value" name="Call Counts" stroke={COLORS.blue} fillOpacity={1} fill="url(#colorCallCounts)" />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           </Card>
 
@@ -796,7 +761,24 @@ export default function Analytics() {
             </div>
             <p className="text-gray-600 text-sm mb-4">All agents</p>
             <div className="h-72">
-              <Doughnut data={successRateData} options={doughnutOptions} />
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Tooltip />
+                  <Legend verticalAlign="bottom" />
+                  <Pie
+                    data={successRateDonut}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius="70%"
+                    outerRadius="90%"
+                    strokeWidth={0}
+                  >
+                    {successRateDonut.map((entry, idx) => (
+                      <Cell key={`sr-${idx}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
             </div>
           </Card>
         </div>
@@ -810,9 +792,71 @@ export default function Analytics() {
             </div>
             <p className="text-gray-600 text-sm mb-4">All agents</p>
             <div className="h-72">
-              <Doughnut data={disconnectionChartData} options={doughnutOptions} />
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Tooltip />
+                  {/* Custom Legend Component */}
+                  <Legend
+                    verticalAlign="bottom"
+                    content={<DisconnectionLegend
+                      payload={disconnectionLegendData}
+                      onShowMore={() => setIsModalOpen(true)}
+                    />}
+                  />
+                  <Pie data={disconnectionDonut} dataKey="value" nameKey="name" innerRadius="70%" outerRadius="90%" strokeWidth={0}>
+                    {disconnectionDonut.map((entry, idx) => (
+                      <Cell key={`disc-${idx}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
             </div>
+
           </Card>
+
+          {/* Expanded Legend Modal */}
+          <ExpandedLegendModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            legendData={disconnectionLegendData.slice(5)}
+          />
+
+          {/* Expanded Legend Modal for Disconnection Reasons Bar Chart */}
+          <ExpandedLegendModal
+            isOpen={isDisconnectionBarModalOpen}
+            onClose={() => setIsDisconnectionBarModalOpen(false)}
+            legendData={disconnectionBarLegendData.slice(2)}
+            title="Additional Disconnection Reasons by Date"
+            description="Complete list of disconnection reasons with their total counts across all dates"
+          />
+
+          {/* Agent Performance Modals */}
+          <AgentPerformanceModal
+            isOpen={agentModalType === 'success'}
+            onClose={() => setAgentModalType(null)}
+            data={agentSuccessBarsFull}
+            title="Call Successful Rate - All Agents"
+            color={COLORS.blue}
+            valueName="Success Rate (%)"
+          />
+
+          <AgentPerformanceModal
+            isOpen={agentModalType === 'pickup'}
+            onClose={() => setAgentModalType(null)}
+            data={agentPickupBarsFull}
+            title="Call Picked Up Rate - All Agents"
+            color={COLORS.emerald}
+            valueName="Pickup Rate (%)"
+          />
+
+          <AgentPerformanceModal
+            isOpen={agentModalType === 'transfer'}
+            onClose={() => setAgentModalType(null)}
+            data={agentTransferBarsFull}
+            title="Call Transfer Rate - All Agents"
+            color={COLORS.violet}
+            valueName="Transfer Rate (%)"
+          />
 
           <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
             <div className="flex items-center gap-2 mb-2">
@@ -821,7 +865,17 @@ export default function Analytics() {
             </div>
             <p className="text-gray-600 text-sm mb-4">All agents</p>
             <div className="h-72">
-              <Doughnut data={sentimentData} options={doughnutOptions} />
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Tooltip />
+                  <Legend verticalAlign="bottom" />
+                  <Pie data={sentimentDonut} dataKey="value" nameKey="name" innerRadius="70%" outerRadius="90%" strokeWidth={0}>
+                    {sentimentDonut.map((entry, idx) => (
+                      <Cell key={`sent-${idx}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
             </div>
           </Card>
 
@@ -832,7 +886,17 @@ export default function Analytics() {
             </div>
             <p className="text-gray-600 text-sm mb-4">All agents</p>
             <div className="h-72">
-              <Doughnut data={phoneDirectionData} options={doughnutOptions} />
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Tooltip />
+                  <Legend verticalAlign="bottom" />
+                  <Pie data={phoneDirectionDonut} dataKey="value" nameKey="name" innerRadius="70%" outerRadius="90%" strokeWidth={0}>
+                    {phoneDirectionDonut.map((entry, idx) => (
+                      <Cell key={`pd-${idx}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
             </div>
           </Card>
         </div>
@@ -846,7 +910,22 @@ export default function Analytics() {
             </div>
             <p className="text-gray-600 text-sm mb-4">All agents</p>
             <div className="h-60">
-              <Line data={pickupRateData} options={lineChartOptions('Pickup Rate')} />
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={pickupRateSeries} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
+                  <defs>
+                    <linearGradient id="colorPickup" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={COLORS.emerald} stopOpacity={0.35} />
+                      <stop offset="95%" stopColor={COLORS.emerald} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid stroke="rgba(0,0,0,0.05)" />
+                  <XAxis dataKey="date" />
+                  <YAxis domain={[0, 100]} />
+                  <Tooltip />
+                  <Legend />
+                  <Area type="monotone" dataKey="value" name="Pickup Rate (%)" stroke={COLORS.emerald} fill="url(#colorPickup)" />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           </Card>
 
@@ -857,7 +936,22 @@ export default function Analytics() {
             </div>
             <p className="text-gray-600 text-sm mb-4">All agents</p>
             <div className="h-60">
-              <Line data={successRateChartData} options={lineChartOptions('Success Rate')} />
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={successRateSeries} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
+                  <defs>
+                    <linearGradient id="colorSuccessRate" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={COLORS.blue} stopOpacity={0.35} />
+                      <stop offset="95%" stopColor={COLORS.blue} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid stroke="rgba(0,0,0,0.05)" />
+                  <XAxis dataKey="date" />
+                  <YAxis domain={[0, 100]} />
+                  <Tooltip />
+                  <Legend />
+                  <Area type="monotone" dataKey="value" name="Success Rate (%)" stroke={COLORS.blue} fill="url(#colorSuccessRate)" />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           </Card>
 
@@ -868,7 +962,22 @@ export default function Analytics() {
             </div>
             <p className="text-gray-600 text-sm mb-4">All agents</p>
             <div className="h-60">
-              <Line data={transferRateData} options={lineChartOptions('Transfer Rate')} />
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={transferRateSeries} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
+                  <defs>
+                    <linearGradient id="colorTransfer" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={COLORS.violet} stopOpacity={0.35} />
+                      <stop offset="95%" stopColor={COLORS.violet} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid stroke="rgba(0,0,0,0.05)" />
+                  <XAxis dataKey="date" />
+                  <YAxis domain={[0, 100]} />
+                  <Tooltip />
+                  <Legend />
+                  <Area type="monotone" dataKey="value" name="Transfer Rate (%)" stroke={COLORS.violet} fill="url(#colorTransfer)" />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           </Card>
         </div>
@@ -882,7 +991,22 @@ export default function Analytics() {
             </div>
             <p className="text-gray-600 text-sm mb-4">All agents</p>
             <div className="h-60">
-              <Line data={voicemailRateData} options={lineChartOptions('Voicemail Rate')} />
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={voicemailRateSeries} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
+                  <defs>
+                    <linearGradient id="colorVoicemail" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={COLORS.amber} stopOpacity={0.35} />
+                      <stop offset="95%" stopColor={COLORS.amber} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid stroke="rgba(0,0,0,0.05)" />
+                  <XAxis dataKey="date" />
+                  <YAxis domain={[0, 100]} />
+                  <Tooltip />
+                  <Legend />
+                  <Area type="monotone" dataKey="value" name="Voicemail Rate (%)" stroke={COLORS.amber} fill="url(#colorVoicemail)" />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           </Card>
 
@@ -893,7 +1017,22 @@ export default function Analytics() {
             </div>
             <p className="text-gray-600 text-sm mb-4">All agents</p>
             <div className="h-60">
-              <Line data={durationData} options={lineChartOptions('Duration')} />
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={durationSeries} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
+                  <defs>
+                    <linearGradient id="colorDuration" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={COLORS.cyan} stopOpacity={0.35} />
+                      <stop offset="95%" stopColor={COLORS.cyan} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid stroke="rgba(0,0,0,0.05)" />
+                  <XAxis dataKey="date" />
+                  <YAxis allowDecimals={false} />
+                  <Tooltip />
+                  <Legend />
+                  <Area type="monotone" dataKey="value" name="Duration (seconds)" stroke={COLORS.cyan} fill="url(#colorDuration)" />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           </Card>
 
@@ -904,12 +1043,27 @@ export default function Analytics() {
             </div>
             <p className="text-gray-600 text-sm mb-4">All agents</p>
             <div className="h-60">
-              <Line data={latencyData} options={lineChartOptions('Latency')} />
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={latencySeries} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
+                  <defs>
+                    <linearGradient id="colorLatency" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={COLORS.rose} stopOpacity={0.35} />
+                      <stop offset="95%" stopColor={COLORS.rose} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid stroke="rgba(0,0,0,0.05)" />
+                  <XAxis dataKey="date" />
+                  <YAxis allowDecimals={false} />
+                  <Tooltip />
+                  <Legend />
+                  <Area type="monotone" dataKey="value" name="Latency (ms)" stroke={COLORS.rose} fill="url(#colorLatency)" />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           </Card>
         </div>
 
-        {/* NEW: Stacked Bar Charts Row */}
+        {/* Stacked Bar Charts Row */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
             <div className="flex items-center gap-2 mb-2">
@@ -918,65 +1072,169 @@ export default function Analytics() {
             </div>
             <p className="text-gray-600 text-sm mb-4">All agents</p>
             <div className="h-72">
-              <Bar data={callSuccessfulStackedData} options={stackedBarOptions} />
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={callSuccessfulStacked} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
+                  <CartesianGrid stroke="rgba(0,0,0,0.05)" />
+                  <XAxis dataKey="label" />
+                  <YAxis allowDecimals={false} />
+                  <Tooltip />
+                  <Legend verticalAlign="bottom" />
+                  <Bar dataKey="successful" name="Call counts: successful" stackId="a" fill={COLORS.sky} radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="unsuccessful" name="Call counts: unsuccessful" stackId="a" fill={COLORS.green} radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </Card>
 
           <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
             <div className="flex items-center gap-2 mb-2">
-              <BarChart3 className="h-5 w-5 text-orange-600" />
-              <h3 className="text-gray-900 font-semibold text-lg">Disconnection Reason</h3>
+              <Phone className="h-5 w-5 text-red-600" />
+              <h3 className="text-gray-900 font-semibold text-lg">Disconnection Reasons by Date</h3>
             </div>
             <p className="text-gray-600 text-sm mb-4">All agents</p>
             <div className="h-72">
-              <Bar data={disconnectionStackedData} options={stackedBarOptions} />
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={disconnectionReasonsStacked} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
+                  <CartesianGrid stroke="rgba(0,0,0,0.05)" />
+                  <XAxis dataKey="label" />
+                  <YAxis allowDecimals={false} />
+                  <Tooltip />
+                  <Legend
+                    verticalAlign="bottom"
+                    content={<DisconnectionBarLegend
+                      payload={disconnectionBarLegendData}
+                      onShowMore={() => setIsDisconnectionBarModalOpen(true)}
+                    />}
+                  />
+                  {Object.keys(disconnectionReasonsStacked[0] || {}).filter(key => key !== 'label').map((reason, idx) => (
+                    <Bar
+                      key={reason}
+                      dataKey={reason}
+                      name={`Disconnection: ${reason}`}
+                      stackId="a"
+                      fill={colorsArray[idx % colorsArray.length]}
+                      radius={idx === Object.keys(disconnectionReasonsStacked[0] || {}).filter(key => key !== 'label').length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
+                    />
+                  ))}
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </Card>
 
           <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
             <div className="flex items-center gap-2 mb-2">
-              <BarChart3 className="h-5 w-5 text-purple-600" />
-              <h3 className="text-gray-900 font-semibold text-lg">User Sentiment</h3>
+              <MessageSquare className="h-5 w-5 text-yellow-600" />
+              <h3 className="text-gray-900 font-semibold text-lg">User Sentiment by Date</h3>
             </div>
             <p className="text-gray-600 text-sm mb-4">All agents</p>
             <div className="h-72">
-              <Bar data={sentimentStackedData} options={stackedBarOptions} />
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={sentimentStacked} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
+                  <CartesianGrid stroke="rgba(0,0,0,0.05)" />
+                  <XAxis dataKey="label" />
+                  <YAxis allowDecimals={false} />
+                  <Tooltip />
+                  <Legend verticalAlign="bottom" />
+                  {Object.keys(sentimentStacked[0] || {}).filter(key => key !== 'label').map((sentiment, idx) => (
+                    <Bar
+                      key={sentiment}
+                      dataKey={sentiment}
+                      name={`Sentiment: ${sentiment}`}
+                      stackId="a"
+                      fill={colorsArray[(idx + 5) % colorsArray.length]} // Offset colors to avoid overlap with disconnection reasons
+                      radius={idx === Object.keys(sentimentStacked[0] || {}).filter(key => key !== 'label').length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
+                    />
+                  ))}
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </Card>
+
         </div>
 
         {/* Agent Performance Row */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
-            <div className="flex items-center gap-2 mb-2">
-              <Users className="h-5 w-5 text-blue-600" />
-              <h3 className="text-gray-900 font-semibold text-lg">Call Successful by Agent</h3>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-blue-600" />
+                <h3 className="text-gray-900 font-semibold text-lg">Call Successful by Agent</h3>
+              </div>
+              <button
+                onClick={() => setAgentModalType('success')}
+                className="text-blue-600 hover:text-blue-800 text-sm font-medium underline"
+              >
+                View All Agents
+              </button>
             </div>
-            <p className="text-gray-600 text-sm mb-4">All agents</p>
-            <div className="h-60">
-              <Bar data={agentSuccessData} options={barChartOptions('Agent Success')} />
+            <p className="text-gray-600 text-sm mb-4">Top 5 agents</p>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={agentSuccessBars} layout="vertical" margin={{ top: 10, right: 10, bottom: 0, left: 10 }}>
+                  <CartesianGrid stroke="rgba(0,0,0,0.05)" />
+                  <XAxis type="number" domain={[0, 100]} />
+                  <YAxis type="category" dataKey="name" width={120} fontSize={12} />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="value" name="Success Rate (%)" fill={COLORS.blue} radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </Card>
 
           <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
-            <div className="flex items-center gap-2 mb-2">
-              <Users className="h-5 w-5 text-emerald-600" />
-              <h3 className="text-gray-900 font-semibold text-lg">Call Picked Up Rate by Agent</h3>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-emerald-600" />
+                <h3 className="text-gray-900 font-semibold text-lg">Call Picked Up Rate by Agent</h3>
+              </div>
+              <button
+                onClick={() => setAgentModalType('pickup')}
+                className="text-blue-600 hover:text-blue-800 text-sm font-medium underline"
+              >
+                View All Agents
+              </button>
             </div>
-            <p className="text-gray-600 text-sm mb-4">All agents</p>
-            <div className="h-60">
-              <Bar data={agentPickupData} options={barChartOptions('Agent Pickup')} />
+            <p className="text-gray-600 text-sm mb-4">Top 5 agents</p>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={agentPickupBars} layout="vertical" margin={{ top: 10, right: 10, bottom: 0, left: 10 }}>
+                  <CartesianGrid stroke="rgba(0,0,0,0.05)" />
+                  <XAxis type="number" domain={[0, 100]} />
+                  <YAxis type="category" dataKey="name" width={120} fontSize={12} />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="value" name="Pickup Rate (%)" fill={COLORS.emerald} radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </Card>
 
           <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
-            <div className="flex items-center gap-2 mb-2">
-              <Users className="h-5 w-5 text-violet-600" />
-              <h3 className="text-gray-900 font-semibold text-lg">Call Transfer Rate by Agent</h3>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-violet-600" />
+                <h3 className="text-gray-900 font-semibold text-lg">Call Transfer Rate by Agent</h3>
+              </div>
+              <button
+                onClick={() => setAgentModalType('transfer')}
+                className="text-blue-600 hover:text-blue-800 text-sm font-medium underline"
+              >
+                View All Agents
+              </button>
             </div>
-            <p className="text-gray-600 text-sm mb-4">All agents</p>
-            <div className="h-60">
-              <Bar data={agentTransferData} options={barChartOptions('Agent Transfer')} />
+            <p className="text-gray-600 text-sm mb-4">Top 5 agents</p>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={agentTransferBars} layout="vertical" margin={{ top: 10, right: 10, bottom: 0, left: 10 }}>
+                  <CartesianGrid stroke="rgba(0,0,0,0.05)" />
+                  <XAxis type="number" domain={[0, 100]} />
+                  <YAxis type="category" dataKey="name" width={120} fontSize={12} />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="value" name="Transfer Rate (%)" fill={COLORS.violet} radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </Card>
         </div>

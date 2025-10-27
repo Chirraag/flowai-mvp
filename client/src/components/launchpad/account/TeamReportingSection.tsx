@@ -30,7 +30,7 @@ interface TeamReportingSectionProps {
   readOnly?: boolean;
 }
 
-function TeamReportingSection({
+export default function TeamReportingSection({
   title,
   team,
   onAdd,
@@ -73,9 +73,7 @@ function TeamReportingSection({
   };
 
   const handleTextOnlyChange = (id: string, field: 'title' | 'name', rawValue: string) => {
-    // Allow only letters, spaces, and basic punctuation
-    const textOnly = rawValue.replace(/[^a-zA-Z\s\-']/g, '');
-    onUpdate(id, field, textOnly);
+    onUpdate(id, field, rawValue);
   };
 
   // Helper to split full name into first and last name
@@ -267,4 +265,3 @@ function TeamReportingSection({
   );
 }
 
-export default React.memo(TeamReportingSection);

@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigationBlocker } from "@/context/NavigationBlockerContext";
-import { Menu, X, Rocket, ChevronDown, ChevronLeft, ChevronRight, Phone } from "lucide-react";
+import { Menu, X, Rocket, ChevronDown, Phone } from "lucide-react";
 import { NAVIGATION_ITEMS } from "@/lib/constants";
 import { filterNavItemsByRole, UserRole } from "@/lib/permissions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -93,11 +93,6 @@ export default function Sidebar({
       onExpandedChange(true);
     }
     setDropdownOpen(dropdownOpen === itemName ? null : itemName);
-  };
-
-  // Handle sidebar toggle via arrow button
-  const handleSidebarToggle = () => {
-    onExpandedChange(!expanded);
   };
 
 
@@ -484,6 +479,18 @@ export default function Sidebar({
                 expanded ? "w-64" : "w-16"
               ),
         )}
+        onMouseEnter={() => {
+          if (!isMobile) {
+            onExpandedChange(true);
+            onHoverChange(true);
+          }
+        }}
+        onMouseLeave={() => {
+          if (!isMobile) {
+            onExpandedChange(false);
+            onHoverChange(false);
+          }
+        }}
       >
         <div className={cn(
           "flex items-center border-b border-gray-200 h-16 px-3",
@@ -519,7 +526,10 @@ export default function Sidebar({
             showLabels ? "flex-row items-center justify-center" : "flex-col items-center justify-center"
           )}>
             <div className="flex-1">
-              <OrganizationSwitcher isCollapsed={!showLabels} />
+              <OrganizationSwitcher
+                isCollapsed={!showLabels}
+                onExpandRequired={() => onExpandedChange(true)}
+              />
             </div>
           </div>
         </div>
@@ -637,23 +647,6 @@ export default function Sidebar({
           ))}
         </nav>
 
-        {/* Arrow Toggle Button - Above Footer, Bottom Right */}
-        <div className="relative px-2 py-2">
-          <button
-            className={cn(
-              "absolute bottom-0 right-0 flex items-center justify-center w-8 h-8 rounded-md transition-colors duration-200 z-10",
-              "hover:bg-orange-600 border border-gray-200 text-white hover:text-white bg-[#f48024]"
-            )}
-            onClick={handleSidebarToggle}
-            title={showLabels ? "Close sidebar" : "Open sidebar"}
-          >
-            {showLabels ? (
-              <ChevronLeft className="h-4 w-4" />
-            ) : (
-              <ChevronRight className="h-4 w-4" />
-            )}
-          </button>
-        </div>
 
         <div className={cn(
           "border-t border-gray-200",
