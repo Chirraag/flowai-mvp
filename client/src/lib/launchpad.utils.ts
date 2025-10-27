@@ -767,6 +767,63 @@ export const applyLocationCodeRenamesToSpecialties = (
   }));
 };
 
+export const syncSpecialtiesWithLocations = (
+  specialties: OrgSpecialityService[],
+  locations: OrgLocation[],
+  originalLocations: Array<{ id: string; location_id: string }>
+): OrgSpecialityService[] => {
+  // Compute location code changes
+  const codeChanges = computeLocationIdChanges(originalLocations, locations);
+
+  // Check if any specialties reference removed locations
+  const currentLocationCodes = new Set(locations.map(loc => loc.location_id));
+  const hasRemovedLocations = specialties.some(spec =>
+    spec.location_ids.some(code => !currentLocationCodes.has(code))
+  );
+
+  // If no changes needed, return original specialties
+  if (codeChanges.size === 0 && !hasRemovedLocations) {
+    return specialties;
+  }
+
+  // Apply code renames first
+  let updatedSpecialties = applyLocationCodeRenamesToSpecialties(specialties, codeChanges);
+
+  // Filter out removed location codes
+  updatedSpecialties = updatedSpecialties.map(spec => ({
+    ...spec,
+    location_ids: spec.location_ids.filter(code => currentLocationCodes.has(code))
+  }));
+
+  return updatedSpecialties;
+};
+
+// =============================================================================
+// LOCATION DELETION VALIDATION
+// =============================================================================
+
+export const validateLocationDeletion = (
+  locationId: string,
+  locationName: string,
+  specialties: OrgSpecialityService[]
+): { canDelete: boolean; affectedSpecialties: string[]; message: string } => {
+  const affectedSpecialties = specialties.filter(spec =>
+    spec.location_ids.includes(locationId)
+  );
+
+  if (affectedSpecialties.length === 0) {
+    return { canDelete: true, affectedSpecialties: [], message: "" };
+  }
+
+  const specialtyNames = affectedSpecialties.map(spec => spec.specialty_name || 'Unnamed Specialty');
+
+  return {
+    canDelete: true, // Allow deletion but with cleanup
+    affectedSpecialties: specialtyNames,
+    message: `Location "${locationName}" is used by ${specialtyNames.length} specialty(ies). It will be automatically removed from these specialties.`
+  };
+};
+
 // =============================================================================
 // UI SELECTOR FUNCTIONS (from original launchpad.selectors.ts)
 // =============================================================================

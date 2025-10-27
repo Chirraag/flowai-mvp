@@ -410,7 +410,7 @@ export default function PatientIntakeAgent() {
           <Button
             onClick={handleSaveAll}
             disabled={loadingState.isSaving}
-            className="bg-gray-100 hover:bg-gray-200 text-[#1c275e] px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+            className="bg-gray-100 border border-[#1c275e] hover:bg-gray-200 text-[#1c275e] px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
           >
             {loadingState.isSaving ? (
               <>

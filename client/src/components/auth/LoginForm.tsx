@@ -410,7 +410,7 @@ export default function LoginForm() {
       }}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
-            <DialogTitle>Welcome! Change Your Password</DialogTitle>
+            <DialogTitle>Change Your Password</DialogTitle>
             <DialogDescription>
               For security reasons, we recommend changing your password. You can skip this for now and change it later from your profile.
             </DialogDescription>

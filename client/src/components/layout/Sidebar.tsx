@@ -50,8 +50,6 @@ export default function Sidebar({
     NAVIGATION_ITEMS
   );
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
-  const [collapsedFlyoutFor, setCollapsedFlyoutFor] = useState<string | null>(null);
-  const collapseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Close mobile menu when switching to desktop
   useEffect(() => {
@@ -60,14 +58,6 @@ export default function Sidebar({
     }
   }, [isMobile, mobileMenuOpen, setMobileMenuOpen]);
 
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (collapseTimeoutRef.current) {
-        clearTimeout(collapseTimeoutRef.current);
-      }
-    };
-  }, []);
 
   // Handle mobile menu item click
   const handleMobileMenuItemClick = () => {
@@ -98,52 +88,13 @@ export default function Sidebar({
 
   // Handle dropdown toggle
   const handleDropdownToggle = (itemName: string) => {
-    const isOpening = dropdownOpen !== itemName;
-    setDropdownOpen(dropdownOpen === itemName ? null : itemName);
-    
-    // Track which dropdown was intentionally opened for collapsed state
-    if (isOpening) {
-      setCollapsedFlyoutFor(itemName);
-    } else {
-      // If closing dropdown, clear collapsed flyout
-      setCollapsedFlyoutFor(null);
-    }
-  };
-
-  // Hover handlers for sidebar expansion (desktop only)
-  const handleMouseEnter = () => {
-    if (!isMobile) {
-      // Clear any pending collapse timeout
-      if (collapseTimeoutRef.current) {
-        clearTimeout(collapseTimeoutRef.current);
-        collapseTimeoutRef.current = null;
-      }
-      onHoverChange(true);
-      // Restore dropdown state when expanding if flyout was active
-      if (collapsedFlyoutFor) {
-        setDropdownOpen(collapsedFlyoutFor);
-      }
-    }
-  };
-
-  const handleMouseLeave = () => {
-    if (!isMobile) {
-      // Delay collapse by 300ms to prevent accidental closes
-      collapseTimeoutRef.current = setTimeout(() => {
-        // Close any open dropdown when collapsing, but keep flyout state
-        setDropdownOpen(null);
-        onHoverChange(false);
-        collapseTimeoutRef.current = null;
-      }, 300);
-    }
-  };
-
-  // Click handler for manual toggle when collapsed
-  const handleSidebarClick = () => {
-    if (!isMobile && !expanded) {
+    // If sidebar is collapsed and clicking a dropdown, expand the sidebar first
+    if (!showLabels) {
       onExpandedChange(true);
     }
+    setDropdownOpen(dropdownOpen === itemName ? null : itemName);
   };
+
 
   // Determine if labels should be shown
   const showLabels = expanded;
@@ -528,9 +479,18 @@ export default function Sidebar({
                 expanded ? "w-64" : "w-16"
               ),
         )}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-        onClick={handleSidebarClick}
+        onMouseEnter={() => {
+          if (!isMobile) {
+            onExpandedChange(true);
+            onHoverChange(true);
+          }
+        }}
+        onMouseLeave={() => {
+          if (!isMobile) {
+            onExpandedChange(false);
+            onHoverChange(false);
+          }
+        }}
       >
         <div className={cn(
           "flex items-center border-b border-gray-200 h-16 px-3",
@@ -556,12 +516,22 @@ export default function Sidebar({
           )}
         </div>
 
-        {/* Organization Switcher - always visible; icon-only when collapsed */}
+        {/* Organization Switcher */}
         <div className={cn(
-          "border-b border-gray-200",
-          showLabels ? "px-3 py-3" : "px-2 py-2"
+          "border-b border-gray-200 relative",
+          showLabels ? "px-2 py-2" : "px-1 py-2"
         )}>
-          <OrganizationSwitcher isCollapsed={!showLabels} />
+          <div className={cn(
+            "flex",
+            showLabels ? "flex-row items-center justify-center" : "flex-col items-center justify-center"
+          )}>
+            <div className="flex-1">
+              <OrganizationSwitcher
+                isCollapsed={!showLabels}
+                onExpandRequired={() => onExpandedChange(true)}
+              />
+            </div>
+          </div>
         </div>
 
         <nav className={cn(
@@ -644,26 +614,6 @@ export default function Sidebar({
                         </div>
                       )}
 
-                      {/* Collapsed state: show child icons below parent when flyout is active */}
-                      {!showLabels && collapsedFlyoutFor === item.name && item.children && (
-                        <div className="mt-1 space-y-1">
-                          {item.children?.map((child: NavigationItem) => (
-                            <button
-                              key={child.path}
-                              className={cn(
-                                "transition-colors duration-200 w-full flex items-center justify-center px-2 py-2 mx-1 rounded-lg",
-                                isPathActive(child.path)
-                                  ? "bg-orange-50 text-[#F48024]"
-                                  : "hover:bg-gray-50 text-gray-600",
-                              )}
-                              onClick={() => handleNavigation(child.path)}
-                              title={child.name}
-                            >
-                              <span className="p-1 inline-flex">{IconComponent(child.icon)}</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
                     </>
                   ) : (
                     /* Regular navigation item */

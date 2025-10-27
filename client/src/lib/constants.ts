@@ -44,7 +44,7 @@ export const NAVIGATION_ITEMS = [
       {
         name: "AI Agents",
         path: "ai-agents",
-        icon: "bot",
+        icon: "brain",
         isDropdown: true,
         children: [
           {

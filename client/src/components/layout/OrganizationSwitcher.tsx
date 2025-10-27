@@ -31,10 +31,12 @@ interface OrganizationsResponse {
 
 interface OrganizationSwitcherProps {
   isCollapsed?: boolean;
+  onExpandRequired?: () => void;
 }
 
 export default function OrganizationSwitcher({
   isCollapsed = false,
+  onExpandRequired,
 }: OrganizationSwitcherProps) {
   const { user, switchOrganization, canCreateOrganizations } = useAuth();
   const { toast } = useToast();
@@ -282,7 +284,13 @@ export default function OrganizationSwitcher({
           "w-full h-10 hover:bg-gray-50 rounded-lg border-gray-200 bg-white transition-all duration-200",
           isCollapsed ? "justify-center px-2" : "justify-between px-3",
         )}
-        onClick={() => setIsExpanded(!isExpanded)}
+        onClick={() => {
+          // If sidebar is collapsed and we're opening the dropdown, expand the sidebar first
+          if (isCollapsed && !isExpanded && onExpandRequired) {
+            onExpandRequired();
+          }
+          setIsExpanded(!isExpanded);
+        }}
         title={isCollapsed ? currentOrg.name : undefined}
       >
         <div

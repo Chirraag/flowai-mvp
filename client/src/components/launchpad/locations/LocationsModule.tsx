@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import LocationCard from "@/components/launchpad/locations/LocationCard";
 import { usePermissions } from "@/context/AuthContext";
-import { OrgLocation } from "@/components/launchpad/types";
+import { OrgLocation, OrgSpecialityService } from "@/components/launchpad/types";
 import { Input } from "@/components/ui/input";
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { X } from "lucide-react";
@@ -28,9 +28,10 @@ interface LocationsModuleProps {
   isSaving?: boolean;
   readOnly?: boolean;
   fieldErrors?: Record<string, ValidationError | null>;
+  specialties?: OrgSpecialityService[];
 }
 
-export default function LocationsModule({
+function LocationsModule({
   locations,
   onAdd,
   onUpdate,
@@ -39,6 +40,7 @@ export default function LocationsModule({
   isSaving = false,
   readOnly: readOnlyProp,
   fieldErrors = {},
+  specialties = [],
 }: LocationsModuleProps) {
   const { canEditLocations } = usePermissions();
   const readOnly = readOnlyProp ?? !canEditLocations;
@@ -228,4 +230,4 @@ export default function LocationsModule({
   );
 }
 
-
+export default React.memo(LocationsModule);

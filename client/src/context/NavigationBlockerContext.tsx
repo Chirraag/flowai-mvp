@@ -11,11 +11,24 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+interface BackgroundTask {
+  id: string;
+  type: 'knowledge-base-generation';
+  status: 'running' | 'completed' | 'failed';
+  message: string;
+  startedAt: number;
+  completedAt?: number;
+}
+
 interface NavigationBlockerContextType {
   hasUnsavedChanges: boolean;
   unsavedTabs: string[];
+  backgroundTasks: BackgroundTask[];
   setHasUnsavedChanges: (value: boolean) => void;
   setUnsavedTabs: (tabs: string[]) => void;
+  addBackgroundTask: (task: Omit<BackgroundTask, 'startedAt'>) => void;
+  updateBackgroundTask: (id: string, updates: Partial<BackgroundTask>) => void;
+  removeBackgroundTask: (id: string) => void;
   attemptNavigation: (to: string) => void;
   navigateWithoutBlock: (to: string) => void;
 }
@@ -37,6 +50,7 @@ interface NavigationBlockerProviderProps {
 export const NavigationBlockerProvider: React.FC<NavigationBlockerProviderProps> = ({ children }) => {
   const [hasUnsavedChanges, setHasUnsavedChangesState] = useState(false);
   const [unsavedTabs, setUnsavedTabsState] = useState<string[]>([]);
+  const [backgroundTasks, setBackgroundTasks] = useState<BackgroundTask[]>([]);
   const [showDialog, setShowDialog] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
 
@@ -54,6 +68,23 @@ export const NavigationBlockerProvider: React.FC<NavigationBlockerProviderProps>
   const setUnsavedTabs = useCallback((tabs: string[]) => {
     console.log('NavigationBlocker - setUnsavedTabs called with:', tabs);
     setUnsavedTabsState(tabs);
+  }, []);
+
+  const addBackgroundTask = useCallback((task: Omit<BackgroundTask, 'startedAt'>) => {
+    console.log('NavigationBlocker - addBackgroundTask called with:', task);
+    setBackgroundTasks(prev => [...prev, { ...task, startedAt: Date.now() }]);
+  }, []);
+
+  const updateBackgroundTask = useCallback((id: string, updates: Partial<BackgroundTask>) => {
+    console.log('NavigationBlocker - updateBackgroundTask called with:', id, updates);
+    setBackgroundTasks(prev => prev.map(task =>
+      task.id === id ? { ...task, ...updates } : task
+    ));
+  }, []);
+
+  const removeBackgroundTask = useCallback((id: string) => {
+    console.log('NavigationBlocker - removeBackgroundTask called with:', id);
+    setBackgroundTasks(prev => prev.filter(task => task.id !== id));
   }, []);
 
   // Function to attempt navigation - called by navigation components
@@ -95,6 +126,29 @@ export const NavigationBlockerProvider: React.FC<NavigationBlockerProviderProps>
     };
   }, [hasUnsavedChanges, location]);
 
+  // Handle browser reload/close navigation for background tasks
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      const hasRunningTasks = backgroundTasks.some(task => task.status === 'running');
+
+      if (hasRunningTasks) {
+        event.preventDefault();
+        event.returnValue = 'Knowledge base generation in progress. Leaving will not stop the generation, but you will need to return to see results.';
+        return event.returnValue;
+      }
+
+      // Also check for unsaved changes (maintains existing behavior)
+      if (hasUnsavedChanges) {
+        event.preventDefault();
+        event.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        return event.returnValue;
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [backgroundTasks, hasUnsavedChanges]);
+
   const handleContinueAnyway = () => {
     setShowDialog(false);
     if (pendingNavigation) {
@@ -118,8 +172,12 @@ export const NavigationBlockerProvider: React.FC<NavigationBlockerProviderProps>
   const value = {
     hasUnsavedChanges,
     unsavedTabs,
+    backgroundTasks,
     setHasUnsavedChanges,
     setUnsavedTabs,
+    addBackgroundTask,
+    updateBackgroundTask,
+    removeBackgroundTask,
     attemptNavigation,
     navigateWithoutBlock,
   };

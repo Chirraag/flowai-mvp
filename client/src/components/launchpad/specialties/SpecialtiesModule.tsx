@@ -43,7 +43,7 @@ interface SpecialtiesModuleProps {
   fieldErrors?: Record<string, ValidationError | null>;
 }
 
-export default function SpecialtiesModule({
+function SpecialtiesModule({
   specialties,
   locations,
   locationOptions,
@@ -908,4 +908,4 @@ export default function SpecialtiesModule({
   );
 }
 
-
+export default React.memo(SpecialtiesModule);

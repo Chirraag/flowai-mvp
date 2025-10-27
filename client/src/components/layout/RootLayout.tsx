@@ -8,7 +8,6 @@ import { NavigationBlockerProvider } from "@/context/NavigationBlockerContext";
 
 export default function RootLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
   const isMobile = useIsMobile();
 
@@ -16,8 +15,8 @@ export default function RootLayout() {
     setMobileMenuOpen(!mobileMenuOpen);
   };
 
-  // Auto-expand logic: expand on hover or manual toggle (desktop only)
-  const effectiveExpanded = isMobile ? false : (sidebarExpanded || isSidebarHovered);
+  // Auto-expand logic: expand on hover (desktop only)
+  const effectiveExpanded = isMobile ? false : isSidebarHovered;
   
   // Dynamic dimensions
   const sidebarWidth = effectiveExpanded ? 256 : 64; // px
@@ -26,7 +25,7 @@ export default function RootLayout() {
       <div className="min-h-screen flex flex-col">
         <Sidebar
           expanded={effectiveExpanded}
-          onExpandedChange={setSidebarExpanded}
+          onExpandedChange={() => {}} // No-op since we only use hover now
           onHoverChange={setIsSidebarHovered}
           mobileMenuOpen={mobileMenuOpen}
           setMobileMenuOpen={setMobileMenuOpen}

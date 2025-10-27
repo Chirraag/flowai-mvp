@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/context/AuthContext";
+import { useNavigationBlocker } from "@/context/NavigationBlockerContext";
 import { useCreateCuratedKB, useDeleteCuratedKB } from "@/lib/launchpad.api";
 import { Download, Trash2, FileText, Loader2, Eye, AlertCircle, CheckCircle, Circle, XCircle } from "lucide-react";
 import { CuratedKBEntry } from "@/lib/launchpad.types";
@@ -35,10 +36,11 @@ interface GenerationStep {
   status: GenerationStepStatus;
 }
 
-export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount, readOnly: readOnlyProp }: KnowledgeModuleProps) {
+function KnowledgeModule({ orgId, curatedKb, curatedKbCount, readOnly: readOnlyProp }: KnowledgeModuleProps) {
   const { canEditKnowledgeBase } = usePermissions();
   const readOnly = readOnlyProp ?? !canEditKnowledgeBase;
   const { toast } = useToast();
+  const { addBackgroundTask, updateBackgroundTask, removeBackgroundTask, backgroundTasks } = useNavigationBlocker();
   const [viewingDocument, setViewingDocument] = useState<CuratedKBEntry | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isScrolled, setIsScrolled] = useState(false);
@@ -53,8 +55,7 @@ export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount, read
     { id: 'locations', label: 'Processing locations data', status: 'pending' },
     { id: 'specialties', label: 'Collecting specialties info', status: 'pending' },
     { id: 'insurance', label: 'Adding insurance settings', status: 'pending' },
-    { id: 'generating', label: 'Creating document', status: 'pending' },
-    { id: 'almost-ready', label: 'Almost ready', status: 'pending' }
+    { id: 'generating', label: 'Creating Knowledge Base', status: 'pending' }
   ]);
 
   const createCuratedKB = useCreateCuratedKB(orgId);
@@ -85,10 +86,18 @@ export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount, read
     setShowProgress(true);
     setGenerationSteps(prev => prev.map(step => ({ ...step, status: 'pending' })));
 
+    // Add background task for navigation blocking
+    const taskId = `kb-gen-${Date.now()}`;
+    addBackgroundTask({
+      id: taskId,
+      type: 'knowledge-base-generation',
+      status: 'running',
+      message: 'Generating knowledge base...',
+    });
+
     // Start mock progress simulation
     let stepIndex = 0;
     let progressInterval: NodeJS.Timeout | undefined;
-    let longWaitTimeout: NodeJS.Timeout | undefined;
 
     const startProgressSimulation = () => {
       const advanceStep = () => {
@@ -100,35 +109,26 @@ export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount, read
 
         stepIndex++;
 
-        // Special handling for "Creating document" step - wait up to 3 minutes
-        if (stepIndex === 5) { // Creating document is index 4, so stepIndex 5 means we just moved to it
-          longWaitTimeout = setTimeout(() => {
-            // After 3 minutes, advance to "Almost ready" and stay there until API completes
-            stepIndex = 5; // Set to almost-ready index
-            setGenerationSteps(prev => prev.map((step, index) => ({
-              ...step,
-              status: index < stepIndex ? 'completed' :
-                      index === stepIndex ? 'current' : 'pending'
-            })));
-            // Don't advance further - stay on "Almost ready" until API completes
-          }, 180000); // 3 minutes = 180,000ms
-        } else if (stepIndex >= generationSteps.length) {
+        // Stop advancing after reaching "Creating document" (index 4)
+        if (stepIndex >= 5) {
           clearInterval(progressInterval);
         }
       };
 
-      // Advance through first 4 steps quickly
+      // Advance through first 4 steps (2 seconds each)
       progressInterval = setInterval(() => {
         if (stepIndex < 4) { // Stop advancing after "Adding insurance settings"
           advanceStep();
         }
-      }, 800);
+      }, 2000);
 
       // Manually advance to "Creating document" after 4 steps
       setTimeout(() => {
-        stepIndex = 4;
-        advanceStep();
-      }, 3200); // 4 steps * 800ms = 3200ms
+        if (stepIndex <= 3) { // Only advance if we haven't reached "Creating document" yet
+          stepIndex = 4;
+          advanceStep();
+        }
+      }, 8000); // 4 steps * 2000ms = 8000ms
     };
 
     startProgressSimulation();
@@ -136,16 +136,28 @@ export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount, read
     try {
       const response = await createCuratedKB.mutateAsync();
 
-      // Clear all timers
+      // Clear timer
       if (progressInterval) {
         clearInterval(progressInterval);
       }
-      if (longWaitTimeout) {
-        clearTimeout(longWaitTimeout);
-      }
 
-      // Complete all steps on success
-      setGenerationSteps(prev => prev.map(step => ({ ...step, status: 'completed' })));
+      // Update background task to completed
+      updateBackgroundTask(taskId, {
+        status: 'completed',
+        message: 'Knowledge base generated successfully!',
+        completedAt: Date.now(),
+      });
+
+      // Auto-remove completed task after 5 seconds
+      setTimeout(() => {
+        removeBackgroundTask(taskId);
+      }, 5000);
+
+      // Complete "Creating document" step on success (keep others as they are)
+      setGenerationSteps(prev => prev.map(step => ({
+        ...step,
+        status: step.id === 'generating' ? 'completed' : step.status
+      })));
 
       // Hide progress after a brief delay to show completion
       setTimeout(() => setShowProgress(false), 1500);
@@ -155,13 +167,22 @@ export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount, read
         description: response.message || "Knowledge base generated successfully",
       });
     } catch (error) {
-      // Clear all timers
+      // Clear timer
       if (progressInterval) {
         clearInterval(progressInterval);
       }
-      if (longWaitTimeout) {
-        clearTimeout(longWaitTimeout);
-      }
+
+      // Update background task to failed
+      updateBackgroundTask(taskId, {
+        status: 'failed',
+        message: 'Knowledge base generation failed',
+        completedAt: Date.now(),
+      });
+
+      // Auto-remove failed task after 10 seconds
+      setTimeout(() => {
+        removeBackgroundTask(taskId);
+      }, 10000);
 
       // Show error state for all steps
       setGenerationSteps(prev => prev.map(step => ({ ...step, status: 'error' })));
@@ -415,7 +436,9 @@ export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount, read
     );
   }, [curatedKb, searchTerm]);
 
-  const isGenerating = createCuratedKB.isPending;
+  const isGenerating = backgroundTasks.some(task =>
+    task.type === 'knowledge-base-generation' && task.status === 'running'
+  ) || createCuratedKB.isPending;
   const isDeleting = deleteCuratedKB.isPending;
 
   return (
@@ -642,4 +665,4 @@ export default function KnowledgeModule({ orgId, curatedKb, curatedKbCount, read
   );
 }
 
-
+export default React.memo(KnowledgeModule);
