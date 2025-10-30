@@ -1,23 +1,26 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card } from '@/components/ui/card';
-import { Calendar, RefreshCw, Filter } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Datepicker } from 'flowbite-react';
+import { RefreshCw, Filter, ChevronDown, Search, X, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { analyticsApi } from '@/api/analytics';
 
 interface DateFilterControlsProps {
   onFiltersChange: (filters: {from?: string, to?: string, agentName?: string} | null) => void;
   isLoading?: boolean;
   filterError?: string | null;
   className?: string;
+  orgId?: number;
 }
 
 const DateFilterControls: React.FC<DateFilterControlsProps> = ({
   onFiltersChange,
   isLoading = false,
   filterError = null,
-  className
+  className,
+  orgId
 }) => {
   // Memoized default dates calculation
   const defaultDates = useMemo(() => {
@@ -26,16 +29,49 @@ const DateFilterControls: React.FC<DateFilterControlsProps> = ({
     ninetyDaysAgo.setDate(today.getDate() - 90);
 
     return {
-      from: ninetyDaysAgo.toISOString().split('T')[0], // YYYY-MM-DD format
-      to: today.toISOString().split('T')[0]
+      from: ninetyDaysAgo.toISOString().split('T')[0], // YYYY-MM-DD for internal use
+      to: today.toISOString().split('T')[0],
+      fromDate: ninetyDaysAgo,
+      toDate: today
     };
-  }, []); // Empty dependency array since this should only calculate once
+  }, []);
 
-  const [fromDate, setFromDate] = useState<string>('');
-  const [toDate, setToDate] = useState<string>('');
+  const [fromDate, setFromDate] = useState<Date | null>(null);
+  const [toDate, setToDate] = useState<Date | null>(null);
   const [agentName, setAgentName] = useState<string>('');
   const [hasAppliedFilters, setHasAppliedFilters] = useState(false);
   const [validationError, setValidationError] = useState<string>('');
+
+  // Agent dropdown state
+  const [agents, setAgents] = useState<string[]>([]);
+  const [isAgentDropdownOpen, setIsAgentDropdownOpen] = useState(false);
+  const [isLoadingAgents, setIsLoadingAgents] = useState(false);
+  const [agentSearchTerm, setAgentSearchTerm] = useState('');
+  const [agentsLoaded, setAgentsLoaded] = useState(false);
+
+  // Helper function to convert Date to YYYY-MM-DD string
+  const dateToString = (date: Date | null | undefined): string => {
+    if (!date) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Helper function to parse YYYY-MM-DD string to Date
+  const stringToDate = (dateStr: string): Date | undefined => {
+    if (!dateStr) return undefined;
+    return new Date(dateStr + 'T00:00:00');
+  };
+
+  // Helper function to format Date to MM-DD-YYYY for display
+  const formatDateForDisplay = (date: Date | undefined): string => {
+    if (!date) return '';
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${month}-${day}-${year}`;
+  };
 
   // Initialize URL params on mount
   useEffect(() => {
@@ -45,8 +81,18 @@ const DateFilterControls: React.FC<DateFilterControlsProps> = ({
     const agentNameParam = urlParams.get('agent_name');
 
     // Set values from URL
-    if (fromParam) setFromDate(fromParam);
-    if (toParam) setToDate(toParam);
+    if (fromParam) {
+      const parsedFromDate = stringToDate(fromParam);
+      setFromDate(parsedFromDate || null);
+    } else {
+      setFromDate(null);
+    }
+    if (toParam) {
+      const parsedToDate = stringToDate(toParam);
+      setToDate(parsedToDate || null);
+    } else {
+      setToDate(null);
+    }
     if (agentNameParam) setAgentName(agentNameParam);
 
     // If any filters are present, mark as applied and trigger change
@@ -58,51 +104,105 @@ const DateFilterControls: React.FC<DateFilterControlsProps> = ({
         agentName: agentNameParam || undefined
       });
     }
-  }, [onFiltersChange]);
+  }, []); // Only run once on mount
+
+  // Fetch agents list
+  const fetchAgents = useCallback(async () => {
+    if (!orgId || agentsLoaded) return;
+
+    setIsLoadingAgents(true);
+    try {
+      const agentList = await analyticsApi.listAgents(orgId);
+      setAgents(agentList);
+      setAgentsLoaded(true);
+    } catch (error) {
+      console.error('Failed to fetch agents:', error);
+      // Keep empty array on error
+      setAgents([]);
+      setAgentsLoaded(true);
+    } finally {
+      setIsLoadingAgents(false);
+    }
+  }, [orgId, agentsLoaded]);
+
+  // Filtered agents based on search term
+  const filteredAgents = useMemo(() => {
+    if (!agentSearchTerm.trim()) return agents;
+    return agents.filter(agent =>
+      agent.toLowerCase().includes(agentSearchTerm.toLowerCase())
+    );
+  }, [agents, agentSearchTerm]);
+
+  // Handle agent selection
+  const handleAgentSelect = useCallback((selectedAgent: string) => {
+    setAgentName(selectedAgent);
+    setIsAgentDropdownOpen(false);
+    setAgentSearchTerm('');
+  }, []);
+
+  // Handle agent dropdown toggle
+  const handleAgentDropdownToggle = useCallback(() => {
+    setIsAgentDropdownOpen(prev => !prev);
+    // Lazy load agents when dropdown opens
+    if (!isAgentDropdownOpen && !agentsLoaded && orgId) {
+      fetchAgents();
+    }
+  }, [isAgentDropdownOpen, agentsLoaded, orgId, fetchAgents]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('[data-agent-dropdown]')) {
+        setIsAgentDropdownOpen(false);
+        setAgentSearchTerm('');
+      }
+    };
+
+    if (isAgentDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isAgentDropdownOpen]);
 
   // Update URL when filters are applied
   const updateURL = (from?: string, to?: string, agentName?: string) => {
-    const url = new URL(window.location.href);
+    const url = new URL(window.location.origin + window.location.pathname);
 
     if (from) {
       url.searchParams.set('from', from);
-    } else {
-      url.searchParams.delete('from');
     }
 
     if (to) {
       url.searchParams.set('to', to);
-    } else {
-      url.searchParams.delete('to');
     }
 
     if (agentName && agentName.trim()) {
       url.searchParams.set('agent_name', agentName.trim());
-    } else {
-      url.searchParams.delete('agent_name');
     }
 
     window.history.replaceState({}, '', url.toString());
   };
 
   // Memoized validation function
-  const validateDates = useCallback((from: string, to: string): string => {
-    const fromDateObj = new Date(from);
-    const toDateObj = new Date(to);
-    const today = new Date();
+  const validateDates = useCallback((fromDateObj: Date | null | undefined, toDateObj: Date | null | undefined): string => {
+    // If both dates are provided, validate them
+    if (fromDateObj && toDateObj) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
 
-    if (fromDateObj > toDateObj) {
-      return 'From date cannot be after to date';
+      if (fromDateObj > toDateObj) {
+        return 'From date cannot be after to date';
+      }
+
+      if (toDateObj > today) {
+        return 'To date cannot be in the future';
+      }
+
+      if (fromDateObj > today) {
+        return 'From date cannot be in the future';
+      }
     }
-
-    if (toDateObj > today) {
-      return 'To date cannot be in the future';
-    }
-
-    if (fromDateObj > today) {
-      return 'From date cannot be in the future';
-    }
-
 
     return '';
   }, []);
@@ -114,19 +214,32 @@ const DateFilterControls: React.FC<DateFilterControlsProps> = ({
       return;
     }
 
+    // Check if at least one filter is provided
+    const hasDateFilters = fromDate || toDate;
+    const hasAgentFilter = agentName.trim().length > 0;
+
+    if (!hasDateFilters && !hasAgentFilter) {
+      setValidationError('Please provide at least one filter (date range or agent name)');
+      return;
+    }
+
     setValidationError('');
     setHasAppliedFilters(true);
-    updateURL(fromDate, toDate, agentName);
+
+    const fromStr = dateToString(fromDate);
+    const toStr = dateToString(toDate);
+
+    updateURL(fromStr, toStr, agentName);
     onFiltersChange({
-      from: fromDate || undefined,
-      to: toDate || undefined,
+      from: fromStr || undefined,
+      to: toStr || undefined,
       agentName: agentName.trim() || undefined
     });
   };
 
   const handleResetFilters = useCallback(() => {
-    setFromDate(defaultDates.from);
-    setToDate(defaultDates.to);
+    setFromDate(defaultDates.fromDate);
+    setToDate(defaultDates.toDate);
     setAgentName('');
     setHasAppliedFilters(true);
     setValidationError('');
@@ -139,8 +252,8 @@ const DateFilterControls: React.FC<DateFilterControlsProps> = ({
   }, [defaultDates, onFiltersChange]);
 
   const handleClearFilters = () => {
-    setFromDate('');
-    setToDate('');
+    setFromDate(null);
+    setToDate(null);
     setAgentName('');
     setHasAppliedFilters(false);
     setValidationError('');
@@ -148,173 +261,318 @@ const DateFilterControls: React.FC<DateFilterControlsProps> = ({
     onFiltersChange(null);
   };
 
+  // Custom theme for Flowbite Datepicker
+  const customTheme = {
+    root: {
+      base: "relative"
+    },
+    input: {
+      base: "h-8 pl-10 pr-3 text-sm bg-white text-[#1C275E] placeholder:text-[#1C275E]/60 border-[#cbd5e1] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition rounded-lg"
+    },
+    popup: {
+      root: {
+        base: "absolute top-10 z-50 block pt-2",
+        inline: "relative top-0 z-auto",
+        inner: "inline-block rounded-lg bg-white p-4 shadow-lg border border-gray-200"
+      },
+      header: {
+        base: "",
+        title: "px-2 py-3 text-center font-semibold text-gray-900",
+        selectors: {
+          base: "mb-2 flex justify-between",
+          button: {
+            base: "rounded-lg bg-white px-5 py-2.5 text-sm font-semibold text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500",
+            prev: "",
+            next: "",
+            view: ""
+          }
+        }
+      },
+      view: {
+        base: "p-1"
+      },
+      footer: {
+        base: "mt-2 flex space-x-2",
+        button: {
+          base: "w-full rounded-lg px-5 py-2 text-center text-sm font-medium focus:ring-4 focus:ring-blue-300",
+          today: "bg-blue-700 text-white hover:bg-blue-800",
+          clear: "border border-gray-300 bg-white text-gray-900 hover:bg-gray-100"
+        }
+      }
+    },
+    views: {
+      days: {
+        header: {
+          base: "mb-1 grid grid-cols-7",
+          title: "h-6 text-center text-sm font-medium leading-6 text-gray-500"
+        },
+        items: {
+          base: "grid w-64 grid-cols-7",
+          item: {
+            base: "block flex-1 cursor-pointer rounded-lg border-0 text-center text-sm font-semibold leading-9 text-gray-900 hover:bg-gray-100",
+            selected: "bg-blue-700 text-white hover:bg-blue-600",
+            disabled: "text-gray-400 cursor-not-allowed"
+          }
+        }
+      },
+      months: {
+        items: {
+          base: "grid w-64 grid-cols-4",
+          item: {
+            base: "block flex-1 cursor-pointer rounded-lg border-0 text-center text-sm font-semibold leading-9 text-gray-900 hover:bg-gray-100",
+            selected: "bg-blue-700 text-white hover:bg-blue-600",
+            disabled: "text-gray-400"
+          }
+        }
+      },
+      years: {
+        items: {
+          base: "grid w-64 grid-cols-4",
+          item: {
+            base: "block flex-1 cursor-pointer rounded-lg border-0 text-center text-sm font-semibold leading-9 text-gray-900 hover:bg-gray-100",
+            selected: "bg-blue-700 text-white hover:bg-blue-600",
+            disabled: "text-gray-400"
+          }
+        }
+      },
+      decades: {
+        items: {
+          base: "grid w-64 grid-cols-4",
+          item: {
+            base: "block flex-1 cursor-pointer rounded-lg border-0 text-center text-sm font-semibold leading-9 text-gray-900 hover:bg-gray-100",
+            selected: "bg-blue-700 text-white hover:bg-blue-600",
+            disabled: "text-gray-400"
+          }
+        }
+      }
+    }
+  };
+
   return (
-    <Card className={cn("p-4 bg-white border-gray-200", className)}>
-      <div className="flex flex-col space-y-4">
+    <div className={cn("w-full", className)}>
+      <div className="flex flex-col lg:flex-row items-start lg:items-center gap-6">
         {/* Header */}
-        <div className="flex items-center gap-2">
-          <Filter className="h-5 w-5 text-gray-600" aria-hidden="true" />
-          <h3 id="date-range-group" className="text-sm font-semibold text-gray-700">
-            Date Range Filter
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <Filter className="h-4 w-4 text-[#F48024]" aria-hidden="true" />
+          <h3 id="date-range-group" className="text-sm font-semibold text-white">
+            Filter
           </h3>
           {hasAppliedFilters && (
-            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full" aria-live="polite">
+            <span className="text-xs bg-[#F48024]/20 text-[#F48024] px-2 py-1 rounded-full" aria-live="polite">
               Active
             </span>
           )}
         </div>
 
-        {/* Date Inputs */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4" role="group" aria-labelledby="date-range-group">
-          <div className="space-y-2">
-            <Label
-              htmlFor="from-date"
-              className="text-sm text-gray-600 font-medium"
-            >
-              From Date
-            </Label>
-            <div className="relative">
-              <Input
+        {/* Date Inputs and Agent Name - Horizontal Layout */}
+        <div className="flex flex-col lg:flex-row items-start lg:items-end gap-4 flex-1" role="group" aria-labelledby="date-range-group">
+          {/* From Date */}
+          <div className="space-y-1.5">
+            <Datepicker
                 id="from-date"
-                type="date"
                 value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-                className="pl-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="YYYY-MM-DD"
-                aria-describedby={validationError ? "date-validation-error" : undefined}
-                aria-invalid={!!validationError}
-                min="2020-01-01"
-                max={new Date().toISOString().split('T')[0]}
+                onChange={(date) => setFromDate(date)}
+                placeholder="From date"
+                minDate={new Date('2020-01-01')}
+                maxDate={new Date()}
+                weekStart={0}
+                autoHide={true}
+                showClearButton={false}
+                showTodayButton={false}
+                theme={customTheme}
               />
-              <Calendar
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"
-                aria-hidden="true"
-              />
-            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label
-              htmlFor="to-date"
-              className="text-sm text-gray-600 font-medium"
-            >
-              To Date
-            </Label>
-            <div className="relative">
-              <Input
+          {/* To Date */}
+          <div className="space-y-1.5">
+            <Datepicker
                 id="to-date"
-                type="date"
                 value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-                className="pl-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="YYYY-MM-DD"
-                aria-describedby={validationError ? "date-validation-error" : undefined}
-                aria-invalid={!!validationError}
-                min="2020-01-01"
-                max={new Date().toISOString().split('T')[0]}
+                onChange={(date) => setToDate(date)}
+                placeholder="To date"
+                minDate={new Date('2020-01-01')}
+                maxDate={new Date()}
+                weekStart={0}
+                autoHide={true}
+                showClearButton={false}
+                showTodayButton={false}
+                theme={customTheme}
               />
-              <Calendar
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"
-                aria-hidden="true"
+          </div>
+
+          {/* Agent Name Dropdown */}
+          <div className="space-y-1.5" data-agent-dropdown>
+            {/* Agent Dropdown Button */}
+            <Button
+              variant="outline"
+              className={cn(
+                "w-full h-8 justify-between bg-white text-[#1C275E] border-[#cbd5e1] hover:bg-gray-50 transition-all duration-200",
+                isAgentDropdownOpen ? "ring-2 ring-[#0d9488]/20 border-[#0d9488]" : ""
+              )}
+              onClick={handleAgentDropdownToggle}
+              type="button"
+            >
+              <span className="truncate text-sm">
+                {agentName || "Select agent..."}
+              </span>
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 text-gray-400 transition-transform duration-200 flex-shrink-0 ml-2",
+                  isAgentDropdownOpen ? "rotate-180" : ""
+                )}
               />
-            </div>
-          </div>
-        </div>
+            </Button>
 
-        {/* Agent Name Input */}
-        <div className="space-y-2">
-          <Label htmlFor="agent-name" className="text-sm text-gray-600 font-medium">
-            Agent Name
-          </Label>
-          <Input
-            id="agent-name"
-            type="text"
-            value={agentName}
-            onChange={(e) => setAgentName(e.target.value)}
-            placeholder="Type agent name..."
-            className="focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            aria-describedby={validationError ? "date-validation-error" : undefined}
-          />
-        </div>
-
-        {/* Validation Error */}
-        {validationError && (
-          <div
-            id="date-validation-error"
-            className="text-sm text-red-600 bg-red-50 p-2 rounded border border-red-200"
-            role="alert"
-            aria-live="assertive"
-          >
-            <strong className="sr-only">Validation Error:</strong>
-            {validationError}
-          </div>
-        )}
-
-        {/* Filter Error */}
-        {filterError && (
-          <div
-            className="text-sm text-orange-600 bg-orange-50 p-2 rounded border border-orange-200"
-            role="alert"
-            aria-live="assertive"
-          >
-            <strong>Filter Error:</strong> {filterError}
-          </div>
-        )}
-
-        {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-2" role="group" aria-label="Filter actions">
-          <Button
-            onClick={handleApplyFilters}
-            disabled={!fromDate || !toDate || isLoading}
-            className="flex-1 sm:flex-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-            aria-describedby={validationError ? "date-validation-error" : undefined}
-          >
-            {isLoading ? (
+            {/* Dropdown Menu */}
+            {isAgentDropdownOpen && (
               <>
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" aria-hidden="true" />
-                Applying...
-              </>
-            ) : (
-              <>
-                <Filter className="h-4 w-4 mr-2" aria-hidden="true" />
-                Apply Filters
+                {/* Click outside overlay */}
+                <div className="fixed inset-0 z-40" onClick={() => setIsAgentDropdownOpen(false)} />
+
+                <Card className="absolute top-full mt-1 shadow-xl border border-gray-200 z-50 bg-white rounded-lg overflow-hidden w-70 max-w-[calc(130vw-2rem)]">
+                  <CardContent className="p-0">
+                    {/* Sticky Search Header */}
+                    <div className="sticky top-0 bg-white border-b border-gray-100 z-10 p-3">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <input
+                          type="text"
+                          placeholder="Search agents..."
+                          value={agentSearchTerm}
+                          onChange={(e) => setAgentSearchTerm(e.target.value)}
+                          className="w-full pl-10 pr-8 py-2 text-sm border border-gray-200 rounded-lg focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 transition"
+                          autoFocus
+                        />
+                        {agentSearchTerm && (
+                          <button
+                            type="button"
+                            onClick={() => setAgentSearchTerm('')}
+                            className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-100 rounded"
+                          >
+                            <X className="h-3 w-3 text-gray-500" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Scrollable Agents List */}
+                    <div className="max-h-64 overflow-y-auto">
+                      {isLoadingAgents ? (
+                        <div className="flex items-center justify-center py-6">
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#1C275E] mr-2"></div>
+                          <span className="text-sm text-gray-600">Loading agents...</span>
+                        </div>
+                      ) : filteredAgents.length === 0 ? (
+                        <div className="flex items-center justify-center py-6">
+                          <span className="text-sm text-gray-500">
+                            {agentSearchTerm.trim() ? "No agents found" : "No agents available"}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="py-2">
+                          {filteredAgents.map((agent) => (
+                            <Button
+                              key={agent}
+                              variant="ghost"
+                              className={cn(
+                                "w-full justify-start p-3 h-auto hover:bg-blue-50 rounded-none border-0",
+                                agent === agentName && "bg-blue-50"
+                              )}
+                              onClick={() => handleAgentSelect(agent)}
+                            >
+                              <div className="flex items-center gap-3 w-full min-w-0">
+                                <div className="text-left min-w-0 flex-1">
+                                  <p className="text-sm font-medium text-gray-900 truncate">
+                                    {agent}
+                                  </p>
+                                </div>
+                                {agent === agentName && (
+                                  <div className="flex items-center gap-2 flex-shrink-0">
+                                    <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                                  </div>
+                                )}
+                              </div>
+                            </Button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
               </>
             )}
-          </Button>
+          </div>
 
-          <Button
-            variant="outline"
-            onClick={handleResetFilters}
-            disabled={isLoading}
-            className="flex-1 sm:flex-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-            aria-label="Reset filters to last 90 days"
-          >
-            <RefreshCw className="h-4 w-4 mr-2" aria-hidden="true" />
-             Last 90 Days
-          </Button>
+          {/* Action Buttons */}
+          <div className="flex gap-2 flex-shrink-0" role="group" aria-label="Filter actions">
+            <Button
+              onClick={handleApplyFilters}
+              disabled={isLoading || (!fromDate && !toDate && !agentName.trim())}
+              className="bg-[#f49024] hover:bg-[#d87f1f] text-white text-xs h-8 px-3 focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+              aria-describedby={validationError ? "date-validation-error" : undefined}
+            >
+              {isLoading ? (
+                <>
+                  <RefreshCw className="h-3 w-3 mr-1 animate-spin" aria-hidden="true" />
+                  Applying...
+                </>
+              ) : (
+                <>
+                  <Filter className="h-3 w-3 mr-1" aria-hidden="true" />
+                  Apply
+                </>
+              )}
+            </Button>
 
-          <Button
-            variant="ghost"
-            onClick={handleClearFilters}
-            disabled={isLoading}
-            className="text-gray-500 hover:text-gray-700 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
-            aria-label="Clear all applied filters"
-          >
-            Clear All
-          </Button>
-        </div>
+            {/* 90 Days button - commented out */}
+            {/* <Button
+              variant="outline"
+              onClick={handleResetFilters}
+              disabled={isLoading}
+              className="bg-transparent text-[#e6eff7] border-[#95a3b8] hover:bg-[#233072] hover:text-white text-xs h-8 px-3 focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+              aria-label="Reset filters to last 90 days"
+            >
+              <RefreshCw className="h-3 w-3 mr-1" aria-hidden="true" />
+              90 Days
+            </Button> */}
 
-        {/* Helper Text */}
-        <div className="text-xs text-gray-500">
-          {!hasAppliedFilters ? (
-            "Apply filters to view data for a specific date range and/or agent. Leave empty for all available data."
-          ) : (
-            `Showing data${fromDate && toDate ? ` from ${fromDate} to ${toDate}` : ''}${agentName ? ` for agent: ${agentName}` : ''}`
-          )}
+            <Button
+              variant="outline"
+              onClick={handleClearFilters}
+              disabled={isLoading}
+              className="bg-transparent text-[#e6eff7] border-[#95a3b8] hover:bg-[#233072] hover:text-white text-xs h-8 px-3 focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+              aria-label="Clear all applied filters"
+            >
+              Clear
+            </Button>
+          </div>
         </div>
       </div>
-    </Card>
+
+      {/* Validation Error */}
+      {validationError && (
+        <div
+          id="date-validation-error"
+          className="mt-3 text-sm text-red-600 bg-red-50 p-2 rounded border border-red-200"
+          role="alert"
+          aria-live="assertive"
+        >
+          <strong className="sr-only">Validation Error:</strong>
+          {validationError}
+        </div>
+      )}
+
+      {/* Filter Error */}
+      {filterError && (
+        <div
+          className="mt-3 text-sm text-orange-600 bg-orange-50 p-2 rounded border border-orange-200"
+          role="alert"
+          aria-live="assertive"
+        >
+          <strong>Filter Error:</strong> {filterError}
+        </div>
+      )}
+    </div>
   );
 };
-
 export default DateFilterControls;

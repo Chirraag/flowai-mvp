@@ -737,13 +737,18 @@ export default function Analytics() {
   return (
     <div className="min-h-screen bg-white p-4 sm:p-6">
       <div className="container mx-auto space-y-6">
-        {/* Date Filter Controls */}
-        <DateFilterControls
-          onFiltersChange={setDateFilters}
-          isLoading={filterLoading}
-          filterError={filterError}
-          className="w-full"
-        />
+        {/* Sticky Header with Filters */}
+        <div className="sticky top-0 z-50 bg-[#1C275E] text-white border-b border-[#1C275E]/20 rounded-t-2xl shadow-sm">
+          <div className="p-2">
+            <DateFilterControls
+              onFiltersChange={setDateFilters}
+              isLoading={filterLoading}
+              filterError={filterError}
+              className="w-full"
+              orgId={user?.org_id}
+            />
+          </div>
+        </div>
 
         {/* Filter Error Alert - Show when data loading failed due to filters */}
         {filterError && data && (
@@ -774,76 +779,81 @@ export default function Analytics() {
           </div>
         )}
 
-        {/* Top KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="bg-gradient-to-br from-blue-500 to-blue-600 border-0 shadow-lg">
-            <div className="flex items-start gap-3">
-              <Sparkles className="h-5 w-5 text-white flex-shrink-0" />
-              <div className="flex-1">
-                <h3 className="text-white font-semibold text-lg">Call Counts</h3>
-                <p className="text-blue-100 text-sm mt-1">All agents</p>
-                <p className="text-white mt-4 text-3xl font-bold">{formatNumber(data.summary.totalCalls)}</p>
-              </div>
-            </div>
-          </Card>
+        {/* Top Row - KPI Cards and Call Successful Chart */}
+        <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
+          {/* Top KPI Cards - Left side, stacked vertically and compact */}
+          <div className="xl:col-span-2 flex flex-col gap-2">
+    <Card className="bg-white border-0 shadow-md rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 focus-within:shadow-xl focus-within:-translate-y-1 h-32">
+      <div className="p-4">
+        <h3 className="text-sm font-bold text-slate-500 tracking-wider uppercase mb-1">
+          Call Counts
+        </h3>
+        <p className="text-4xl font-bold text-[#f48024] tracking-tight">
+          {formatNumber(data.summary.totalCalls)}
+        </p>
+      </div>
+    </Card>
 
-          <Card className="bg-gradient-to-br from-purple-500 to-purple-600 border-0 shadow-lg">
-            <div className="flex items-start gap-3">
-              <Clock className="h-5 w-5 text-white flex-shrink-0" />
-              <div className="flex-1">
-                <h3 className="text-white font-semibold text-lg">Call Duration</h3>
-                <p className="text-purple-100 text-sm mt-1">All agents</p>
-                <p className="text-white mt-4 text-3xl font-bold">{formatDuration(data.summary.averageCallDuration)}</p>
-              </div>
-            </div>
-          </Card>
+    <Card className="bg-white border-0 shadow-md rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 focus-within:shadow-xl focus-within:-translate-y-1 h-32">
+      <div className="p-4">
+        <h3 className="text-sm font-bold text-slate-500 tracking-wider uppercase mb-1">
+          Avg. Call Duration
+        </h3>
+        <p className="text-4xl font-bold text-[#f48024] tracking-tight">
+          {formatDuration(data.summary.averageCallDuration)}
+        </p>
+      </div>
+    </Card>
 
-          <Card className="bg-gradient-to-br from-pink-500 to-rose-600 border-0 shadow-lg">
-            <div className="flex items-start gap-3">
-              <Activity className="h-5 w-5 text-white flex-shrink-0" />
-              <div className="flex-1">
-                <h3 className="text-white font-semibold text-lg">Call Latency</h3>
-                <p className="text-pink-100 text-sm mt-1">All agents</p>
-                <p className="text-white mt-4 text-3xl font-bold">{data.summary.averageLatency}ms</p>
+    <Card className="bg-white border-0 shadow-md rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 focus-within:shadow-xl focus-within:-translate-y-1 h-32">
+      <div className="p-4">
+        <h3 className="text-sm font-bold text-slate-500 tracking-wider uppercase mb-1">
+          Avg. Call Latency
+        </h3>
+        <p className="text-4xl font-bold text-[#f48024] tracking-tight">
+          {data.summary.averageLatency}ms
+        </p>
+      </div>
+    </Card>
+  </div>
+
+
+          {/* Call Successful Chart - Right side, wider */}
+          <div className="xl:col-span-3">
+            <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
+              <div className="flex items-center gap-2 mb-2">
+                <BarChart3 className="h-5 w-5 text-blue-600" />
+                <h3 className="text-gray-900 font-semibold text-lg">Call Successful</h3>
               </div>
-            </div>
-          </Card>
+              
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={callSuccessfulStacked} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
+                    <CartesianGrid stroke="rgba(0,0,0,0.05)" />
+                    <XAxis dataKey="label" />
+                    <YAxis allowDecimals={false} />
+                    <Tooltip />
+                    <Legend verticalAlign="bottom" />
+                    <Bar dataKey="successful" name="Call counts: successful" stackId="a" fill={COLORS.sky} radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="unsuccessful" name="Call counts: unsuccessful" stackId="a" fill={COLORS.green} radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+          </div>
         </div>
 
-        {/* Call Counts and Success Rate */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
-            <div className="flex items-center gap-2 mb-2">
-              <TrendingUp className="h-5 w-5 text-blue-600" />
-              <h3 className="text-gray-900 font-semibold text-lg">Call Counts</h3>
-            </div>
-            <p className="text-gray-600 text-sm mb-4">All agents</p>
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={callCountsSeries} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
-                  <defs>
-                    <linearGradient id="colorCallCounts" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={COLORS.blue} stopOpacity={0.35} />
-                      <stop offset="95%" stopColor={COLORS.blue} stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid stroke="rgba(0,0,0,0.05)" />
-                  <XAxis dataKey="date" />
-                  <YAxis allowDecimals={false} />
-                  <Tooltip />
-                  <Legend />
-                  <Area type="monotone" dataKey="value" name="Call Counts" stroke={COLORS.blue} fillOpacity={1} fill="url(#colorCallCounts)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
+        {/* Charts Section - Full width below */}
 
-          <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
-            <div className="flex items-center gap-2 mb-2">
-              <Phone className="h-5 w-5 text-green-600" />
-              <h3 className="text-gray-900 font-semibold text-lg">Call Successful</h3>
-            </div>
-            <p className="text-gray-600 text-sm mb-4">All agents</p>
+        {/* Call Counts and Success Rate */}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+          <div className="xl:col-span-2">
+            <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
+              <div className="flex items-center gap-2 mb-2">
+                <Phone className="h-5 w-5 text-green-600" />
+                <h3 className="text-gray-900 font-semibold text-lg">Call Successful</h3>
+              </div>
+            
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -864,17 +874,46 @@ export default function Analytics() {
                 </PieChart>
               </ResponsiveContainer>
             </div>
-          </Card>
+            </Card>
+          </div>
+
+          <div className="xl:col-span-3">
+            <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
+              <div className="flex items-center gap-2 mb-2">
+                <TrendingUp className="h-5 w-5 text-blue-600" />
+                <h3 className="text-gray-900 font-semibold text-lg">Call Counts</h3>
+              </div>
+            
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={callCountsSeries} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
+                  <defs>
+                    <linearGradient id="colorCallCounts" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={COLORS.blue} stopOpacity={0.35} />
+                      <stop offset="95%" stopColor={COLORS.blue} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid stroke="rgba(0,0,0,0.05)" />
+                  <XAxis dataKey="date" />
+                  <YAxis allowDecimals={false} />
+                  <Tooltip />
+                  <Legend />
+                  <Area type="monotone" dataKey="value" name="Call Counts" stroke={COLORS.blue} fillOpacity={1} fill="url(#colorCallCounts)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+            </Card>
+          </div>
         </div>
 
         {/* Donut Charts Row */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
+          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
             <div className="flex items-center gap-2 mb-2">
               <PhoneOff className="h-5 w-5 text-orange-600" />
               <h3 className="text-gray-900 font-semibold text-lg">Disconnection Reason</h3>
             </div>
-            <p className="text-gray-600 text-sm mb-4">All agents</p>
+            
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -942,12 +981,12 @@ export default function Analytics() {
             valueName="Transfer Rate (%)"
           />
 
-          <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
+          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
             <div className="flex items-center gap-2 mb-2">
               <MessageSquare className="h-5 w-5 text-purple-600" />
               <h3 className="text-gray-900 font-semibold text-lg">User Sentiment</h3>
             </div>
-            <p className="text-gray-600 text-sm mb-4">All agents</p>
+            
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -963,12 +1002,12 @@ export default function Analytics() {
             </div>
           </Card>
 
-          <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
+          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
             <div className="flex items-center gap-2 mb-2">
               <Phone className="h-5 w-5 text-indigo-600" />
               <h3 className="text-gray-900 font-semibold text-lg">Phone inbound/outbound</h3>
             </div>
-            <p className="text-gray-600 text-sm mb-4">All agents</p>
+            
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -987,12 +1026,12 @@ export default function Analytics() {
 
         {/* Rate Charts Row */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
+          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
             <div className="flex items-center gap-2 mb-2">
               <PhoneIncoming className="h-5 w-5 text-green-600" />
               <h3 className="text-gray-900 font-semibold text-lg">Call Picked Up Rate</h3>
             </div>
-            <p className="text-gray-600 text-sm mb-4">All agents</p>
+            
             <div className="h-60">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={pickupRateSeries} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
@@ -1013,12 +1052,12 @@ export default function Analytics() {
             </div>
           </Card>
 
-          <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
+          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
             <div className="flex items-center gap-2 mb-2">
               <TrendingUp className="h-5 w-5 text-blue-600" />
               <h3 className="text-gray-900 font-semibold text-lg">Call Successful Rate</h3>
             </div>
-            <p className="text-gray-600 text-sm mb-4">All agents</p>
+            
             <div className="h-60">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={successRateSeries} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
@@ -1039,12 +1078,12 @@ export default function Analytics() {
             </div>
           </Card>
 
-          <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
+          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
             <div className="flex items-center gap-2 mb-2">
               <PhoneOutgoing className="h-5 w-5 text-purple-600" />
               <h3 className="text-gray-900 font-semibold text-lg">Call Transfer Rate</h3>
             </div>
-            <p className="text-gray-600 text-sm mb-4">All agents</p>
+            
             <div className="h-60">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={transferRateSeries} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
@@ -1068,12 +1107,12 @@ export default function Analytics() {
 
         {/* Additional Metrics Row */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
+          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
             <div className="flex items-center gap-2 mb-2">
               <Phone className="h-5 w-5 text-amber-600" />
               <h3 className="text-gray-900 font-semibold text-lg">Voicemail Rate</h3>
             </div>
-            <p className="text-gray-600 text-sm mb-4">All agents</p>
+            
             <div className="h-60">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={voicemailRateSeries} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
@@ -1094,12 +1133,12 @@ export default function Analytics() {
             </div>
           </Card>
 
-          <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
+          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
             <div className="flex items-center gap-2 mb-2">
               <Clock className="h-5 w-5 text-cyan-600" />
               <h3 className="text-gray-900 font-semibold text-lg">Average call duration</h3>
             </div>
-            <p className="text-gray-600 text-sm mb-4">All agents</p>
+            
             <div className="h-60">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={durationSeries} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
@@ -1120,12 +1159,12 @@ export default function Analytics() {
             </div>
           </Card>
 
-          <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
+          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
             <div className="flex items-center gap-2 mb-2">
               <Activity className="h-5 w-5 text-rose-600" />
               <h3 className="text-gray-900 font-semibold text-lg">Average Latency</h3>
             </div>
-            <p className="text-gray-600 text-sm mb-4">All agents</p>
+            
             <div className="h-60">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={latencySeries} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
@@ -1148,34 +1187,13 @@ export default function Analytics() {
         </div>
 
         {/* Stacked Bar Charts Row */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
-            <div className="flex items-center gap-2 mb-2">
-              <BarChart3 className="h-5 w-5 text-blue-600" />
-              <h3 className="text-gray-900 font-semibold text-lg">Call Successful</h3>
-            </div>
-            <p className="text-gray-600 text-sm mb-4">All agents</p>
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={callSuccessfulStacked} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
-                  <CartesianGrid stroke="rgba(0,0,0,0.05)" />
-                  <XAxis dataKey="label" />
-                  <YAxis allowDecimals={false} />
-                  <Tooltip />
-                  <Legend verticalAlign="bottom" />
-                  <Bar dataKey="successful" name="Call counts: successful" stackId="a" fill={COLORS.sky} radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="unsuccessful" name="Call counts: unsuccessful" stackId="a" fill={COLORS.green} radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-
-          <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
             <div className="flex items-center gap-2 mb-2">
               <Phone className="h-5 w-5 text-red-600" />
               <h3 className="text-gray-900 font-semibold text-lg">Disconnection Reasons by Date</h3>
             </div>
-            <p className="text-gray-600 text-sm mb-4">All agents</p>
+            
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={disconnectionReasonsStacked} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
@@ -1205,12 +1223,12 @@ export default function Analytics() {
             </div>
           </Card>
 
-          <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
+          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
             <div className="flex items-center gap-2 mb-2">
               <MessageSquare className="h-5 w-5 text-yellow-600" />
               <h3 className="text-gray-900 font-semibold text-lg">User Sentiment by Date</h3>
             </div>
-            <p className="text-gray-600 text-sm mb-4">All agents</p>
+            
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={sentimentStacked} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
@@ -1238,7 +1256,7 @@ export default function Analytics() {
 
         {/* Agent Performance Row */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
+          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-blue-600" />
@@ -1266,7 +1284,7 @@ export default function Analytics() {
             </div>
           </Card>
 
-          <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
+          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-emerald-600" />
@@ -1294,7 +1312,7 @@ export default function Analytics() {
             </div>
           </Card>
 
-          <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
+          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-violet-600" />
