@@ -776,7 +776,7 @@ export default function Analytics() {
 
         {/* Top KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="bg-[#f48019] border-0 shadow-lg">
+        <Card className="bg-gradient-to-br from-blue-500 to-blue-600 border-0 shadow-lg">
             <div className="flex items-start gap-3">
               <Sparkles className="h-5 w-5 text-white flex-shrink-0" />
               <div className="flex-1">
@@ -787,7 +787,7 @@ export default function Analytics() {
             </div>
           </Card>
 
-          <Card className="bg-[#f48019] border-0 shadow-lg">
+          <Card className="bg-gradient-to-br from-purple-500 to-purple-600 border-0 shadow-lg">
             <div className="flex items-start gap-3">
               <Clock className="h-5 w-5 text-white flex-shrink-0" />
               <div className="flex-1">
@@ -798,7 +798,7 @@ export default function Analytics() {
             </div>
           </Card>
 
-          <Card className="bg-[#f48019] border-0 shadow-lg">
+          <Card className="bg-gradient-to-br from-pink-500 to-rose-600 border-0 shadow-lg">
             <div className="flex items-start gap-3">
               <Activity className="h-5 w-5 text-white flex-shrink-0" />
               <div className="flex-1">
