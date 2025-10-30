@@ -3,18 +3,7 @@
  * Handles validation orchestration across multiple tabs
  */
 
-export interface ValidationResult {
-  valid: boolean;
-  errors: ValidationError[];
-  warnings?: ValidationError[];
-}
-
-export interface ValidationError {
-  field: string;
-  message: string;
-  section: string;
-  type: 'error' | 'warning';
-}
+import type { ValidationResult, ValidationError } from './types';
 
 /**
  * Orchestrate validation across multiple tabs
