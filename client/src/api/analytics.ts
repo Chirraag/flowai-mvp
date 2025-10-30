@@ -7,12 +7,29 @@ import type { AnalyticsData, ApiResponse } from '@/types/analytics';
  */
 export const analyticsApi = {
   /**
-   * Get analytics data for an organization
-   * GET /api/v1/callAnalytics?org_id=${orgId}
+   * Get analytics data for an organization with optional date and agent filtering
+   * GET /api/v1/callAnalytics?org_id=${orgId}&from=${from}&to=${to}&agent_name=${agentName}
    */
-  async getAnalytics(orgId: number): Promise<AnalyticsData> {
+  async getAnalytics(orgId: number, filters?: {from?: string, to?: string, agentName?: string}): Promise<AnalyticsData> {
     try {
-      const response: any = await api.get(`/api/v1/callAnalytics?org_id=${orgId}`);
+      // Build query string dynamically
+      const params = new URLSearchParams();
+      params.append('org_id', orgId.toString());
+
+      if (filters?.from) {
+        params.append('from', filters.from);
+      }
+      if (filters?.to) {
+        params.append('to', filters.to);
+      }
+      if (filters?.agentName && filters.agentName.trim()) {
+        params.append('agent_name', filters.agentName.trim());
+      }
+
+      const queryString = params.toString();
+      const endpoint = `/api/v1/callAnalytics?${queryString}`;
+
+      const response: any = await api.get(endpoint);
 
       // API returns { status: true, data: {...} } but our interface expects { success: true, data: {...} }
       if (!response.status || !response.data) {

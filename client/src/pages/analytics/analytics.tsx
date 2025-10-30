@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import {
   ResponsiveContainer,
   LineChart,
@@ -40,6 +40,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import DateFilterControls from '@/components/analytics/DateFilterControls';
 
 // Analytics data types are imported from '@/types/analytics'
 
@@ -125,7 +126,7 @@ const DisconnectionBarLegend: React.FC<{
       {/* Primary legend items */}
       <div className="flex flex-wrap justify-center gap-4 mt-4">
         {visibleItems.map((entry, index) => (
-          <div key={entry.name} className="flex items-center gap-2">
+          <div key={index} className="flex items-center gap-2">
             <div
               className="w-3 h-3 rounded-full"
               style={{ backgroundColor: entry.color }}
@@ -176,7 +177,7 @@ const ExpandedLegendModal: React.FC<{
         </DialogHeader>
         <div className="grid grid-cols-2 gap-4 py-4">
           {legendData.map((entry, index) => (
-            <div key={`modal-${entry.name}`} className="flex items-center gap-2">
+            <div key={index} className="flex items-center gap-2">
               <div
                 className="w-3 h-3 rounded-full flex-shrink-0"
                 style={{ backgroundColor: entry.color }}
@@ -250,7 +251,7 @@ const DisconnectionLegend: React.FC<{
       {/* Primary legend items */}
       <div className="flex flex-wrap justify-center gap-4 mt-4">
         {visibleItems.map((entry, index) => (
-          <div key={entry.name} className="flex items-center gap-2">
+          <div key={index} className="flex items-center gap-2">
             <div
               className="w-3 h-3 rounded-full"
               style={{ backgroundColor: entry.color }}
@@ -288,28 +289,97 @@ export default function Analytics() {
   const [isDisconnectionBarModalOpen, setIsDisconnectionBarModalOpen] = useState(false);
   const [agentModalType, setAgentModalType] = useState<'success' | 'pickup' | 'transfer' | null>(null);
 
+  // Date filter state
+  const [dateFilters, setDateFilters] = useState<{from?: string, to?: string, agentName?: string} | null>(null);
+  const [debouncedDateFilters, setDebouncedDateFilters] = useState<{from?: string, to?: string, agentName?: string} | null>(null);
+  const [filterLoading, setFilterLoading] = useState(false);
+  const [filterError, setFilterError] = useState<string | null>(null);
+
+  // Debounce date filter changes (500ms delay)
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Debounce date filter changes to prevent rapid API calls
+  useEffect(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    debounceTimerRef.current = setTimeout(() => {
+      setDebouncedDateFilters(dateFilters);
+    }, 500);
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [dateFilters]);
+
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
+
   // Fetch data
   useEffect(() => {
     const fetchData = async () => {
       if (!user?.org_id) {
         setError('Organization ID not found. Please log in again.');
         setLoading(false);
+        setFilterLoading(false);
+        setFilterError(null);
         return;
       }
 
       try {
-        const analyticsData = await analyticsApi.getAnalytics(user.org_id);
+        setFilterLoading(true);
+        setFilterError(null);
+
+        const analyticsData = await analyticsApi.getAnalytics(user.org_id, debouncedDateFilters || undefined);
         setData(analyticsData);
+        setError(null); // Clear any previous errors on successful fetch
+
+        // Clear filter-specific errors on success
+        setFilterError(null);
+
       } catch (err: any) {
         console.error('Error loading analytics data:', err);
-        setError(err.message || 'Failed to load analytics data');
+
+        // Handle filter-specific errors
+        const errorMessage = err.message || 'Failed to load analytics data';
+
+        if (debouncedDateFilters) {
+          // If we have filters applied, show filter-specific error
+          setFilterError(errorMessage);
+          // Keep existing data if available, don't overwrite with error
+          if (!data) {
+            setError('Unable to load filtered data. Please try clearing filters or refreshing the page.');
+          }
+        } else {
+          // Initial load error
+          setError(errorMessage);
+        }
+
+        // Handle specific error types
+        if (errorMessage.includes('Invalid date range') || errorMessage.includes('date')) {
+          setFilterError('The selected date range is invalid. Please check your dates and try again.');
+        } else if (errorMessage.includes('permission') || errorMessage.includes('403')) {
+          setFilterError('You do not have permission to view data for the selected date range.');
+        } else if (errorMessage.includes('Network') || errorMessage.includes('fetch')) {
+          setFilterError('Network error. Please check your connection and try again.');
+        }
       } finally {
         setLoading(false);
+        setFilterLoading(false);
       }
     };
 
     fetchData();
-  }, [user?.org_id]);
+  }, [user?.org_id, debouncedDateFilters]);
 
   // ALL useMemo hooks must be declared BEFORE any conditional returns
   // Memoized transforms for Recharts
@@ -625,15 +695,6 @@ export default function Analytics() {
   if (loading) {
     return (
       <div className="container mx-auto p-4 sm:p-6 space-y-6">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-          <div className="min-w-0 flex-1">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 truncate flex items-center gap-3">
-              <FileText className="h-8 w-8 text-[#1c275e]" />
-              Analytics
-            </h1>
-            <p className="text-gray-600 mt-1 sm:mt-2 text-sm sm:text-base">Healthcare analytics and insights dashboard</p>
-          </div>
-        </div>
         <div className="flex items-center justify-center min-h-96">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1c275e] mx-auto"></div>
@@ -647,15 +708,6 @@ export default function Analytics() {
   if (error || !data) {
     return (
       <div className="container mx-auto p-4 sm:p-6 space-y-6">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-          <div className="min-w-0 flex-1">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 truncate flex items-center gap-3">
-              <FileText className="h-8 w-8 text-[#1c275e]" />
-              Analytics
-            </h1>
-            <p className="text-gray-600 mt-1 sm:mt-2 text-sm sm:text-base">Healthcare analytics and insights dashboard</p>
-          </div>
-        </div>
         <div className="text-center p-8">
           <div className="max-w-md mx-auto">
             <div className="text-red-600 mb-4">
@@ -685,14 +737,46 @@ export default function Analytics() {
   return (
     <div className="min-h-screen bg-white p-4 sm:p-6">
       <div className="container mx-auto space-y-6">
-        {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-          <div className="min-w-0 flex-1" />
-        </div>
+        {/* Date Filter Controls */}
+        <DateFilterControls
+          onFiltersChange={setDateFilters}
+          isLoading={filterLoading}
+          filterError={filterError}
+          className="w-full"
+        />
+
+        {/* Filter Error Alert - Show when data loading failed due to filters */}
+        {filterError && data && (
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-orange-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-medium text-orange-800">
+                  Unable to load filtered data
+                </h3>
+                <p className="text-sm text-orange-700 mt-1">
+                  {filterError}
+                </p>
+                <div className="mt-3">
+                  <button
+                    onClick={() => setDateFilters(null)}
+                    className="text-sm font-medium text-orange-800 hover:text-orange-900 underline"
+                  >
+                    Clear filters to view all data →
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Top KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="bg-gradient-to-br from-blue-500 to-blue-600 border-0 shadow-lg">
+        <Card className="bg-gradient-to-br from-blue-500 to-blue-600 border-0 shadow-lg">
             <div className="flex items-start gap-3">
               <Sparkles className="h-5 w-5 text-white flex-shrink-0" />
               <div className="flex-1">

@@ -632,7 +632,7 @@ export default function Launchpad() {
   };
 
   // Memoized change detection for account tab
-  const hasAccountChanges = useAccountChangeDetection(typedData?.account_details, {
+  const hasAccountChanges = useAccountChangeDetection(typedData?.account_details || null, {
     accountName,
     websiteAddress,
     headquartersAddress,
