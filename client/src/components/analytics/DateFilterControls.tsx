@@ -165,6 +165,22 @@ const DateFilterControls: React.FC<DateFilterControlsProps> = ({
     }
   }, [isAgentDropdownOpen]);
 
+  // Reset agent state when organization changes
+  useEffect(() => {
+    if (orgId) {
+      // Reset all agent-related state when orgId changes
+      setAgentName('');
+      setAgents([]);
+      setAgentsLoaded(false);
+      setIsLoadingAgents(false);
+      setAgentSearchTerm('');
+      setIsAgentDropdownOpen(false);
+
+      // Re-fetch agents for the new organization
+      fetchAgents();
+    }
+  }, [orgId]);
+
   // Update URL when filters are applied
   const updateURL = (from?: string, to?: string, agentName?: string) => {
     const url = new URL(window.location.origin + window.location.pathname);
@@ -508,7 +524,7 @@ const DateFilterControls: React.FC<DateFilterControlsProps> = ({
             <Button
               onClick={handleApplyFilters}
               disabled={isLoading || (!fromDate && !toDate && !agentName.trim())}
-              className="bg-[#f49024] hover:bg-[#d87f1f] text-white text-xs h-8 px-3 focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+              className="bg-[#f49024] hover:bg-[#d87f1f] text-white text-base h-8 px-3 focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
               aria-describedby={validationError ? "date-validation-error" : undefined}
             >
               {isLoading ? (
@@ -540,10 +556,10 @@ const DateFilterControls: React.FC<DateFilterControlsProps> = ({
               variant="outline"
               onClick={handleClearFilters}
               disabled={isLoading}
-              className="bg-transparent text-[#e6eff7] border-[#95a3b8] hover:bg-[#233072] hover:text-white text-xs h-8 px-3 focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+              className="bg-transparent text-[#e6eff7] border-[#95a3b8] hover:bg-[#233072] hover:text-white text-base h-8 px-3 focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
               aria-label="Clear all applied filters"
             >
-              Clear
+              Refresh
             </Button>
           </div>
         </div>
