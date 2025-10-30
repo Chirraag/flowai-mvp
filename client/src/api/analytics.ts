@@ -1,5 +1,5 @@
 import { api } from '@/lib/api';
-import type { AnalyticsData, ApiResponse } from '@/types/analytics';
+import type { AnalyticsData, ApiResponse, AgentListResponse } from '@/types/analytics';
 
 /**
  * Analytics API Services
@@ -49,6 +49,47 @@ export const analyticsApi = {
 
       if (error.message?.includes('500') || error.message?.includes('502') || error.message?.includes('503')) {
         // Server error - show retry message
+        throw new Error('Server error occurred. Please try again later.');
+      }
+
+      if (error.message?.includes('NetworkError') || error.message?.includes('Failed to fetch')) {
+        // Network error
+        throw new Error('Network connection error. Please check your internet connection.');
+      }
+
+      // Re-throw the original error if it's already user-friendly
+      throw error;
+    }
+  },
+
+  /**
+   * Get list of agents for an organization
+   * POST /api/v1/list-agent
+   */
+  async listAgents(orgId: number): Promise<string[]> {
+    try {
+      const response: AgentListResponse = await api.post('/api/v1/list-agent', {
+        org_id: orgId.toString()
+      });
+
+      if (!response.status || !response.data) {
+        throw new Error('Failed to fetch agent list');
+      }
+
+      // Extract agent names from the response
+      return response.data.map(item => item.agent_name);
+    } catch (error: any) {
+      // Handle specific error types
+      if (error.message?.includes('401') || error.message?.includes('403')) {
+        // Authentication/authorization error - redirect to login
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('refresh_token');
+        window.location.href = '/login';
+        throw new Error('Authentication required. Please log in again.');
+      }
+
+      if (error.message?.includes('500') || error.message?.includes('502') || error.message?.includes('503')) {
+        // Server error
         throw new Error('Server error occurred. Please try again later.');
       }
 

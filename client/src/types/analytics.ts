@@ -88,3 +88,13 @@ export interface AgentBarData {
   name: string;
   value: number;
 }
+
+// Agent list API types
+export interface AgentListItem {
+  agent_name: string;
+}
+
+export interface AgentListResponse {
+  status: boolean;
+  data: AgentListItem[];
+}
