@@ -41,6 +41,20 @@ const DateFilterControls: React.FC<DateFilterControlsProps> = ({
   const [agentName, setAgentName] = useState<string>('');
   const [hasAppliedFilters, setHasAppliedFilters] = useState(false);
   const [validationError, setValidationError] = useState<string>('');
+  const [datePickerKey, setDatePickerKey] = useState<number>(0);
+
+  // Preset dropdown state
+  const [isPresetDropdownOpen, setIsPresetDropdownOpen] = useState(false);
+  const [selectedPreset, setSelectedPreset] = useState<string>('');
+
+  // Preset options
+  const presetOptions = [
+    { label: 'All time', value: 'all' },
+    { label: 'Today', value: 'today' },
+    { label: 'Last 1 week', value: 'week' },
+    { label: 'Last month', value: 'month' },
+    { label: 'Last 3 months', value: 'quarter' }
+  ];
 
   // Agent dropdown state
   const [agents, setAgents] = useState<string[]>([]);
@@ -149,23 +163,77 @@ const DateFilterControls: React.FC<DateFilterControlsProps> = ({
     }
   }, [isAgentDropdownOpen, agentsLoaded, orgId, fetchAgents]);
 
+  // Handle preset selection
+  const handlePresetSelect = useCallback((presetValue: string) => {
+    const today = new Date();
+    // Create today at midnight to avoid future date validation issues
+    const todayMidnight = new Date(today);
+    todayMidnight.setHours(0, 0, 0, 0);
+
+    if (presetValue === 'all') {
+      // All time - clear date filters but keep agent selection
+      setFromDate(null);
+      setToDate(null);
+      setSelectedPreset(presetValue);
+      setValidationError('');
+      setDatePickerKey(prev => prev + 1); // Force re-render of datepickers
+    } else {
+      let fromDateValue: Date;
+
+      switch (presetValue) {
+        case 'today':
+          fromDateValue = new Date(todayMidnight);
+          break;
+        case 'week':
+          fromDateValue = new Date(todayMidnight);
+          fromDateValue.setDate(todayMidnight.getDate() - 7);
+          break;
+        case 'month':
+          fromDateValue = new Date(todayMidnight);
+          fromDateValue.setDate(todayMidnight.getDate() - 30);
+          break;
+        case 'quarter':
+          fromDateValue = new Date(todayMidnight);
+          fromDateValue.setDate(todayMidnight.getDate() - 90);
+          break;
+        default:
+          return;
+      }
+
+      // Set the actual date values in the date pickers
+      setFromDate(fromDateValue);
+      setToDate(todayMidnight);
+      setSelectedPreset(presetValue);
+      setValidationError('');
+      setDatePickerKey(prev => prev + 1); // Force re-render of datepickers to update display
+    }
+
+    setIsPresetDropdownOpen(false);
+  }, []);
+
+  // Handle preset dropdown toggle
+  const handlePresetDropdownToggle = useCallback(() => {
+    setIsPresetDropdownOpen(prev => !prev);
+  }, []);
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
-      if (!target.closest('[data-agent-dropdown]')) {
+      if (!target.closest('[data-agent-dropdown]') && !target.closest('[data-preset-dropdown]')) {
         setIsAgentDropdownOpen(false);
         setAgentSearchTerm('');
+        setIsPresetDropdownOpen(false);
       }
     };
 
-    if (isAgentDropdownOpen) {
+    if (isAgentDropdownOpen || isPresetDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [isAgentDropdownOpen]);
+  }, [isAgentDropdownOpen, isPresetDropdownOpen]);
 
-  // Reset agent state when organization changes
+  // Reset agent and preset state when organization changes
   useEffect(() => {
     if (orgId) {
       // Reset all agent-related state when orgId changes
@@ -175,6 +243,10 @@ const DateFilterControls: React.FC<DateFilterControlsProps> = ({
       setIsLoadingAgents(false);
       setAgentSearchTerm('');
       setIsAgentDropdownOpen(false);
+
+      // Reset preset state
+      setSelectedPreset('');
+      setIsPresetDropdownOpen(false);
 
       // Re-fetch agents for the new organization
       fetchAgents();
@@ -240,6 +312,7 @@ const DateFilterControls: React.FC<DateFilterControlsProps> = ({
     }
 
     setValidationError('');
+    setSelectedPreset(''); // Clear preset selection when manually applying custom dates
     setHasAppliedFilters(true);
 
     const fromStr = dateToString(fromDate);
@@ -271,8 +344,10 @@ const DateFilterControls: React.FC<DateFilterControlsProps> = ({
     setFromDate(null);
     setToDate(null);
     setAgentName('');
+    setSelectedPreset('');
     setHasAppliedFilters(false);
     setValidationError('');
+    setDatePickerKey(prev => prev + 1); // Force re-render of datepickers
     updateURL();
     onFiltersChange(null);
   };
@@ -385,6 +460,7 @@ const DateFilterControls: React.FC<DateFilterControlsProps> = ({
           {/* From Date */}
           <div className="space-y-1.5">
             <Datepicker
+                key={`from-date-${datePickerKey}`}
                 id="from-date"
                 value={fromDate}
                 onChange={(date) => setFromDate(date)}
@@ -402,6 +478,7 @@ const DateFilterControls: React.FC<DateFilterControlsProps> = ({
           {/* To Date */}
           <div className="space-y-1.5">
             <Datepicker
+                key={`to-date-${datePickerKey}`}
                 id="to-date"
                 value={toDate}
                 onChange={(date) => setToDate(date)}
@@ -416,20 +493,83 @@ const DateFilterControls: React.FC<DateFilterControlsProps> = ({
               />
           </div>
 
+          {/* Preset Date Range Dropdown */}
+          <div className="space-y-1.5" data-preset-dropdown>
+            {/* Preset Dropdown Button */}
+            <Button
+              variant="outline"
+              className={cn(
+                "w-full h-8 justify-between bg-white text-[#1C275E] border-[#cbd5e1] hover:bg-gray-50 transition-all duration-200",
+                isPresetDropdownOpen ? "ring-2 ring-[#0d9488]/20 border-[#0d9488]" : ""
+              )}
+              onClick={handlePresetDropdownToggle}
+              type="button"
+            >
+              <span className="truncate text-sm">
+                {selectedPreset ? presetOptions.find(p => p.value === selectedPreset)?.label : "Select range..."}
+              </span>
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 text-gray-400 transition-transform duration-200 flex-shrink-0 ml-2",
+                  isPresetDropdownOpen ? "rotate-180" : ""
+                )}
+              />
+            </Button>
+
+            {/* Dropdown Menu */}
+            {isPresetDropdownOpen && (
+              <>
+                {/* Click outside overlay */}
+                <div className="fixed inset-0 z-40" onClick={() => setIsPresetDropdownOpen(false)} />
+
+                <Card className="absolute top-full mt-1 shadow-xl border border-gray-200 z-50 bg-white rounded-lg overflow-hidden w-48">
+                  <CardContent className="p-0">
+                    <div className="py-2">
+                      {presetOptions.map((preset) => (
+                        <Button
+                          key={preset.value}
+                          variant="ghost"
+                          className={cn(
+                            "w-full justify-start p-3 h-auto hover:bg-blue-50 rounded-none border-0",
+                            selectedPreset === preset.value && "bg-blue-50"
+                          )}
+                          onClick={() => handlePresetSelect(preset.value)}
+                        >
+                          <div className="flex items-center gap-3 w-full min-w-0">
+                            <div className="text-left min-w-0 flex-1">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                {preset.label}
+                              </p>
+                            </div>
+                            {selectedPreset === preset.value && (
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                              </div>
+                            )}
+                          </div>
+                        </Button>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            )}
+          </div>
+
           {/* Agent Name Dropdown */}
           <div className="space-y-1.5" data-agent-dropdown>
             {/* Agent Dropdown Button */}
             <Button
               variant="outline"
               className={cn(
-                "w-full h-8 justify-between bg-white text-[#1C275E] border-[#cbd5e1] hover:bg-gray-50 transition-all duration-200",
+                "w-80 h-8 justify-between bg-white text-[#1C275E] border-[#cbd5e1] hover:bg-gray-50 transition-all duration-200",
                 isAgentDropdownOpen ? "ring-2 ring-[#0d9488]/20 border-[#0d9488]" : ""
               )}
               onClick={handleAgentDropdownToggle}
               type="button"
             >
               <span className="truncate text-sm">
-                {agentName || "Select agent..."}
+                {agentName || "Select agent"}
               </span>
               <ChevronDown
                 className={cn(

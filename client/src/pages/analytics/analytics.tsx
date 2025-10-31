@@ -243,8 +243,8 @@ const DisconnectionLegend: React.FC<{
   payload: any[];
   onShowMore: () => void;
 }> = ({ payload, onShowMore }) => {
-  // Always show first 5 items + "Show more" button
-  const visibleItems = payload.slice(0, 5);
+  // Always show first 3 items + "Show more" button
+  const visibleItems = payload.slice(0, 3);
 
   return (
     <div>
@@ -263,13 +263,13 @@ const DisconnectionLegend: React.FC<{
         ))}
 
         {/* Show more button (opens modal) */}
-        {payload.length > 5 && (
+        {payload.length > 3 && (
           <button
             className="flex items-center gap-2 font-semibold text-blue-600 hover:text-blue-800 transition-colors"
             onClick={onShowMore}
           >
             <span className="text-sm">
-              +{payload.length - 5} more
+              +{payload.length - 3} more
             </span>
           </button>
         )}
@@ -941,7 +941,9 @@ export default function Analytics() {
           <ExpandedLegendModal
             isOpen={isModalOpen}
             onClose={() => setIsModalOpen(false)}
-            legendData={disconnectionLegendData.slice(5)}
+            legendData={disconnectionLegendData}
+            title="All Disconnection Reasons"
+            description="Complete list of all disconnection reasons with their call counts"
           />
 
           {/* Expanded Legend Modal for Disconnection Reasons Bar Chart */}
@@ -1269,7 +1271,6 @@ export default function Analytics() {
                 View All Agents
               </button>
             </div>
-            <p className="text-gray-600 text-sm mb-4">Top 5 agents</p>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={agentSuccessBars} layout="vertical" margin={{ top: 10, right: 10, bottom: 0, left: 10 }}>
@@ -1297,7 +1298,6 @@ export default function Analytics() {
                 View All Agents
               </button>
             </div>
-            <p className="text-gray-600 text-sm mb-4">Top 5 agents</p>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={agentPickupBars} layout="vertical" margin={{ top: 10, right: 10, bottom: 0, left: 10 }}>
@@ -1325,7 +1325,6 @@ export default function Analytics() {
                 View All Agents
               </button>
             </div>
-            <p className="text-gray-600 text-sm mb-4">Top 5 agents</p>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={agentTransferBars} layout="vertical" margin={{ top: 10, right: 10, bottom: 0, left: 10 }}>
