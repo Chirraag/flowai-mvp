@@ -468,10 +468,10 @@ export default function Sidebar({
 
       <aside
         className={cn(
-          "bg-white border-r border-gray-200 z-20 transition-all duration-300 ease-in-out",
+          "bg-white border-r border-gray-200 z-20 transition-[width] duration-300 ease-out",
           isMobile
             ? cn(
-                "fixed inset-y-0 left-0 w-64 transform",
+                "fixed inset-y-0 left-0 w-64 transform transition-transform duration-300 ease-out",
                 mobileMenuOpen ? "translate-x-0" : "-translate-x-full",
               )
             : cn(
@@ -529,6 +529,10 @@ export default function Sidebar({
               <OrganizationSwitcher
                 isCollapsed={!showLabels}
                 onExpandRequired={() => onExpandedChange(true)}
+                onOrganizationSwitched={() => {
+                  onExpandedChange(false);
+                  onHoverChange(false);
+                }}
               />
             </div>
           </div>

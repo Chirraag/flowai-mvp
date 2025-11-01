@@ -32,11 +32,13 @@ interface OrganizationsResponse {
 interface OrganizationSwitcherProps {
   isCollapsed?: boolean;
   onExpandRequired?: () => void;
+  onOrganizationSwitched?: () => void;
 }
 
 export default function OrganizationSwitcher({
   isCollapsed = false,
   onExpandRequired,
+  onOrganizationSwitched,
 }: OrganizationSwitcherProps) {
   const { user, switchOrganization, canCreateOrganizations } = useAuth();
   const { toast } = useToast();
@@ -122,6 +124,7 @@ export default function OrganizationSwitcher({
     } finally {
       setSwitching(null);
       setIsExpanded(false);
+      onOrganizationSwitched?.();
     }
   };
 

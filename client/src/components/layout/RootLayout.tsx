@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -16,10 +16,18 @@ export default function RootLayout() {
   };
 
   // Auto-expand logic: expand on hover (desktop only)
-  const effectiveExpanded = isMobile ? false : isSidebarHovered;
+  const effectiveExpanded = useMemo(() => isMobile ? false : isSidebarHovered, [isMobile, isSidebarHovered]);
   
-  // Dynamic dimensions
-  const sidebarWidth = effectiveExpanded ? 256 : 64; // px
+  // Dynamic dimensions - memoized to prevent unnecessary recalculations
+  const sidebarWidth = useMemo(() => effectiveExpanded ? 256 : 64, [effectiveExpanded]);
+  
+  // Calculate transform offset for GPU-accelerated animation
+  // Base margin is 64px (w-16), so we only need to translate by the difference
+  const transformOffset = useMemo(() => {
+    if (isMobile) return 0;
+    return sidebarWidth - 64; // Additional offset beyond base 64px margin
+  }, [isMobile, sidebarWidth]);
+
   return (
     <NavigationBlockerProvider>
       <div className="min-h-screen flex flex-col">
@@ -32,11 +40,13 @@ export default function RootLayout() {
         />
         <main
           className={cn(
-            "flex-1 min-h-screen transition-all duration-300 ease-in-out",
-            isMobile ? "" : "md:ml-[var(--sidebar-width)]"
+            "flex-1 min-h-screen transition-transform duration-300 ease-out",
+            isMobile ? "" : "md:ml-16"
           )}
           style={{
-            '--sidebar-width': `${sidebarWidth}px`
+            '--sidebar-width': `${sidebarWidth}px`,
+            transform: transformOffset > 0 ? `translateX(${transformOffset}px)` : 'translateX(0)',
+            willChange: isMobile ? 'auto' : 'transform',
           } as React.CSSProperties}
         >
           <Header onMobileMenuToggle={toggleMobileMenu} />

@@ -336,7 +336,13 @@ export default function Analytics() {
       }
 
       try {
-        setFilterLoading(true);
+        // Show filter loading only if data already exists (filter change), otherwise show initial loading
+        if (data) {
+          setFilterLoading(true);
+        } else if (!loading) {
+          // Only set loading if not already loading (prevents redundant state updates)
+          setLoading(true);
+        }
         setFilterError(null);
 
         const analyticsData = await analyticsApi.getAnalytics(user.org_id, debouncedDateFilters || undefined);
@@ -783,7 +789,7 @@ export default function Analytics() {
         <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
           {/* Top KPI Cards - Left side, stacked vertically and compact */}
           <div className="xl:col-span-2 flex flex-col gap-2">
-    <Card className="bg-white border-0 shadow-md rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 focus-within:shadow-xl focus-within:-translate-y-1 h-32">
+    <Card className="bg-white border-0 shadow-md rounded-2xl overflow-hidden hover:shadow-lg h-32">
       <div className="p-4">
         <h3 className="text-sm font-bold text-slate-500 tracking-wider uppercase mb-1">
           Call Counts
@@ -794,7 +800,7 @@ export default function Analytics() {
       </div>
     </Card>
 
-    <Card className="bg-white border-0 shadow-md rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 focus-within:shadow-xl focus-within:-translate-y-1 h-32">
+    <Card className="bg-white border-0 shadow-md rounded-2xl overflow-hidden hover:shadow-lg h-32">
       <div className="p-4">
         <h3 className="text-sm font-bold text-slate-500 tracking-wider uppercase mb-1">
           Avg. Call Duration
@@ -805,7 +811,7 @@ export default function Analytics() {
       </div>
     </Card>
 
-    <Card className="bg-white border-0 shadow-md rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 focus-within:shadow-xl focus-within:-translate-y-1 h-32">
+    <Card className="bg-white border-0 shadow-md rounded-2xl overflow-hidden hover:shadow-lg h-32">
       <div className="p-4">
         <h3 className="text-sm font-bold text-slate-500 tracking-wider uppercase mb-1">
           Avg. Call Latency
@@ -820,7 +826,7 @@ export default function Analytics() {
 
           {/* Call Successful Chart - Right side, wider */}
           <div className="xl:col-span-3">
-            <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
+            <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md">
               <div className="flex items-center gap-2 mb-2">
                 <BarChart3 className="h-5 w-5 text-blue-600" />
                 <h3 className="text-gray-900 font-semibold text-lg">Call Successful</h3>
@@ -848,7 +854,7 @@ export default function Analytics() {
         {/* Call Counts and Success Rate */}
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
           <div className="xl:col-span-2">
-            <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
+            <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md">
               <div className="flex items-center gap-2 mb-2">
                 <Phone className="h-5 w-5 text-green-600" />
                 <h3 className="text-gray-900 font-semibold text-lg">Call Successful</h3>
@@ -878,7 +884,7 @@ export default function Analytics() {
           </div>
 
           <div className="xl:col-span-3">
-            <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
+            <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md">
               <div className="flex items-center gap-2 mb-2">
                 <TrendingUp className="h-5 w-5 text-blue-600" />
                 <h3 className="text-gray-900 font-semibold text-lg">Call Counts</h3>
@@ -908,7 +914,7 @@ export default function Analytics() {
 
         {/* Donut Charts Row */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
+          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md">
             <div className="flex items-center gap-2 mb-2">
               <PhoneOff className="h-5 w-5 text-orange-600" />
               <h3 className="text-gray-900 font-semibold text-lg">Disconnection Reason</h3>
@@ -983,7 +989,7 @@ export default function Analytics() {
             valueName="Transfer Rate (%)"
           />
 
-          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
+          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md">
             <div className="flex items-center gap-2 mb-2">
               <MessageSquare className="h-5 w-5 text-purple-600" />
               <h3 className="text-gray-900 font-semibold text-lg">User Sentiment</h3>
@@ -1004,7 +1010,7 @@ export default function Analytics() {
             </div>
           </Card>
 
-          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
+          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md">
             <div className="flex items-center gap-2 mb-2">
               <Phone className="h-5 w-5 text-indigo-600" />
               <h3 className="text-gray-900 font-semibold text-lg">Phone inbound/outbound</h3>
@@ -1028,7 +1034,7 @@ export default function Analytics() {
 
         {/* Rate Charts Row */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
+          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md">
             <div className="flex items-center gap-2 mb-2">
               <PhoneIncoming className="h-5 w-5 text-green-600" />
               <h3 className="text-gray-900 font-semibold text-lg">Call Picked Up Rate</h3>
@@ -1054,7 +1060,7 @@ export default function Analytics() {
             </div>
           </Card>
 
-          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
+          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md">
             <div className="flex items-center gap-2 mb-2">
               <TrendingUp className="h-5 w-5 text-blue-600" />
               <h3 className="text-gray-900 font-semibold text-lg">Call Successful Rate</h3>
@@ -1080,7 +1086,7 @@ export default function Analytics() {
             </div>
           </Card>
 
-          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
+          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md">
             <div className="flex items-center gap-2 mb-2">
               <PhoneOutgoing className="h-5 w-5 text-purple-600" />
               <h3 className="text-gray-900 font-semibold text-lg">Call Transfer Rate</h3>
@@ -1109,7 +1115,7 @@ export default function Analytics() {
 
         {/* Additional Metrics Row */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
+          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md">
             <div className="flex items-center gap-2 mb-2">
               <Phone className="h-5 w-5 text-amber-600" />
               <h3 className="text-gray-900 font-semibold text-lg">Voicemail Rate</h3>
@@ -1135,7 +1141,7 @@ export default function Analytics() {
             </div>
           </Card>
 
-          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
+          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md">
             <div className="flex items-center gap-2 mb-2">
               <Clock className="h-5 w-5 text-cyan-600" />
               <h3 className="text-gray-900 font-semibold text-lg">Average call duration</h3>
@@ -1161,7 +1167,7 @@ export default function Analytics() {
             </div>
           </Card>
 
-          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
+          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md">
             <div className="flex items-center gap-2 mb-2">
               <Activity className="h-5 w-5 text-rose-600" />
               <h3 className="text-gray-900 font-semibold text-lg">Average Latency</h3>
@@ -1190,7 +1196,7 @@ export default function Analytics() {
 
         {/* Stacked Bar Charts Row */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
+          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md">
             <div className="flex items-center gap-2 mb-2">
               <Phone className="h-5 w-5 text-red-600" />
               <h3 className="text-gray-900 font-semibold text-lg">Disconnection Reasons by Date</h3>
@@ -1225,7 +1231,7 @@ export default function Analytics() {
             </div>
           </Card>
 
-          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
+          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md">
             <div className="flex items-center gap-2 mb-2">
               <MessageSquare className="h-5 w-5 text-yellow-600" />
               <h3 className="text-gray-900 font-semibold text-lg">User Sentiment by Date</h3>
@@ -1258,7 +1264,7 @@ export default function Analytics() {
 
         {/* Agent Performance Row */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
+          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-blue-600" />
@@ -1285,7 +1291,7 @@ export default function Analytics() {
             </div>
           </Card>
 
-          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
+          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-emerald-600" />
@@ -1312,7 +1318,7 @@ export default function Analytics() {
             </div>
           </Card>
 
-          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] focus-within:shadow-md focus-within:-translate-y-[1px]">
+          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-violet-600" />
