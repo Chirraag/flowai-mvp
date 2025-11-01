@@ -506,7 +506,7 @@ const DateFilterControls: React.FC<DateFilterControlsProps> = ({
               type="button"
             >
               <span className="truncate text-sm">
-                {selectedPreset ? presetOptions.find(p => p.value === selectedPreset)?.label : "Select range..."}
+                {selectedPreset ? presetOptions.find(p => p.value === selectedPreset)?.label : "Select range"}
               </span>
               <ChevronDown
                 className={cn(
@@ -664,7 +664,7 @@ const DateFilterControls: React.FC<DateFilterControlsProps> = ({
             <Button
               onClick={handleApplyFilters}
               disabled={isLoading || (!fromDate && !toDate && !agentName.trim())}
-              className="bg-[#f49024] hover:bg-[#d87f1f] text-white text-base h-8 px-3 focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2"
+              className="bg-[#f49024] hover:bg-[#d87f1f] text-white text-base h-8 px-3 focus:ring-2 focus:ring-[#fef08a] focus:ring-offset-2 disabled:opacity-70"
               aria-describedby={validationError ? "date-validation-error" : undefined}
             >
               {isLoading ? (
