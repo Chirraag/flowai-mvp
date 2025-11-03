@@ -118,8 +118,8 @@ const DisconnectionBarLegend: React.FC<{
   payload: any[];
   onShowMore: () => void;
 }> = ({ payload, onShowMore }) => {
-  // Always show first 2 items + "Show more" button
-  const visibleItems = payload.slice(0, 2);
+  // Always show first 1 item + "Show more" button
+  const visibleItems = payload.slice(0, 1);
 
   return (
     <div>
@@ -138,13 +138,13 @@ const DisconnectionBarLegend: React.FC<{
         ))}
 
         {/* Show more button (opens modal) */}
-        {payload.length > 2 && (
+        {payload.length > 1 && (
           <button
             className="flex items-center gap-2 font-semibold text-blue-600 hover:text-blue-800 transition-colors"
             onClick={onShowMore}
           >
             <span className="text-sm">
-              +{payload.length - 2} more
+              +{payload.length - 1} more
             </span>
           </button>
         )}
@@ -745,7 +745,7 @@ export default function Analytics() {
       <div className="container mx-auto space-y-6">
         {/* Sticky Header with Filters */}
         <div className="sticky top-0 z-50 bg-[#1C275E] text-white border-b border-[#1C275E]/20 rounded-t-2xl shadow-sm">
-          <div className="p-2">
+          <div className="p-1.5">
             <DateFilterControls
               onFiltersChange={setDateFilters}
               isLoading={filterLoading}
@@ -785,129 +785,99 @@ export default function Analytics() {
           </div>
         )}
 
-        {/* Top Row - KPI Cards and Call Successful Chart */}
-        <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
-          {/* Top KPI Cards - Left side, stacked vertically and compact */}
-          <div className="xl:col-span-2 flex flex-col gap-2">
-    <Card className="bg-white border-0 shadow-md rounded-2xl overflow-hidden hover:shadow-lg h-32">
-      <div className="p-4">
-        <h3 className="text-sm font-bold text-slate-500 tracking-wider uppercase mb-1">
-          Call Counts
-        </h3>
-        <p className="text-4xl font-bold text-[#f48024] tracking-tight">
-          {formatNumber(data.summary.totalCalls)}
-        </p>
-      </div>
-    </Card>
+        {/* KPI Cards Row */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="bg-white border-0 shadow-md rounded-2xl overflow-hidden hover:shadow-lg">
+            <div className="p-4">
+              <h3 className="text-sm font-bold text-slate-500 tracking-wider uppercase mb-1">
+                Call Counts
+              </h3>
+              <p className="text-4xl font-bold text-[#f48024] tracking-tight">
+                {formatNumber(data.summary.totalCalls)}
+              </p>
+            </div>
+          </Card>
 
-    <Card className="bg-white border-0 shadow-md rounded-2xl overflow-hidden hover:shadow-lg h-32">
-      <div className="p-4">
-        <h3 className="text-sm font-bold text-slate-500 tracking-wider uppercase mb-1">
-          Avg. Call Duration
-        </h3>
-        <p className="text-4xl font-bold text-[#f48024] tracking-tight">
-          {formatDuration(data.summary.averageCallDuration)}
-        </p>
-      </div>
-    </Card>
+          <Card className="bg-white border-0 shadow-md rounded-2xl overflow-hidden hover:shadow-lg">
+            <div className="p-4">
+              <h3 className="text-sm font-bold text-slate-500 tracking-wider uppercase mb-1">
+                Avg. Call Duration
+              </h3>
+              <p className="text-4xl font-bold text-[#f48024] tracking-tight">
+                {formatDuration(data.summary.averageCallDuration)}
+              </p>
+            </div>
+          </Card>
 
-    <Card className="bg-white border-0 shadow-md rounded-2xl overflow-hidden hover:shadow-lg h-32">
-      <div className="p-4">
-        <h3 className="text-sm font-bold text-slate-500 tracking-wider uppercase mb-1">
-          Avg. Call Latency
-        </h3>
-        <p className="text-4xl font-bold text-[#f48024] tracking-tight">
-          {data.summary.averageLatency}ms
-        </p>
-      </div>
-    </Card>
-  </div>
-
-
-          {/* Call Successful Chart - Right side, wider */}
-          <div className="xl:col-span-3">
-            <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md">
-              <div className="flex items-center gap-2 mb-2">
-                <BarChart3 className="h-5 w-5 text-blue-600" />
-                <h3 className="text-gray-900 font-semibold text-lg">Call Successful</h3>
-              </div>
-              
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={callSuccessfulStacked} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
-                    <CartesianGrid stroke="rgba(0,0,0,0.05)" />
-                    <XAxis dataKey="label" />
-                    <YAxis allowDecimals={false} />
-                    <Tooltip />
-                    <Legend verticalAlign="bottom" />
-                    <Bar dataKey="successful" name="Call counts: successful" stackId="a" fill={COLORS.sky} radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="unsuccessful" name="Call counts: unsuccessful" stackId="a" fill={COLORS.green} radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </Card>
-          </div>
+          <Card className="bg-white border-0 shadow-md rounded-2xl overflow-hidden hover:shadow-lg">
+            <div className="p-4">
+              <h3 className="text-sm font-bold text-slate-500 tracking-wider uppercase mb-1">
+                Avg. Call Latency
+              </h3>
+              <p className="text-4xl font-bold text-[#f48024] tracking-tight">
+                {data.summary.averageLatency}ms
+              </p>
+            </div>
+          </Card>
         </div>
 
-        {/* Charts Section - Full width below */}
-
         {/* Call Counts and Success Rate */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-          <div className="xl:col-span-2">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-1">
             <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md">
               <div className="flex items-center gap-2 mb-2">
                 <Phone className="h-5 w-5 text-green-600" />
                 <h3 className="text-gray-900 font-semibold text-lg">Call Successful</h3>
               </div>
             
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Tooltip />
-                  <Legend verticalAlign="bottom" />
-                  <Pie
-                    data={successRateDonut}
-                    dataKey="value"
-                    nameKey="name"
-                    innerRadius="70%"
-                    outerRadius="90%"
-                    strokeWidth={0}
-                  >
-                    {successRateDonut.map((entry, idx) => (
-                      <Cell key={`sr-${idx}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Tooltip />
+                    <Legend verticalAlign="bottom" />
+                    <Pie
+                      data={successRateDonut}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius="70%"
+                      outerRadius="90%"
+                      strokeWidth={0}
+                    >
+                      {successRateDonut.map((entry, idx) => (
+                        <Cell key={`sr-${idx}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
             </Card>
           </div>
 
-          <div className="xl:col-span-3">
+          <div className="lg:col-span-2">
             <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md">
               <div className="flex items-center gap-2 mb-2">
                 <TrendingUp className="h-5 w-5 text-blue-600" />
                 <h3 className="text-gray-900 font-semibold text-lg">Call Counts</h3>
               </div>
             
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={callCountsSeries} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
-                  <defs>
-                    <linearGradient id="colorCallCounts" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={COLORS.blue} stopOpacity={0.35} />
-                      <stop offset="95%" stopColor={COLORS.blue} stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid stroke="rgba(0,0,0,0.05)" />
-                  <XAxis dataKey="date" />
-                  <YAxis allowDecimals={false} />
-                  <Tooltip />
-                  <Legend />
-                  <Area type="monotone" dataKey="value" name="Call Counts" stroke={COLORS.blue} fillOpacity={1} fill="url(#colorCallCounts)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={callCountsSeries} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
+                    <defs>
+                      <linearGradient id="colorCallCounts" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={COLORS.blue} stopOpacity={0.35} />
+                        <stop offset="95%" stopColor={COLORS.blue} stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid stroke="rgba(0,0,0,0.05)" />
+                    <XAxis dataKey="date" />
+                    <YAxis allowDecimals={false} />
+                    <Tooltip />
+                    <Legend />
+                    <Area type="monotone" dataKey="value" name="Call Counts" stroke={COLORS.blue} fillOpacity={1} fill="url(#colorCallCounts)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
             </Card>
           </div>
         </div>
@@ -920,7 +890,7 @@ export default function Analytics() {
               <h3 className="text-gray-900 font-semibold text-lg">Disconnection Reason</h3>
             </div>
             
-            <div className="h-72">
+            <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Tooltip />
@@ -995,7 +965,7 @@ export default function Analytics() {
               <h3 className="text-gray-900 font-semibold text-lg">User Sentiment</h3>
             </div>
             
-            <div className="h-72">
+            <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Tooltip />
@@ -1016,7 +986,7 @@ export default function Analytics() {
               <h3 className="text-gray-900 font-semibold text-lg">Phone inbound/outbound</h3>
             </div>
             
-            <div className="h-72">
+            <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Tooltip />
@@ -1040,7 +1010,7 @@ export default function Analytics() {
               <h3 className="text-gray-900 font-semibold text-lg">Call Picked Up Rate</h3>
             </div>
             
-            <div className="h-60">
+            <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={pickupRateSeries} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
                   <defs>
@@ -1066,7 +1036,7 @@ export default function Analytics() {
               <h3 className="text-gray-900 font-semibold text-lg">Call Successful Rate</h3>
             </div>
             
-            <div className="h-60">
+            <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={successRateSeries} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
                   <defs>
@@ -1092,7 +1062,7 @@ export default function Analytics() {
               <h3 className="text-gray-900 font-semibold text-lg">Call Transfer Rate</h3>
             </div>
             
-            <div className="h-60">
+            <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={transferRateSeries} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
                   <defs>
@@ -1121,7 +1091,7 @@ export default function Analytics() {
               <h3 className="text-gray-900 font-semibold text-lg">Voicemail Rate</h3>
             </div>
             
-            <div className="h-60">
+            <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={voicemailRateSeries} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
                   <defs>
@@ -1147,7 +1117,7 @@ export default function Analytics() {
               <h3 className="text-gray-900 font-semibold text-lg">Average call duration</h3>
             </div>
             
-            <div className="h-60">
+            <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={durationSeries} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
                   <defs>
@@ -1173,7 +1143,7 @@ export default function Analytics() {
               <h3 className="text-gray-900 font-semibold text-lg">Average Latency</h3>
             </div>
             
-            <div className="h-60">
+            <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={latencySeries} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
                   <defs>
@@ -1194,15 +1164,15 @@ export default function Analytics() {
           </Card>
         </div>
 
-        {/* Stacked Bar Charts Row */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Stacked Bar Charts Row - Disconnection, Call Successful, Sentiment */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md">
             <div className="flex items-center gap-2 mb-2">
               <Phone className="h-5 w-5 text-red-600" />
               <h3 className="text-gray-900 font-semibold text-lg">Disconnection Reasons by Date</h3>
             </div>
             
-            <div className="h-72">
+            <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={disconnectionReasonsStacked} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
                   <CartesianGrid stroke="rgba(0,0,0,0.05)" />
@@ -1233,11 +1203,32 @@ export default function Analytics() {
 
           <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md">
             <div className="flex items-center gap-2 mb-2">
+              <BarChart3 className="h-5 w-5 text-blue-600" />
+              <h3 className="text-gray-900 font-semibold text-lg">Call Successful</h3>
+            </div>
+            
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={callSuccessfulStacked} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
+                  <CartesianGrid stroke="rgba(0,0,0,0.05)" />
+                  <XAxis dataKey="label" />
+                  <YAxis allowDecimals={false} />
+                  <Tooltip />
+                  <Legend verticalAlign="bottom" />
+                  <Bar dataKey="successful" name="Call counts: successful" stackId="a" fill={COLORS.sky} radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="unsuccessful" name="Call counts: unsuccessful" stackId="a" fill={COLORS.green} radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+
+          <Card className="border border-slate-200/70 bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md">
+            <div className="flex items-center gap-2 mb-2">
               <MessageSquare className="h-5 w-5 text-yellow-600" />
               <h3 className="text-gray-900 font-semibold text-lg">User Sentiment by Date</h3>
             </div>
             
-            <div className="h-72">
+            <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={sentimentStacked} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
                   <CartesianGrid stroke="rgba(0,0,0,0.05)" />
@@ -1251,7 +1242,7 @@ export default function Analytics() {
                       dataKey={sentiment}
                       name={`Sentiment: ${sentiment}`}
                       stackId="a"
-                      fill={colorsArray[(idx + 5) % colorsArray.length]} // Offset colors to avoid overlap with disconnection reasons
+                      fill={colorsArray[(idx + 5) % colorsArray.length]}
                       radius={idx === Object.keys(sentimentStacked[0] || {}).filter(key => key !== 'label').length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
                     />
                   ))}
@@ -1259,7 +1250,6 @@ export default function Analytics() {
               </ResponsiveContainer>
             </div>
           </Card>
-
         </div>
 
         {/* Agent Performance Row */}

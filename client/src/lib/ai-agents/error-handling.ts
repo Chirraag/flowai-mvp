@@ -14,8 +14,6 @@ export interface ErrorContext {
  * Provides consistent error messages and user feedback
  */
 export const handleApiError = (error: any, context: ErrorContext): { title: string; description: string; variant: 'default' | 'destructive' } => {
-  console.error(`API Error during ${context.action}:`, error);
-
   // Extract error message from various error formats
   let errorMessage = context.fallbackMessage || 'An unexpected error occurred';
 
@@ -57,7 +55,6 @@ export const retryWithBackoff = async <T>(
 
       if (attempt < maxRetries) {
         const delay = baseDelay * Math.pow(backoffMultiplier, attempt);
-        console.log(`Attempt ${attempt + 1} failed, retrying in ${delay}ms...`);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
@@ -82,7 +79,6 @@ export const withErrorHandling = async <T>(
       onError(error);
     } else {
       // Default error handling - could integrate with toast system
-      console.error(`Error during ${context.action}:`, error);
     }
     return null;
   }
