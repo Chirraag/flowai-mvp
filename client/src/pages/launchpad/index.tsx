@@ -2159,5 +2159,3 @@ export default function Launchpad() {
     </div>
   );
 }
-
-
