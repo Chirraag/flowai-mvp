@@ -19,6 +19,7 @@ import {
   canCreateOrganizations,
   canUploadLaunchpadDocuments
 } from "@/lib/permissions";
+import { redirectToOrgSubdomain, shouldRedirectToOrgSubdomain } from "@/lib/subdomain-redirect";
 import type { QueryFilters } from "@tanstack/react-query";
 
 interface User {
@@ -127,6 +128,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             console.log("Auth validation response:", data);
             if (data.valid && data.user) {
               console.log("Setting user from auth validation:", data.user);
+
+              // Check if redirect to org subdomain is needed
+              if (data.user.orgName && shouldRedirectToOrgSubdomain(data.user.orgName)) {
+                redirectToOrgSubdomain(data.user.orgName);
+                return; // Stop execution as we're redirecting
+              }
+
               // Map API response to User interface
               const mappedUser: User = {
                 id: data.user.userId,
@@ -241,6 +249,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
                 "AuthContext: Setting user after refresh:",
                 validateData.user,
               );
+
+              // Check if redirect to org subdomain is needed
+              if (validateData.user.orgName && shouldRedirectToOrgSubdomain(validateData.user.orgName)) {
+                redirectToOrgSubdomain(validateData.user.orgName);
+                return; // Stop execution as we're redirecting
+              }
+
               // Map API response to User interface
               const mappedUser: User = {
                 id: validateData.user.userId,
@@ -334,7 +349,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         // Only navigate if force_password_reset is not true
         // If it is true, let the LoginForm show the dialog first
         if (!data.user.force_password_reset) {
-          window.location.href = "/";
+          // Check if redirect to org subdomain is needed
+          if (data.user.orgName && shouldRedirectToOrgSubdomain(data.user.orgName)) {
+            redirectToOrgSubdomain(data.user.orgName);
+          } else {
+            window.location.href = "/";
+          }
         }
       } else {
         throw new Error("Invalid response from server");
