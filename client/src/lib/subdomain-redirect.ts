@@ -28,10 +28,16 @@ export function redirectToOrgSubdomain(orgName: string): void {
 
 /**
  * Checks if a redirect to org subdomain is needed
+ * ONLY redirects for "Precision Imaging" organization
  * @param orgName - The organization name from the auth response
  * @returns true if redirect is needed, false otherwise
  */
 export function shouldRedirectToOrgSubdomain(orgName: string): boolean {
+  // Only redirect for Precision Imaging
+  if (orgName !== "Precision Imaging") {
+    return false;
+  }
+
   const subdomain = orgNameToSubdomain(orgName);
   const currentHost = window.location.hostname;
   const expectedHost = `${subdomain}.myflowai.com`;
