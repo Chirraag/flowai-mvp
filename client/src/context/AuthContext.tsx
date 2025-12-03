@@ -42,7 +42,7 @@ interface AuthContextType {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, redirectUrl?: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshToken: () => Promise<void>;
   switchOrganization: (orgId: number) => Promise<void>;
@@ -102,11 +102,27 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   useEffect(() => {
     const initializeAuth = async () => {
       console.log("AuthContext: Initializing auth...");
-      const storedToken = localStorage.getItem("auth_token");
+
+      // Check for token in URL query parameters (for cross-subdomain auth)
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlToken = urlParams.get('token');
+
+      if (urlToken) {
+        console.log("AuthContext: Found token in URL, storing and validating...");
+        localStorage.setItem("auth_token", urlToken);
+
+        // Remove token from URL for security
+        urlParams.delete('token');
+        const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+        window.history.replaceState({}, '', newUrl);
+      }
+
+      const storedToken = urlToken || localStorage.getItem("auth_token");
       const storedRefreshToken = localStorage.getItem("refresh_token");
       console.log("AuthContext: Found tokens:", {
         hasToken: !!storedToken,
         hasRefreshToken: !!storedRefreshToken,
+        fromUrl: !!urlToken,
       });
 
       if (storedToken) {
@@ -298,7 +314,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, redirectUrl?: string) => {
     try {
       const response = await fetch("https://api.myflowai.com/auth/login", {
         method: "POST",
@@ -349,7 +365,23 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         // Only navigate if force_password_reset is not true
         // If it is true, let the LoginForm show the dialog first
         if (!data.user.force_password_reset) {
-          // Check if redirect to org subdomain is needed
+          // Handle redirect_url parameter for Precision Imaging
+          if (redirectUrl && redirectUrl.includes('precision-imaging.myflowai.com')) {
+            // Check if user's orgName is "Precision Imaging"
+            if (data.user.orgName === "Precision Imaging") {
+              // Redirect to the provided URL with JWT token
+              const targetUrl = new URL(redirectUrl);
+              targetUrl.searchParams.set('token', data.token);
+              window.location.href = targetUrl.toString();
+              return;
+            } else {
+              // User is not part of Precision Imaging, redirect to home
+              window.location.href = "/";
+              return;
+            }
+          }
+
+          // Standard flow: Check if redirect to org subdomain is needed
           if (data.user.orgName && shouldRedirectToOrgSubdomain(data.user.orgName)) {
             redirectToOrgSubdomain(data.user.orgName);
           } else {

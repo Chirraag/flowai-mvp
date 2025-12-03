@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,12 @@ import { FormError } from '@/components/ui/form-error';
 
 export default function LoginForm() {
   const { login, logout, forcePasswordReset } = useAuth();
+
+  // Get redirect_url from query parameters
+  const redirectUrl = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('redirect_url');
+  }, []);
   const { toast } = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -54,7 +60,7 @@ export default function LoginForm() {
     setIsLoading(true);
 
     try {
-      await login(email, password);
+      await login(email, password, redirectUrl || undefined);
       // Navigation is handled in the AuthContext after successful login
       // But if force_password_reset is true, we'll show dialog instead
     } catch (error) {
