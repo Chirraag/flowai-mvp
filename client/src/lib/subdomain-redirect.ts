@@ -17,10 +17,16 @@ export function orgNameToSubdomain(orgName: string): string {
 /**
  * Redirects to the organization-specific subdomain
  * @param orgName - The organization name from the auth response
+ * @param token - Optional JWT token to append to the URL
  */
-export function redirectToOrgSubdomain(orgName: string): void {
+export function redirectToOrgSubdomain(orgName: string, token?: string): void {
   const subdomain = orgNameToSubdomain(orgName);
-  const targetUrl = `https://${subdomain}.myflowai.com`;
+  let targetUrl = `https://${subdomain}.myflowai.com`;
+
+  // Append token if provided
+  if (token) {
+    targetUrl += `?token=${encodeURIComponent(token)}`;
+  }
 
   console.log(`Redirecting to organization subdomain: ${targetUrl}`);
   window.location.href = targetUrl;

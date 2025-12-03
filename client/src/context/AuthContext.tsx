@@ -147,7 +147,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
               // Check if redirect to org subdomain is needed
               if (data.user.orgName && shouldRedirectToOrgSubdomain(data.user.orgName)) {
-                redirectToOrgSubdomain(data.user.orgName);
+                redirectToOrgSubdomain(data.user.orgName, storedToken);
                 return; // Stop execution as we're redirecting
               }
 
@@ -268,7 +268,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
               // Check if redirect to org subdomain is needed
               if (validateData.user.orgName && shouldRedirectToOrgSubdomain(validateData.user.orgName)) {
-                redirectToOrgSubdomain(validateData.user.orgName);
+                redirectToOrgSubdomain(validateData.user.orgName, data.token);
                 return; // Stop execution as we're redirecting
               }
 
@@ -383,7 +383,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
           // Standard flow: Check if redirect to org subdomain is needed
           if (data.user.orgName && shouldRedirectToOrgSubdomain(data.user.orgName)) {
-            redirectToOrgSubdomain(data.user.orgName);
+            // Redirect with token for Precision Imaging
+            redirectToOrgSubdomain(data.user.orgName, data.token);
           } else {
             window.location.href = "/";
           }
