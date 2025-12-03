@@ -16,6 +16,7 @@ const CustomerSupportAgent = lazy(
 const AnalyticsAgent = lazy(() => import("@/pages/analytics/analytics"));
 const MembersPage = lazy(() => import("@/pages/members"));
 const LoginPage = lazy(() => import("@/pages/login"));
+const LogoutPage = lazy(() => import("@/pages/logout"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 const IntakePage = lazy(() => import("@/pages/intake"));
 
@@ -24,6 +25,11 @@ export const routes: RouteObject[] = [
     {
         path: "/login",
         element: React.createElement(LoginPage),
+    },
+    // Logout route - accessible without authentication
+    {
+        path: "/logout",
+        element: React.createElement(LogoutPage),
     },
     // Public intake route - accessible without authentication
     {

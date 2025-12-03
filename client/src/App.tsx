@@ -24,6 +24,7 @@ function AppRoutes() {
 
   const isPublicRoute =
     window.location.pathname.includes("/login") ||
+    window.location.pathname.includes("/logout") ||
     window.location.pathname.includes("/intake/");
 
   // Handle navigation after authentication state changes
